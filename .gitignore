@@ -1,0 +1,12 @@
+/build/
+/.gradle/
+/.nb-gradle/
+/.nb-gradle-properties
+/.settings/
+/.vscode/
+/lib/
+/bin/
+**/application.properties
+**/.DS_Store
+
+/data/

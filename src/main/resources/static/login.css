@@ -1,0 +1,1 @@
+.login-shell { display:grid; min-height:100vh; place-items:center; padding:24px; }.login-card { width:min(440px,100%); }.login-card h1 { margin-bottom:8px; }.login-card form { margin-top:24px; }.hint { color:var(--muted); font-size:.85rem; margin-top:20px; }
