@@ -15,7 +15,24 @@ install_elasticsearch(){
   apt-get update
   apt-get install -y ca-certificates curl gnupg
   install -d -m 0755 /usr/share/keyrings
-  curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+  local key_source="$APP_DIR/deploy/elasticsearch-signing-key.asc"
+  local downloaded_key="/tmp/elasticsearch-signing-key.asc"
+  # La clave pública oficial se incluye con el proyecto: evita el fallo cuando
+  # un proxy devuelve 403 al descargar solo la clave desde artifacts.elastic.co.
+  if [[ ! -r "$key_source" ]]; then
+    echo "No se encontró la clave incluida; descargando la clave de Elastic…"
+    curl --fail --location --retry 3 --user-agent 'BaseRepo-deploy/1.0' \
+      -o "$downloaded_key" https://artifacts.elastic.co/GPG-KEY-elasticsearch || {
+        echo "No se pudo obtener la clave de firma de Elastic. Revise el proxy/salida HTTPS hacia artifacts.elastic.co." >&2
+        exit 1
+      }
+    key_source="$downloaded_key"
+  fi
+  gpg --show-keys --with-colons "$key_source" | grep -q 'fpr:::::::::46095ACC8548582C1A2699A9D27D666CD88E42B4:' || {
+    echo "La clave de Elasticsearch no tiene la huella oficial esperada." >&2
+    exit 1
+  }
+  gpg --dearmor --yes -o /usr/share/keyrings/elasticsearch-keyring.gpg "$key_source"
   chmod 0644 /usr/share/keyrings/elasticsearch-keyring.gpg
   echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main' > /etc/apt/sources.list.d/elastic-9.x.list
   apt-get update
