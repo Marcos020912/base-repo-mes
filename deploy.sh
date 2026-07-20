@@ -5,6 +5,12 @@ set -euo pipefail
 if [[ $EUID -ne 0 ]]; then echo "Ejecute con sudo: sudo ./deploy.sh"; exit 1; fi
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONF="$APP_DIR/config/application.properties"
+# application.properties contiene secretos de cada instalación y no se publica
+# en Git. En un clon nuevo se genera desde la plantilla versionada.
+if [[ ! -f "$CONF" ]]; then
+  cp "$APP_DIR/config/application-default.properties" "$CONF"
+  echo "Creado $CONF desde application-default.properties."
+fi
 ask(){
   local var=$1 prompt=$2 default=${3:-} value=""
   # El despliegue es interactivo. Leer desde la terminal evita que una entrada
@@ -17,7 +23,10 @@ ask(){
 }
 install_if_missing(){ command -v "$1" >/dev/null 2>&1 || { apt-get update; apt-get install -y "$2"; }; }
 # Obtiene el último valor de una clave YAML simple sin interpretar la clave como una expresión regular.
-property_value(){ awk -v key="$1" 'index($0, key ":") == 1 { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF" 2>/dev/null; }
+property_value(){
+  [[ -r "$CONF" ]] || return 0
+  awk -v key="$1" 'index($0, key ":") == 1 { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF"
+}
 find_elasticsearch_home(){
   local candidate
   for candidate in "${ES_HOME:-}" "$APP_DIR/elasticsearch" \
