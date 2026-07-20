@@ -73,7 +73,7 @@ EOF
   # Puede existir una instancia iniciada manualmente durante la configuración
   # automática inicial. Se detiene para que no ocupe el puerto 9200.
   systemctl stop elasticsearch base-repo-elasticsearch 2>/dev/null || true
-  pkill -u "$es_owner" -f "$es_home/bin/elasticsearch" 2>/dev/null || true
+  pkill -u "$es_owner" -f 'org.elasticsearch.bootstrap.Elasticsearch' 2>/dev/null || true
   sleep 2
   systemctl daemon-reload
   systemctl enable --now base-repo-elasticsearch
