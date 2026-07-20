@@ -27,6 +27,9 @@ property_value(){
   [[ -r "$CONF" ]] || return 0
   awk -v key="$1" 'index($0, key ":") == 1 { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF"
 }
+boolean_value(){
+  case "${1,,}" in s|si|sí|y|yes|true|1) printf 'true\n' ;; n|no|false|0) printf 'false\n' ;; *) printf '%s\n' "$1" ;; esac
+}
 find_elasticsearch_home(){
   local candidate
   for candidate in "${ES_HOME:-}" "$APP_DIR/elasticsearch" \
@@ -113,12 +116,13 @@ fi
 if [[ "${REUSE_CONFIGURATION,,}" == "s" || "${REUSE_CONFIGURATION,,}" == "si" || "${REUSE_CONFIGURATION,,}" == "sí" ]]; then
   APP_PORT="$(property_value 'server.port')"; APP_DOMAIN="$(property_value 'repo.public-domain')"; APP_BIND="$(property_value 'server.address')"
   DB_NAME="$(property_value 'repo.deploy.db-name')"; DB_USER="$(property_value 'spring.datasource.username')"; DB_PASSWORD="$(property_value 'spring.datasource.password')"
-  MAIL_DESCRIPTION="$(property_value 'repo.mail.description')"; MAIL_HOST="$(property_value 'spring.mail.host')"; MAIL_PORT="$(property_value 'spring.mail.port')"; MAIL_USER="$(property_value 'spring.mail.username')"; MAIL_PASSWORD="$(property_value 'spring.mail.password')"; ES_URL="$(property_value 'repo.search.url')"
+  MAIL_DESCRIPTION="$(property_value 'repo.mail.description')"; MAIL_HOST="$(property_value 'spring.mail.host')"; MAIL_PORT="$(property_value 'spring.mail.port')"; MAIL_USER="$(property_value 'spring.mail.username')"; MAIL_PASSWORD="$(property_value 'spring.mail.password')"; MAIL_STARTTLS="$(property_value 'spring.mail.properties.mail.smtp.starttls.enable')"; ES_URL="$(property_value 'repo.search.url')"
   HAPROXY_NETWORK="$(property_value 'repo.deploy.haproxy-network')"; APP_PRIVATE_HOST="$(property_value 'repo.deploy.private-host')"; HAPROXY_FRONTEND_PORT="$(property_value 'repo.deploy.haproxy-port')"; CONFIGURE_FIREWALL="N"
   # Compatibilidad con configuraciones creadas por versiones anteriores del script.
   APP_PORT=${APP_PORT:-8090}; APP_DOMAIN=${APP_DOMAIN:-localhost}; APP_BIND=${APP_BIND:-0.0.0.0}
   DB_NAME=${DB_NAME:-base_repo}; DB_USER=${DB_USER:-base_repo}
-  MAIL_DESCRIPTION=${MAIL_DESCRIPTION:-webmail.mes.gob.cu}; MAIL_HOST=${MAIL_HOST:-webmail.mes.gob.ci}; MAIL_PORT=${MAIL_PORT:-25}; MAIL_USER=${MAIL_USER:-soporte@mes.gob.cu}
+  MAIL_DESCRIPTION=${MAIL_DESCRIPTION:-webmail.mes.gob.cu}; MAIL_HOST=${MAIL_HOST:-webmail.mes.gob.ci}; MAIL_PORT=${MAIL_PORT:-25}; MAIL_USER=${MAIL_USER:-soporte@mes.gob.cu}; MAIL_STARTTLS=${MAIL_STARTTLS:-true}
+  MAIL_STARTTLS="$(boolean_value "$MAIL_STARTTLS")"
   ES_URL=${ES_URL:-http://localhost:9200}; APP_PRIVATE_HOST=${APP_PRIVATE_HOST:-$(hostname -I | awk '{print $1}')}; HAPROXY_FRONTEND_PORT=${HAPROXY_FRONTEND_PORT:-443}
   if [[ -z "$DB_PASSWORD" || -z "$MAIL_PASSWORD" ]]; then
     echo "La configuración anterior no contiene todas las credenciales; se solicitarán para completar la actualización."
@@ -146,6 +150,8 @@ else
   EXISTING_MAIL_PASSWORD="$(property_value 'spring.mail.password')"
   ask MAIL_PASSWORD "Contraseña SMTP"
   MAIL_PASSWORD=${MAIL_PASSWORD:-$EXISTING_MAIL_PASSWORD}
+  ask MAIL_STARTTLS "¿El SMTP usa STARTTLS? (S/n)" "$(property_value 'spring.mail.properties.mail.smtp.starttls.enable')"; MAIL_STARTTLS=${MAIL_STARTTLS:-true}
+  MAIL_STARTTLS="$(boolean_value "$MAIL_STARTTLS")"
   ask ES_URL "URL de Elasticsearch" "$(property_value 'repo.search.url')"; ES_URL=${ES_URL:-http://localhost:9200}
   ask CONFIGURE_FIREWALL "¿Configurar UFW para que solo HAProxy acceda al puerto de la app? (s/N)" "N"
 fi
@@ -176,6 +182,11 @@ spring.mail.host: $MAIL_HOST
 spring.mail.port: $MAIL_PORT
 spring.mail.username: $MAIL_USER
 spring.mail.password: $MAIL_PASSWORD
+spring.mail.properties.mail.smtp.auth: true
+spring.mail.properties.mail.smtp.starttls.enable: $MAIL_STARTTLS
+spring.mail.properties.mail.smtp.starttls.required: $MAIL_STARTTLS
+# El proveedor indicó aceptar certificados del servidor SMTP.
+spring.mail.properties.mail.smtp.ssl.trust: *
 repo.mail.from: $MAIL_USER
 repo.allowed-origin-pattern: https://$APP_DOMAIN
 repo.public-domain: $APP_DOMAIN
