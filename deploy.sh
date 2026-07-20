@@ -31,6 +31,24 @@ property_value(){
 boolean_value(){
   case "${1,,}" in s|si|sí|y|yes|true|1) printf 'true\n' ;; n|no|false|0) printf 'false\n' ;; *) printf '%s\n' "$1" ;; esac
 }
+remove_managed_properties(){
+  local tmp keys
+  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port'
+  tmp="$(mktemp "$CONF.XXXXXX")"
+  awk -v keys="$keys" '
+    BEGIN { count=split(keys, items, ","); for (i=1; i<=count; i++) managed[items[i]]=1 }
+    /^[[:space:]]*#/ { print; next }
+    {
+      line=$0; sub(/^[[:space:]]+/, "", line); separator=index(line, ":")
+      if (separator > 0) {
+        key=substr(line, 1, separator-1); sub(/[[:space:]]+$/, "", key)
+        if (key in managed) next
+      }
+      print
+    }
+  ' "$CONF" > "$tmp"
+  mv "$tmp" "$CONF"
+}
 configure_gradle_proxy(){
   local proxy hostport host port
   proxy="${HTTPS_PROXY:-${https_proxy:-}}"
@@ -134,7 +152,7 @@ for _ in $(seq 1 60); do curl -fsS http://localhost:9200 >/dev/null 2>&1 && brea
 curl -fsS http://localhost:9200 >/dev/null || { echo "Elasticsearch no pudo iniciar. Revise: journalctl -u base-repo-elasticsearch -n 100 --no-pager"; exit 1; }
 
 REUSE_CONFIGURATION="N"
-if grep -q '^# Managed by deploy.sh' "$CONF" 2>/dev/null; then
+if grep -qE '^# (BEGIN )?Managed by deploy.sh' "$CONF" 2>/dev/null; then
   ask REUSE_CONFIGURATION "Se detectó una configuración previa. ¿Reutilizarla sin volver a pedir datos? (S/n)" "S"
 fi
 if [[ "${REUSE_CONFIGURATION,,}" == "s" || "${REUSE_CONFIGURATION,,}" == "si" || "${REUSE_CONFIGURATION,,}" == "sí" ]]; then
@@ -185,9 +203,10 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" |
 install -d -m 0750 "$REPO_DATA_DIR"
 
 cp "$CONF" "$CONF.bak.$(date +%s)"
+remove_managed_properties
 cat >> "$CONF" <<EOF
 
-# Managed by deploy.sh
+# BEGIN Managed by deploy.sh
 server.port: $APP_PORT
 server.address: $APP_BIND
 # HAProxy termina TLS y comunica el esquema/host original con X-Forwarded-*.
@@ -221,6 +240,7 @@ repo.deploy.db-name: $DB_NAME
 repo.deploy.haproxy-network: $HAPROXY_NETWORK
 repo.deploy.private-host: $APP_PRIVATE_HOST
 repo.deploy.haproxy-port: $HAPROXY_FRONTEND_PORT
+# END Managed by deploy.sh
 EOF
 
 # This file is copied to the remote HAProxy administrator; it is not applied locally.
