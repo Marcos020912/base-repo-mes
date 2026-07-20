@@ -49,7 +49,7 @@ EOF
   # Requisito de bootstrap de Elasticsearch en Linux (el paquete DEB lo ajusta
   # automáticamente; la distribución .tar.gz no).
   printf '%s\n' 'vm.max_map_count=262144' > /etc/sysctl.d/99-base-repo-elasticsearch.conf
-  sysctl --system >/dev/null
+  sysctl -w vm.max_map_count=262144 >/dev/null
 
   cat > /etc/systemd/system/base-repo-elasticsearch.service <<EOF
 [Unit]
@@ -70,6 +70,11 @@ TimeoutStopSec=0
 [Install]
 WantedBy=multi-user.target
 EOF
+  # Puede existir una instancia iniciada manualmente durante la configuración
+  # automática inicial. Se detiene para que no ocupe el puerto 9200.
+  systemctl stop elasticsearch base-repo-elasticsearch 2>/dev/null || true
+  pkill -u "$es_owner" -f "$es_home/bin/elasticsearch" 2>/dev/null || true
+  sleep 2
   systemctl daemon-reload
   systemctl enable --now base-repo-elasticsearch
 }
@@ -80,8 +85,8 @@ install_if_missing curl curl
 
 configure_elasticsearch_tar
 systemctl enable --now postgresql
-for _ in $(seq 1 30); do curl -fsS http://localhost:9200 >/dev/null 2>&1 && break; sleep 1; done
-curl -fsS http://localhost:9200 >/dev/null || { echo "Elasticsearch no pudo iniciar. Revise: journalctl -u base-repo-elasticsearch"; exit 1; }
+for _ in $(seq 1 60); do curl -fsS http://localhost:9200 >/dev/null 2>&1 && break; sleep 1; done
+curl -fsS http://localhost:9200 >/dev/null || { echo "Elasticsearch no pudo iniciar. Revise: journalctl -u base-repo-elasticsearch -n 100 --no-pager"; exit 1; }
 
 REUSE_CONFIGURATION="N"
 if grep -q '^# Managed by deploy.sh' "$CONF" 2>/dev/null; then
