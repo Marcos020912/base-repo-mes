@@ -38,6 +38,9 @@ configure_gradle_proxy(){
   fi
   [[ -z "$proxy" || "$proxy" == "DIRECT" ]] && return
   proxy="${proxy#http://}"; proxy="${proxy#https://}"; hostport="${proxy%%/*}"
+  # Las configuraciones APT pueden incluir usuario:contraseña@host:puerto.
+  # El host nunca debe incluir esas credenciales.
+  hostport="${hostport##*@}"
   host="${hostport%:*}"; port="${hostport##*:}"
   [[ -n "$host" && "$port" =~ ^[0-9]+$ ]] || return
   echo "Configurando Gradle para usar el proxy HTTP(S) detectado: $host:$port"
@@ -51,6 +54,13 @@ find_elasticsearch_home(){
   done
   candidate="$(find /home -maxdepth 5 -type f -path '*/bin/elasticsearch' -print -quit 2>/dev/null || true)"
   [[ -n "$candidate" ]] && dirname "$(dirname "$candidate")"
+}
+find_application_jar(){
+  local candidate
+  for candidate in "$APP_DIR/build/libs/base-repo.jar" "$APP_DIR/build/libs/base_repo.jar"; do
+    [[ -f "$candidate" ]] && { printf '%s\n' "$candidate"; return; }
+  done
+  find "$APP_DIR/build/libs" -maxdepth 1 -type f -name '*repo*.jar' ! -name '*plain*.jar' -print -quit 2>/dev/null || true
 }
 
 configure_elasticsearch_tar(){
@@ -235,16 +245,19 @@ fi
 
 cd "$APP_DIR"
 REBUILD_APPLICATION="S"
-if [[ -f "$APP_DIR/build/libs/base-repo.jar" ]]; then
+APP_JAR="$(find_application_jar)"
+if [[ -n "$APP_JAR" ]]; then
   ask REBUILD_APPLICATION "Se encontró build/libs/base-repo.jar. ¿Reconstruir la aplicación? (s/N)" "N"
 fi
 if [[ "${REBUILD_APPLICATION,,}" == "s" || "${REBUILD_APPLICATION,,}" == "si" || "${REBUILD_APPLICATION,,}" == "sí" ]]; then
   configure_gradle_proxy
   ./gradlew --no-daemon -Dprofile=minimal bootJar
+  APP_JAR="$(find_application_jar)"
 else
   echo "Usando el JAR existente; se omite la descarga y compilación con Gradle."
 fi
-pkill -f 'base-repo.jar' || true
-nohup java -jar build/libs/base-repo.jar > "$APP_DIR/base-repo.log" 2>&1 &
+[[ -n "$APP_JAR" ]] || { echo "No se encontró el JAR de Base Repo en build/libs." >&2; exit 1; }
+pkill -f 'base[-_]repo\.jar' || true
+nohup java -jar "$APP_JAR" > "$APP_DIR/base-repo.log" 2>&1 &
 echo "Base Repo iniciado. Log: $APP_DIR/base-repo.log"
 echo "Entregue $APP_DIR/haproxy-base-repo.cfg al administrador del HAProxy remoto."
