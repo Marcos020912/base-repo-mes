@@ -283,6 +283,6 @@ else
 fi
 [[ -n "$APP_JAR" ]] || { echo "No se encontró el JAR de Base Repo en build/libs." >&2; exit 1; }
 pkill -f 'base[-_]repo\.jar' || true
-nohup java -jar "$APP_JAR" --spring.config.location="file:$CONF" > "$APP_DIR/base-repo.log" 2>&1 &
+nohup java -jar "$APP_JAR" --spring.config.location="file:$CONF" --spring.profiles.active=production > "$APP_DIR/base-repo.log" 2>&1 &
 echo "Base Repo iniciado. Log: $APP_DIR/base-repo.log"
 echo "Entregue $APP_DIR/haproxy-base-repo.cfg al administrador del HAProxy remoto."
