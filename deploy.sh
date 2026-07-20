@@ -8,7 +8,8 @@ CONF="$APP_DIR/config/application.properties"
 REPO_DATA_DIR="/var/lib/base-repo/data"
 # application.properties contiene secretos de cada instalación y no se publica
 # en Git. En un clon nuevo se genera desde la plantilla versionada.
-if [[ ! -f "$CONF" ]]; then
+if [[ ! -s "$CONF" ]]; then
+  [[ -e "$CONF" ]] && cp "$CONF" "$CONF.empty.$(date +%s)"
   cp "$APP_DIR/config/application-default.properties" "$CONF"
   echo "Creado $CONF desde application-default.properties."
 fi
