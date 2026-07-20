@@ -234,8 +234,16 @@ if [[ "${CONFIGURE_FIREWALL,,}" == "s" || "${CONFIGURE_FIREWALL,,}" == "si" || "
 fi
 
 cd "$APP_DIR"
-configure_gradle_proxy
-./gradlew --no-daemon -Dprofile=minimal bootJar
+REBUILD_APPLICATION="S"
+if [[ -f "$APP_DIR/build/libs/base-repo.jar" ]]; then
+  ask REBUILD_APPLICATION "Se encontró build/libs/base-repo.jar. ¿Reconstruir la aplicación? (s/N)" "N"
+fi
+if [[ "${REBUILD_APPLICATION,,}" == "s" || "${REBUILD_APPLICATION,,}" == "si" || "${REBUILD_APPLICATION,,}" == "sí" ]]; then
+  configure_gradle_proxy
+  ./gradlew --no-daemon -Dprofile=minimal bootJar
+else
+  echo "Usando el JAR existente; se omite la descarga y compilación con Gradle."
+fi
 pkill -f 'base-repo.jar' || true
 nohup java -jar build/libs/base-repo.jar > "$APP_DIR/base-repo.log" 2>&1 &
 echo "Base Repo iniciado. Log: $APP_DIR/base-repo.log"
