@@ -7,16 +7,40 @@ APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONF="$APP_DIR/config/application.properties"
 ask(){ local var=$1 prompt=$2 default=${3:-}; read -r -p "$prompt${default:+ [$default]}: " value; printf -v "$var" '%s' "${value:-$default}"; }
 install_if_missing(){ command -v "$1" >/dev/null 2>&1 || { apt-get update; apt-get install -y "$2"; }; }
+install_elasticsearch(){
+  if systemctl list-unit-files 2>/dev/null | grep -q '^elasticsearch.service'; then return; fi
+  echo "Instalando Elasticsearch desde el repositorio oficial de Elastic…"
+  apt-get update
+  apt-get install -y ca-certificates curl gnupg
+  install -d -m 0755 /usr/share/keyrings
+  curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+  chmod 0644 /usr/share/keyrings/elasticsearch-keyring.gpg
+  echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main' > /etc/apt/sources.list.d/elastic-9.x.list
+  apt-get update
+  apt-get install -y elasticsearch
+  cat > /etc/elasticsearch/elasticsearch.yml <<'EOF'
+cluster.name: base-repo
+node.name: base-repo-node
+discovery.type: single-node
+network.host: 127.0.0.1
+http.port: 9200
+xpack.security.enabled: false
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
+EOF
+  install -d -m 0755 /etc/elasticsearch/jvm.options.d
+  printf '%s\n' '-Xms1g' '-Xmx1g' > /etc/elasticsearch/jvm.options.d/base-repo.options
+}
 
 install_if_missing java openjdk-21-jdk
 install_if_missing psql postgresql
 if ! command -v curl >/dev/null; then apt-get update; apt-get install -y curl ca-certificates gnupg; fi
 
-if ! systemctl list-unit-files | grep -q '^elasticsearch.service'; then
-  echo "Elasticsearch no está instalado. Instálelo desde el repositorio oficial de Elastic y vuelva a ejecutar este script."; exit 1
-fi
+install_elasticsearch
 systemctl enable --now postgresql
 systemctl enable --now elasticsearch
+for _ in $(seq 1 30); do curl -fsS http://localhost:9200 >/dev/null 2>&1 && break; sleep 1; done
+curl -fsS http://localhost:9200 >/dev/null || { echo "Elasticsearch no pudo iniciar. Revise: journalctl -u elasticsearch"; exit 1; }
 
 ask APP_PORT "Puerto de Base Repo" "8090"
 ask APP_DOMAIN "Dominio público (sin http)" "localhost"
