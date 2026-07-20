@@ -30,6 +30,19 @@ property_value(){
 boolean_value(){
   case "${1,,}" in s|si|sí|y|yes|true|1) printf 'true\n' ;; n|no|false|0) printf 'false\n' ;; *) printf '%s\n' "$1" ;; esac
 }
+configure_gradle_proxy(){
+  local proxy hostport host port
+  proxy="${HTTPS_PROXY:-${https_proxy:-}}"
+  if [[ -z "$proxy" ]]; then
+    proxy="$(grep -RhsE 'Acquire::https::Proxy[[:space:]]+"[^"]+"' /etc/apt/apt.conf /etc/apt/apt.conf.d 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)"
+  fi
+  [[ -z "$proxy" || "$proxy" == "DIRECT" ]] && return
+  proxy="${proxy#http://}"; proxy="${proxy#https://}"; hostport="${proxy%%/*}"
+  host="${hostport%:*}"; port="${hostport##*:}"
+  [[ -n "$host" && "$port" =~ ^[0-9]+$ ]] || return
+  echo "Configurando Gradle para usar el proxy HTTP(S) detectado: $host:$port"
+  export GRADLE_OPTS="${GRADLE_OPTS:-} -Dhttp.proxyHost=$host -Dhttp.proxyPort=$port -Dhttps.proxyHost=$host -Dhttps.proxyPort=$port"
+}
 find_elasticsearch_home(){
   local candidate
   for candidate in "${ES_HOME:-}" "$APP_DIR/elasticsearch" \
@@ -221,6 +234,7 @@ if [[ "${CONFIGURE_FIREWALL,,}" == "s" || "${CONFIGURE_FIREWALL,,}" == "si" || "
 fi
 
 cd "$APP_DIR"
+configure_gradle_proxy
 ./gradlew --no-daemon -Dprofile=minimal bootJar
 pkill -f 'base-repo.jar' || true
 nohup java -jar build/libs/base-repo.jar > "$APP_DIR/base-repo.log" 2>&1 &
