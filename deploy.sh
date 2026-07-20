@@ -5,7 +5,16 @@ set -euo pipefail
 if [[ $EUID -ne 0 ]]; then echo "Ejecute con sudo: sudo ./deploy.sh"; exit 1; fi
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONF="$APP_DIR/config/application.properties"
-ask(){ local var=$1 prompt=$2 default=${3:-}; read -r -p "$prompt${default:+ [$default]}: " value; printf -v "$var" '%s' "${value:-$default}"; }
+ask(){
+  local var=$1 prompt=$2 default=${3:-} value=""
+  # El despliegue es interactivo. Leer desde la terminal evita que una entrada
+  # redirigida o agotada termine el script silenciosamente a mitad de los datos.
+  if ! read -r -p "$prompt${default:+ [$default]}: " value </dev/tty; then
+    echo "No se pudo leer '$prompt'. Ejecute el script desde una terminal interactiva." >&2
+    exit 1
+  fi
+  printf -v "$var" '%s' "${value:-$default}"
+}
 install_if_missing(){ command -v "$1" >/dev/null 2>&1 || { apt-get update; apt-get install -y "$2"; }; }
 # Obtiene el último valor de una clave YAML simple sin interpretar la clave como una expresión regular.
 property_value(){ awk -v key="$1" 'index($0, key ":") == 1 { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF" 2>/dev/null; }
