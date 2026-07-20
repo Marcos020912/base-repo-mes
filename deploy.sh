@@ -5,6 +5,7 @@ set -euo pipefail
 if [[ $EUID -ne 0 ]]; then echo "Ejecute con sudo: sudo ./deploy.sh"; exit 1; fi
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONF="$APP_DIR/config/application.properties"
+REPO_DATA_DIR="/var/lib/base-repo/data"
 # application.properties contiene secretos de cada instalación y no se publica
 # en Git. En un clon nuevo se genera desde la plantilla versionada.
 if [[ ! -f "$CONF" ]]; then
@@ -181,6 +182,7 @@ fi
 
 sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || sudo -u postgres psql -c "CREATE USER \"$DB_USER\" WITH PASSWORD '$DB_PASSWORD';"
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || sudo -u postgres createdb -O "$DB_USER" "$DB_NAME"
+install -d -m 0750 "$REPO_DATA_DIR"
 
 cp "$CONF" "$CONF.bak.$(date +%s)"
 cat >> "$CONF" <<EOF
@@ -198,6 +200,8 @@ spring.datasource.username: $DB_USER
 spring.datasource.password: $DB_PASSWORD
 spring.jpa.database: POSTGRESQL
 spring.jpa.database-platform: org.hibernate.dialect.PostgreSQLDialect
+# Directorio persistente y escribible para los archivos de los repositorios.
+repo.basepath: file:$REPO_DATA_DIR/
 repo.search.url: $ES_URL
 repo.search.enabled: true
 repo.mail.description: $MAIL_DESCRIPTION
