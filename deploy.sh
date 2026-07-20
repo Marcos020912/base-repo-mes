@@ -9,57 +9,79 @@ ask(){ local var=$1 prompt=$2 default=${3:-}; read -r -p "$prompt${default:+ [$d
 install_if_missing(){ command -v "$1" >/dev/null 2>&1 || { apt-get update; apt-get install -y "$2"; }; }
 # Obtiene el último valor de una clave YAML simple sin interpretar la clave como una expresión regular.
 property_value(){ awk -v key="$1" 'index($0, key ":") == 1 { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF" 2>/dev/null; }
-install_elasticsearch(){
-  if systemctl list-unit-files 2>/dev/null | grep -q '^elasticsearch.service'; then return; fi
-  echo "Instalando Elasticsearch desde el repositorio oficial de Elastic…"
-  apt-get update
-  apt-get install -y ca-certificates curl gnupg
-  install -d -m 0755 /usr/share/keyrings
-  local key_source="$APP_DIR/deploy/elasticsearch-signing-key.asc"
-  local downloaded_key="/tmp/elasticsearch-signing-key.asc"
-  # La clave pública oficial se incluye con el proyecto: evita el fallo cuando
-  # un proxy devuelve 403 al descargar solo la clave desde artifacts.elastic.co.
-  if [[ ! -r "$key_source" ]]; then
-    echo "No se encontró la clave incluida; descargando la clave de Elastic…"
-    curl --fail --location --retry 3 --user-agent 'BaseRepo-deploy/1.0' \
-      -o "$downloaded_key" https://artifacts.elastic.co/GPG-KEY-elasticsearch || {
-        echo "No se pudo obtener la clave de firma de Elastic. Revise el proxy/salida HTTPS hacia artifacts.elastic.co." >&2
-        exit 1
-      }
-    key_source="$downloaded_key"
+find_elasticsearch_home(){
+  local candidate
+  for candidate in "${ES_HOME:-}" "$APP_DIR/elasticsearch" \
+    "/home/${SUDO_USER:-}/elasticsearch"; do
+    [[ -n "$candidate" && -x "$candidate/bin/elasticsearch" ]] && { printf '%s\n' "$candidate"; return; }
+  done
+  candidate="$(find /home -maxdepth 5 -type f -path '*/bin/elasticsearch' -print -quit 2>/dev/null || true)"
+  [[ -n "$candidate" ]] && dirname "$(dirname "$candidate")"
+}
+
+configure_elasticsearch_tar(){
+  local es_home es_owner
+  es_home="$(find_elasticsearch_home)"
+  if [[ -z "$es_home" ]]; then
+    ask es_home "Ruta de Elasticsearch extraído (debe contener bin/elasticsearch)" "/home/${SUDO_USER:-ituser}/elasticsearch"
   fi
-  gpg --show-keys --with-colons "$key_source" | grep -q 'fpr:::::::::46095ACC8548582C1A2699A9D27D666CD88E42B4:' || {
-    echo "La clave de Elasticsearch no tiene la huella oficial esperada." >&2
-    exit 1
-  }
-  gpg --dearmor --yes -o /usr/share/keyrings/elasticsearch-keyring.gpg "$key_source"
-  chmod 0644 /usr/share/keyrings/elasticsearch-keyring.gpg
-  echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main' > /etc/apt/sources.list.d/elastic-9.x.list
-  apt-get update
-  apt-get install -y elasticsearch
-  cat > /etc/elasticsearch/elasticsearch.yml <<'EOF'
+  [[ -x "$es_home/bin/elasticsearch" ]] || { echo "No se encontró Elasticsearch en: $es_home" >&2; exit 1; }
+  es_owner="$(stat -c '%U' "$es_home")"
+  [[ "$es_owner" != "root" ]] || { echo "El directorio de Elasticsearch no debe ejecutarse como root. Ajuste su propietario a un usuario de servicio." >&2; exit 1; }
+
+  echo "Configurando Elasticsearch desde $es_home…"
+  cp "$es_home/config/elasticsearch.yml" "$es_home/config/elasticsearch.yml.bak.$(date +%s)" 2>/dev/null || true
+  cat > "$es_home/config/elasticsearch.yml" <<'EOF'
 cluster.name: base-repo
 node.name: base-repo-node
 discovery.type: single-node
 network.host: 127.0.0.1
 http.port: 9200
+# Base Repo usa el cliente HTTP local sin credenciales. Elasticsearch no queda
+# expuesto a la red porque escucha exclusivamente en 127.0.0.1.
 xpack.security.enabled: false
 xpack.security.http.ssl.enabled: false
 xpack.security.transport.ssl.enabled: false
 EOF
-  install -d -m 0755 /etc/elasticsearch/jvm.options.d
-  printf '%s\n' '-Xms1g' '-Xmx1g' > /etc/elasticsearch/jvm.options.d/base-repo.options
+  install -d -m 0755 "$es_home/config/jvm.options.d"
+  printf '%s\n' '-Xms1g' '-Xmx1g' > "$es_home/config/jvm.options.d/base-repo.options"
+  chown -R "$es_owner":"$(stat -c '%G' "$es_home")" "$es_home/config"
+  # Requisito de bootstrap de Elasticsearch en Linux (el paquete DEB lo ajusta
+  # automáticamente; la distribución .tar.gz no).
+  printf '%s\n' 'vm.max_map_count=262144' > /etc/sysctl.d/99-base-repo-elasticsearch.conf
+  sysctl --system >/dev/null
+
+  cat > /etc/systemd/system/base-repo-elasticsearch.service <<EOF
+[Unit]
+Description=Elasticsearch for Base Repo
+After=network.target
+
+[Service]
+Type=simple
+User=$es_owner
+WorkingDirectory=$es_home
+Environment=ES_PATH_CONF=$es_home/config
+ExecStart=$es_home/bin/elasticsearch
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=65535
+TimeoutStopSec=0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable --now base-repo-elasticsearch
 }
 
 install_if_missing java openjdk-21-jdk
 install_if_missing psql postgresql
-if ! command -v curl >/dev/null; then apt-get update; apt-get install -y curl ca-certificates gnupg; fi
+install_if_missing curl curl
 
-install_elasticsearch
+configure_elasticsearch_tar
 systemctl enable --now postgresql
-systemctl enable --now elasticsearch
 for _ in $(seq 1 30); do curl -fsS http://localhost:9200 >/dev/null 2>&1 && break; sleep 1; done
-curl -fsS http://localhost:9200 >/dev/null || { echo "Elasticsearch no pudo iniciar. Revise: journalctl -u elasticsearch"; exit 1; }
+curl -fsS http://localhost:9200 >/dev/null || { echo "Elasticsearch no pudo iniciar. Revise: journalctl -u base-repo-elasticsearch"; exit 1; }
 
 REUSE_CONFIGURATION="N"
 if grep -q '^# Managed by deploy.sh' "$CONF" 2>/dev/null; then
