@@ -34,7 +34,7 @@ boolean_value(){
 }
 remove_managed_properties(){
   local tmp keys
-  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port'
+  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port'
   tmp="$(mktemp "$CONF.XXXXXX")"
   awk -v keys="$keys" '
     BEGIN { count=split(keys, items, ","); for (i=1; i<=count; i++) managed[items[i]]=1 }
@@ -234,6 +234,7 @@ spring.mail.properties.mail.smtp.starttls.enable: $MAIL_STARTTLS
 spring.mail.properties.mail.smtp.starttls.required: $MAIL_STARTTLS
 # El proveedor indicó aceptar certificados del servidor SMTP.
 spring.mail.properties.mail.smtp.ssl.trust: *
+spring.mail.properties.mail.smtp.ssl.checkserveridentity: false
 repo.mail.from: $MAIL_USER
 repo.allowed-origin-pattern: https://$APP_DOMAIN
 repo.public-domain: $APP_DOMAIN
