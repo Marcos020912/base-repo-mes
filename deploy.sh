@@ -144,13 +144,19 @@ EOF
 }
 
 install_if_missing java openjdk-21-jdk
-install_if_missing psql postgresql
+ask SETUP_POSTGRES "¿Instalar y configurar PostgreSQL? (s/N)" "N"
+ask SETUP_ELASTIC "¿Configurar Elasticsearch? (s/N)" "N"
+if [[ "$(boolean_value "$SETUP_POSTGRES")" == true ]]; then
+  install_if_missing psql postgresql
+  systemctl enable --now postgresql
+fi
 install_if_missing curl curl
 
+if [[ "$(boolean_value "$SETUP_ELASTIC")" == true ]]; then
 configure_elasticsearch_tar
-systemctl enable --now postgresql
 for _ in $(seq 1 60); do curl -fsS http://localhost:9200 >/dev/null 2>&1 && break; sleep 1; done
 curl -fsS http://localhost:9200 >/dev/null || { echo "Elasticsearch no pudo iniciar. Revise: journalctl -u base-repo-elasticsearch -n 100 --no-pager"; exit 1; }
+fi
 
 REUSE_CONFIGURATION="N"
 if grep -qE '^# (BEGIN )?Managed by deploy.sh' "$CONF" 2>/dev/null; then
@@ -199,8 +205,12 @@ else
   ask CONFIGURE_FIREWALL "¿Configurar UFW para que solo HAProxy acceda al puerto de la app? (s/N)" "N"
 fi
 
+if [[ "$(boolean_value "$SETUP_POSTGRES")" == true ]]; then
 sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || sudo -u postgres psql -c "CREATE USER \"$DB_USER\" WITH PASSWORD '$DB_PASSWORD';"
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || sudo -u postgres createdb -O "$DB_USER" "$DB_NAME"
+fi
+
+if [[ "$(boolean_value "$REUSE_CONFIGURATION")" != true ]]; then
 install -d -m 0750 "$REPO_DATA_DIR"
 
 cp "$CONF" "$CONF.bak.$(date +%s)"
@@ -268,6 +278,8 @@ if [[ "${CONFIGURE_FIREWALL,,}" == "s" || "${CONFIGURE_FIREWALL,,}" == "si" || "
   ufw deny 9200/tcp
   ufw --force enable
 fi
+
+fi # Conservar configuración y firewall intactos al reutilizar.
 
 cd "$APP_DIR"
 REBUILD_APPLICATION="S"
