@@ -64,6 +64,7 @@ async function preview(id, container, page = 0) {
 async function load() {
   list.textContent = 'Cargando…';
   try {
+    const doiEnabled = (await request('/api/v1/scientific/doi/config')).enabled;
     const records = await request('/api/v1/scientific/reviews');
     list.replaceChildren();
     if (!records.length) { const empty = document.createElement('p'); empty.className = 'panel empty'; empty.textContent = 'No hay depósitos pendientes de revisión.'; list.append(empty); return; }
@@ -81,9 +82,9 @@ async function load() {
         try { await request(`/api/v1/scientific/${encodeURIComponent(record.resourceId)}/return-to-draft`, { method: 'POST' }); toast.success('Depósito devuelto a borrador.'); await load(); }
         catch (error) { toast.error(error.message); }
       }), action('Publicar', 'primary', async () => {
-        if (!record.versionDoi) { toast.error('Registra primero el DOI de esta versión.'); return; }
-        if (!confirm('Confirma que el DOI mostrado ya está registrado externamente y que revisaste metadatos y archivos. ¿Publicar esta versión inmutable?')) return;
-        try { await request(`/api/v1/scientific/${encodeURIComponent(record.resourceId)}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doiRegisteredExternally: true }) }); toast.success('Versión publicada.'); await load(); }
+        if (!doiEnabled && !record.versionDoi) { toast.error('Registra primero el DOI de esta versión.'); return; }
+        if (!confirm(doiEnabled?'¿Confirmas la revisión? Se reservarán y publicarán en DataCite el DOI de versión y el conceptual.':'Confirma que el DOI mostrado ya está registrado externamente y que revisaste metadatos y archivos. ¿Publicar esta versión inmutable?')) return;
+        try { if(doiEnabled)await request(`/api/v1/scientific/${encodeURIComponent(record.resourceId)}/doi/publish`, { method: 'POST' });else await request(`/api/v1/scientific/${encodeURIComponent(record.resourceId)}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doiRegisteredExternally: true }) }); toast.success('Versión publicada.'); await load(); }
         catch (error) { toast.error(error.message); }
       }));
       card.append(heading, info, controls, detail); list.append(card);

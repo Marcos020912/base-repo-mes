@@ -57,6 +57,8 @@ public class DataCiteService {
     }
 
     public boolean isEnabled() { return enabled; }
+    public String prefix() { return prefix; }
+    public String apiHost() { return baseUri.getHost(); }
 
     /** Draft is only a reservation, not a resolvable DOI. DataCite generates the suffix. */
     public DoiResponse reserveDraft() {
@@ -64,6 +66,18 @@ public class DataCiteService {
         DoiResponse response = send("POST", "/dois", Map.of("prefix", prefix), 201);
         if (!response.doi().startsWith(prefix + "/") || !"draft".equalsIgnoreCase(response.state()))
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "DataCite no confirmó una reserva Draft del prefijo configurado.");
+        return response;
+    }
+
+    /** Explicit DOI supports safe reconciliation after a lost API response. */
+    public DoiResponse reserveDraft(String doi) {
+        requireConfigured();
+        requireDoi(doi);
+        if (!doi.toLowerCase(java.util.Locale.ROOT).startsWith(prefix.toLowerCase(java.util.Locale.ROOT) + "/"))
+            throw new IllegalArgumentException("El DOI no pertenece al prefijo configurado.");
+        DoiResponse response = send("POST", "/dois", Map.of("doi", doi), 201);
+        if (!doi.equalsIgnoreCase(response.doi()) || !"draft".equalsIgnoreCase(response.state()))
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "DataCite no confirmó una reserva Draft.");
         return response;
     }
 
@@ -107,7 +121,20 @@ public class DataCiteService {
         return response;
     }
 
+    public java.util.Optional<DoiResponse> lookup(String doi) {
+        requireConfigured();
+        requireDoi(doi);
+        DoiResponse response = send("GET", "/dois/" + doi, null, 200, true);
+        if (response != null && !doi.equalsIgnoreCase(response.doi()))
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "DataCite devolvió un DOI diferente.");
+        return java.util.Optional.ofNullable(response);
+    }
+
     private DoiResponse send(String method, String path, Map<String, Object> attributes, int expectedStatus) {
+        return send(method, path, attributes, expectedStatus, false);
+    }
+
+    private DoiResponse send(String method, String path, Map<String, Object> attributes, int expectedStatus, boolean allowNotFound) {
         try {
             String basic = Base64.getEncoder().encodeToString((repositoryId + ":" + password).getBytes(StandardCharsets.UTF_8));
             HttpRequest.Builder builder = HttpRequest.newBuilder(baseUri.resolve(path))
@@ -123,6 +150,7 @@ public class DataCiteService {
             }
             HttpRequest request = builder.build();
             HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            if (allowNotFound && response.statusCode() == 404) return null;
             if (response.statusCode() != expectedStatus)
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "DataCite rechazó la operación; HTTP " + response.statusCode() + ".");
             JsonNode data = json.readTree(response.body()).path("data");

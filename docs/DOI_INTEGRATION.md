@@ -1,56 +1,80 @@
-# Integración DataCite: estado y requisitos
+# Integración DOI con DataCite
 
-La especificación institucional recibida el 28-09-2026 propone usar la API REST
-de DataCite, no desplegar un servidor DOI. Se contrastó con las guías oficiales
-de [creación](https://support.datacite.org/docs/api-create-dois),
+La especificación institucional del 28-09-2026 indica usar la API REST de
+DataCite, no desplegar un servidor DOI. Diseño contrastado con las guías
+oficiales de [creación](https://support.datacite.org/docs/api-create-dois),
 [actualización](https://support.datacite.org/docs/updating-metadata-with-the-rest-api)
 y [estados](https://support.datacite.org/docs/doi-states).
 
-## Ya implementado en `develop-reduniv`
+## Flujo implementado en `develop-reduniv`
 
-- `DataCiteService` encapsula reserva Draft, publicación Findable, lectura
-  autenticada y actualización de metadatos/URL. Solo admite los endpoints
-  oficiales de pruebas y producción mediante HTTPS. Credenciales solo backend.
-- `DataCiteMetadataMapper` prepara los campos mínimos de una versión y exige
-  landing HTTPS, título, autoría, editorial y año. El cliente está **apagado**
-  por defecto; ninguna ruta de la aplicación lo invoca todavía.
-- Pruebas HTTP locales comprueban el método, autenticación, carga útil y que
-  la reserva Draft no incluya `event=publish`. No se han usado credenciales ni
-  realizado pruebas contra DataCite real.
+1. Autor prepara el depósito y pulsa **Reservar DOI**. El backend guarda primero
+   la intención en PostgreSQL y reserva dos identificadores Draft: uno conceptual
+   para el conjunto y otro para la versión. La operación puede repetirse.
+2. En Draft, el DOI aparece como **reservado, no público**. No se enlaza a doi.org
+   ni se incluye en la cita definitiva. El autor envía el depósito a revisión.
+3. Curación revisa y publica. Se verifican metadatos obligatorios y se envían
+   a DataCite con `event=publish`; la aplicación comprueba `findable` para ambos
+   DOI antes de cambiar el estado local a `PUBLISHED`. Se incluyen título,
+   autoría, editorial, año, tipo y URL; cuando constan, también licencia,
+   disciplina, palabras clave, institución/ROR y ORCID. El formulario actual
+   solo tiene un ORCID: se envía a DataCite únicamente si hay un autor, para
+   no atribuirlo erróneamente cuando hay varios.
+4. El DOI de versión apunta a `https://<dominio>/datasets/<id>` y el conceptual
+   a `/datasets/<id-raíz>/concept`, que redirige a la versión publicada más
+   reciente. Los DOI de versión incluyen `IsVersionOf` y, si corresponde,
+   `IsNewVersionOf`; el conceptual incluye `HasVersion`.
+5. La versión publicada es inmutable. Si se retira, la landing pública conserva
+   el aviso/tombstone; no se intenta borrar un DOI Findable.
 
-## Configuración futura (privada, nunca en Git)
+Antes de reservar, se comprueba que la URL base pública configurada sea HTTPS.
+La disponibilidad real de esa ruta y su resolución desde Internet deben
+verificarse en el entorno institucional; la aplicación no puede garantizarlo
+solo por la sintaxis de la URL.
+
+El servicio registra el último estado y eventos de sincronización en
+`doi_registrations` y `doi_sync_events`. Una intención local se confirma antes
+de llamar a DataCite. Tras un fallo se puede repetir **Reservar** o **Publicar**:
+el backend consulta el identificador conocido y continúa sin generar otro.
+Para hacer esto seguro, el sufijo se deriva de un UUID estable del recurso en
+vez de pedir un sufijo aleatorio a DataCite; esta es una excepción deliberada
+a la recomendación no obligatoria del documento institucional. La configuración
+del prefijo o del entorno Test/Production no puede cambiarse para una reserva
+existente sin conciliación explícita.
+
+## Configuración
+
+`sudo ./deploy.sh` puede solicitar estos datos al reconfigurar la instalación.
+Si se reutiliza la configuración previa, no vuelve a pedirlos. Las contraseñas
+se introducen sin eco y el archivo local permanece con permiso `600`.
 
 ```properties
 repo.datacite.enabled=false
 repo.datacite.api-url=https://api.test.datacite.org
-repo.datacite.repository-id=<id de cuenta Repository del entorno de pruebas>
+repo.datacite.repository-id=<cuenta Repository de Test>
 repo.datacite.password=<secreto entregado por canal seguro>
-repo.datacite.prefix=<prefijo de ese entorno>
+repo.datacite.prefix=<prefijo de Test>
+repo.datacite.public-base-url=https://datos.reduniv.edu.cu
 ```
 
-La configuración de producción usa `https://api.datacite.org` y **otras**
-credenciales/prefijo. No activar hasta completar y aprobar el flujo editorial.
-No compartir secretos en incidencias, capturas ni conversaciones.
+DataCite Test y Production necesitan credenciales/prefijos distintos. El
+cliente solo acepta sus hosts oficiales por HTTPS. No guardar secretos en Git,
+en capturas o en el frontend. **Por defecto está desactivado.** Con la opción
+desactivada continúa el flujo manual de DOI preexistente; con la opción activa
+la publicación manual se bloquea y se usa únicamente la publicación DataCite.
 
-## Pendiente antes de activar
+## Antes de producción
 
-1. Credenciales Repository y prefijo, primero de pruebas y luego de producción.
-2. Persistir cada reserva y su estado con historial de sincronización. Diseñar
-   reconciliación para fallos entre la API externa y PostgreSQL, reintentos sin
-   duplicar reservas, y control de concurrencia.
-3. Asegurar una URL permanente por versión, por ejemplo `/datasets/{uuid}`.
-   El frontend actual usa `public-resource.html?id=...`; no enviar a DataCite
-   una ruta futura que todavía no exista y no apunte a una landing durable.
-4. Reservar Draft en el flujo del autor; **no** presentar Draft como DOI público
-   ni generar cita definitiva con ese identificador: Draft no resuelve.
-5. Publicar Findable solo tras validación curatorial y comprobar el estado
-   devuelto por DataCite. La operación remota y el cambio de estado local
-   requieren reconciliación; no se puede asumir una transacción distribuida.
-6. DOI conceptual, DOI por versión y relaciones de versionado verificadas por
-   bibliotecarios. Una retirada conserva la landing/tombstone y el DOI; los
-   registros Findable/Registered no se pueden borrar.
-7. Pruebas en DataCite Test, staging y producción con aprobación institucional.
-
-El actual botón editorial de publicación con confirmación de registro externo
-permanece como flujo **manual** hasta completar lo anterior. No mezclarlo con
-el cliente automático sin una migración explícita de DOI previamente asignados.
+- Aplicar la migración SQL tras copia de seguridad y validar restauración.
+- Obtener cuenta Repository, prefijo y credenciales de DataCite Test por canal
+  seguro. Probar reserva, publicación, resolución, actualización, fallos de red
+  y relaciones en Test y staging. Repetir la validación con Production antes de
+  habilitarlo para usuarios.
+- Asegurar que el dominio público y TLS del HAProxy sirvan realmente las rutas
+  `/datasets/...`; el DOI no debe apuntar a una URL inexistente o temporal.
+- Los DOI manuales ya asignados no se convierten automáticamente. Conciliarlos
+  con DataCite y definir migración antes de activar el modo automático para
+  esos depósitos. No intercambiar las credenciales de Test y Production sobre
+  registros ya reservados.
+- Revisar metadatos y relaciones con bibliotecarios. Las pruebas simuladas y la
+  suite local no sustituyen la validación contra DataCite real.

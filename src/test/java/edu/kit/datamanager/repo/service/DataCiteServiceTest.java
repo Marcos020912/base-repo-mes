@@ -30,6 +30,7 @@ public class DataCiteServiceTest {
             method.set(exchange.getRequestMethod());
             path.set(exchange.getRequestURI().getPath());
             authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            if (path.get().endsWith("/missing")) { exchange.sendResponseHeaders(404, -1); exchange.close(); return; }
             sent.set("GET".equals(method.get()) ? null : json.readTree(exchange.getRequestBody()));
             boolean draft = "POST".equals(method.get());
             byte[] response = ("{\"data\":{\"id\":\"10.1234/abcd\",\"attributes\":{\"doi\":\"10.1234/abcd\",\"state\":\""
@@ -85,5 +86,14 @@ public class DataCiteServiceTest {
         assertEquals("GET", method.get());
         assertEquals("/dois/10.1234/abcd", path.get());
         assertEquals("findable", result.state());
+    }
+
+    @Test
+    public void explicitDraftSupportsIdempotentReconciliation() {
+        var result = client(true).reserveDraft("10.1234/abcd");
+        assertEquals("draft", result.state());
+        assertEquals("10.1234/abcd", sent.get().path("data").path("attributes").path("doi").asText());
+        assertFalse(sent.get().path("data").path("attributes").has("event"));
+        assertTrue(client(true).lookup("10.1234/missing").isEmpty());
     }
 }

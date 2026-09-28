@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,6 +74,18 @@ public class ScientificRecordControllerTest {
         assertNotNull(published.getPublishedAt());
         assertThrows(ResponseStatusException.class, () -> controller.update("r1", new ScientificRecordController.UpdateRequest(
                 null, null, null, null, null, null, null, null, null, null, null, null, null, null)));
+    }
+
+    @Test
+    public void automatedDoiModeRejectsManualPublicationAndDoiOverride() {
+        ReflectionTestUtils.setField(controller, "automatedDoiEnabled", true);
+        ScientificRecord record = new ScientificRecord("r1");
+        when(records.findById("r1")).thenReturn(Optional.of(record));
+        assertThrows(ResponseStatusException.class, () -> controller.update("r1", new ScientificRecordController.UpdateRequest(
+                "1.0", "10.1234/manual", null, "CC-BY-4.0", "OPEN", null, "es", "Física", "datos", null,
+                "Universidad", null, null, "Métodos")));
+        record.setStatus(PublicationStatus.IN_REVIEW);
+        assertThrows(ResponseStatusException.class, () -> controller.publish("r1", new ScientificRecordController.PublicationApproval(true)));
     }
 
     @Test

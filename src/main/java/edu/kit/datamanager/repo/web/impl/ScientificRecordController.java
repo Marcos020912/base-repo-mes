@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,6 +41,8 @@ public class ScientificRecordController {
     private final IDataResourceDao resources;
     private final ScientificQualityService quality;
     private final ScientificRecordEventRepository events;
+    @Value("${repo.datacite.enabled:false}")
+    private boolean automatedDoiEnabled;
 
     public ScientificRecordController(ScientificRecordRepository records, ResourceOwnershipRepository ownership, IDataResourceDao resources, ScientificQualityService quality, ScientificRecordEventRepository events) {
         this.records = records;
@@ -72,8 +75,15 @@ public class ScientificRecordController {
         ScientificRecord record = records.findById(id).orElseGet(() -> new ScientificRecord(id));
         if (record.getStatus() != PublicationStatus.DRAFT) throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede editar un borrador.");
         record.setVersionLabel(clean(input.versionLabel(), 40));
-        record.setVersionDoi(validDoi(input.versionDoi()));
-        record.setConceptualDoi(validDoi(input.conceptualDoi()));
+        if (automatedDoiEnabled) {
+            if (validDoi(input.versionDoi()) != null && !input.versionDoi().equalsIgnoreCase(record.getVersionDoi() == null ? "" : record.getVersionDoi()))
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El DOI de versión lo asigna DataCite; use Reservar DOI.");
+            if (validDoi(input.conceptualDoi()) != null && !input.conceptualDoi().equalsIgnoreCase(record.getConceptualDoi() == null ? "" : record.getConceptualDoi()))
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El DOI conceptual lo asigna DataCite.");
+        } else {
+            record.setVersionDoi(validDoi(input.versionDoi()));
+            record.setConceptualDoi(validDoi(input.conceptualDoi()));
+        }
         record.setLicenseId(clean(input.licenseId(), 100));
         String access = clean(input.accessLevel(), 30);
         if (access != null && !List.of("OPEN", "RESTRICTED", "EMBARGOED").contains(access)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nivel de acceso no válido.");
@@ -175,6 +185,8 @@ public class ScientificRecordController {
     @Transactional
     @PreAuthorize("hasAnyAuthority('ROLE_CURATOR','ROLE_ADMINISTRATOR')")
     public ScientificRecord publish(@PathVariable String id, @RequestBody PublicationApproval approval) {
+        if (automatedDoiEnabled) throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Use la publicación DataCite del flujo editorial; la confirmación manual está desactivada.");
         ScientificRecord record = current(id);
         if (record.getStatus() != PublicationStatus.IN_REVIEW) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso debe pasar por revisión.");
         if (!approval.doiRegisteredExternally()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El DOI debe estar registrado antes de publicar; esta aplicación aún no lo registra automáticamente.");

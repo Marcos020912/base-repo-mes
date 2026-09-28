@@ -1,4 +1,4 @@
-const id = new URLSearchParams(location.search).get('id');
+const id = new URLSearchParams(location.search).get('id') || (location.pathname.startsWith('/datasets/') ? decodeURIComponent(location.pathname.slice('/datasets/'.length)) : null);
 const status = document.querySelector('#status');
 let detail;
 function node(tag, value, className) { const item = document.createElement(tag); item.textContent = value; if (className) item.className = className; return item; }
@@ -73,13 +73,13 @@ async function load() {
     field('Métodos', data.methodology); field('Publicaciones relacionadas', data.relatedPublications);
     field('Publicado', data.publishedAt ? new Date(data.publishedAt).toLocaleDateString('es') : null);
     if (data.previousResourceId) {
-      const previous = document.createElement('a'); previous.href = `public-resource.html?id=${encodeURIComponent(data.previousResourceId)}`;
+      const previous = document.createElement('a'); previous.href = `/datasets/${encodeURIComponent(data.previousResourceId)}`;
       previous.textContent = 'Ver versión anterior'; document.querySelector('#version-links').append(previous);
     }
     if (data.newerVersionId) {
       const warning = document.createElement('p'); warning.className = 'version-warning';
       warning.textContent = 'Está consultando una versión anterior. ';
-      const newer = document.createElement('a'); newer.href = `public-resource.html?id=${encodeURIComponent(data.newerVersionId)}`;
+      const newer = document.createElement('a'); newer.href = `/datasets/${encodeURIComponent(data.newerVersionId)}`;
       newer.textContent = 'Ver la versión posterior'; warning.append(newer);
       document.querySelector('#version-links').append(warning);
     }

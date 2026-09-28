@@ -36,20 +36,21 @@ install_if_missing(){ command -v "$1" >/dev/null 2>&1 || { apt-get update; apt-g
 # Obtiene el último valor de una clave YAML simple sin interpretar la clave como una expresión regular.
 property_value(){
   [[ -r "$CONF" ]] || return 0
-  awk -v key="$1" 'index($0, key ":") == 1 { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF"
+  awk -v key="$1" '(index($0, key ":") == 1 || index($0, key "=") == 1) { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF"
 }
 boolean_value(){
   case "${1,,}" in s|si|sí|y|yes|true|1) printf 'true\n' ;; n|no|false|0) printf 'false\n' ;; *) printf '%s\n' "$1" ;; esac
 }
 remove_managed_properties(){
   local tmp keys
-  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password'
+  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url'
   tmp="$(mktemp "$CONF.XXXXXX")"
   awk -v keys="$keys" '
     BEGIN { count=split(keys, items, ","); for (i=1; i<=count; i++) managed[items[i]]=1 }
     /^[[:space:]]*#/ { print; next }
     {
-      line=$0; sub(/^[[:space:]]+/, "", line); separator=index(line, ":")
+      line=$0; sub(/^[[:space:]]+/, "", line); separator=index(line, ":"); eq=index(line, "=")
+      if (eq > 0 && (separator == 0 || eq < separator)) separator=eq
       if (separator > 0) {
         key=substr(line, 1, separator-1); sub(/[[:space:]]+$/, "", key)
         if (key in managed) next
@@ -205,17 +206,39 @@ else
   ask DB_USER "Usuario PostgreSQL" "$(property_value 'spring.datasource.username')"; DB_USER=${DB_USER:-base_repo}
   # Las contraseñas existentes se conservan si se deja vacío el campo, sin mostrarlas en pantalla.
   EXISTING_DB_PASSWORD="$(property_value 'spring.datasource.password')"
-  ask DB_PASSWORD "Contraseña PostgreSQL"
+  ask_secret DB_PASSWORD "Contraseña PostgreSQL (vacío = conservar anterior)"
   DB_PASSWORD=${DB_PASSWORD:-$EXISTING_DB_PASSWORD}
   ask MAIL_DESCRIPTION "Descripción del servidor de correo" "$(property_value 'repo.mail.description')"; MAIL_DESCRIPTION=${MAIL_DESCRIPTION:-webmail.mes.gob.cu}
   ask MAIL_HOST "Servidor SMTP" "$(property_value 'spring.mail.host')"; MAIL_HOST=${MAIL_HOST:-webmail.mes.gob.ci}
   ask MAIL_PORT "Puerto SMTP" "$(property_value 'spring.mail.port')"; MAIL_PORT=${MAIL_PORT:-25}
   ask MAIL_USER "Usuario SMTP" "$(property_value 'spring.mail.username')"; MAIL_USER=${MAIL_USER:-soporte@mes.gob.cu}
   EXISTING_MAIL_PASSWORD="$(property_value 'spring.mail.password')"
-  ask MAIL_PASSWORD "Contraseña SMTP"
+  ask_secret MAIL_PASSWORD "Contraseña SMTP (vacío = conservar anterior)"
   MAIL_PASSWORD=${MAIL_PASSWORD:-$EXISTING_MAIL_PASSWORD}
   ask MAIL_STARTTLS "¿El SMTP usa STARTTLS? (S/n)" "$(property_value 'spring.mail.properties.mail.smtp.starttls.enable')"; MAIL_STARTTLS=${MAIL_STARTTLS:-true}
   MAIL_STARTTLS="$(boolean_value "$MAIL_STARTTLS")"
+  ask DATACITE_ENABLED "¿Configurar integración DOI con DataCite? (s/N)" "$(property_value 'repo.datacite.enabled')"; DATACITE_ENABLED="$(boolean_value "${DATACITE_ENABLED:-false}")"
+  DATACITE_API_URL="$(property_value 'repo.datacite.api-url')"; DATACITE_REPOSITORY_ID="$(property_value 'repo.datacite.repository-id')"; DATACITE_PREFIX="$(property_value 'repo.datacite.prefix')"; DATACITE_PASSWORD="$(property_value 'repo.datacite.password')"
+  if [[ "$DATACITE_ENABLED" == true ]]; then
+    DATACITE_ENV_DEFAULT=test
+    [[ "$DATACITE_API_URL" == 'https://api.datacite.org' ]] && DATACITE_ENV_DEFAULT=production
+    ask DATACITE_ENV "Entorno DataCite (test/production)" "$DATACITE_ENV_DEFAULT"
+    case "$DATACITE_ENV" in
+      test) DATACITE_API_URL=https://api.test.datacite.org ;;
+      production)
+        ask CONFIRM_DATACITE_PRODUCTION "DataCite Production crea DOI permanentes. ¿Confirmar uso en producción? (s/N)" "N"
+        [[ "$(boolean_value "$CONFIRM_DATACITE_PRODUCTION")" == true ]] || { echo "Se canceló la activación de DataCite Production." >&2; exit 1; }
+        DATACITE_API_URL=https://api.datacite.org ;;
+      *) echo "Entorno DataCite no válido." >&2; exit 1 ;;
+    esac
+    ask DATACITE_REPOSITORY_ID "ID de cuenta Repository DataCite" "$DATACITE_REPOSITORY_ID"
+    ask DATACITE_PREFIX "Prefijo DOI asignado" "$DATACITE_PREFIX"
+    EXISTING_DATACITE_PASSWORD="$DATACITE_PASSWORD"
+    ask_secret DATACITE_PASSWORD "Contraseña/API key DataCite (vacío = conservar anterior)"
+    DATACITE_PASSWORD=${DATACITE_PASSWORD:-$EXISTING_DATACITE_PASSWORD}
+    [[ -n "$DATACITE_REPOSITORY_ID" && -n "$DATACITE_PASSWORD" && "$DATACITE_PREFIX" =~ ^10\.[0-9]{4,9}$ ]] || { echo "Faltan datos válidos de DataCite." >&2; exit 1; }
+  fi
+  DATACITE_API_URL=${DATACITE_API_URL:-https://api.test.datacite.org}
   ask ES_URL "URL de Elasticsearch" "$(property_value 'repo.search.url')"; ES_URL=${ES_URL:-http://localhost:9200}
   ask CONFIGURE_FIREWALL "¿Configurar UFW para que solo HAProxy acceda al puerto de la app? (s/N)" "N"
   APP_JWT_SECRET="$(property_value 'repo.auth.jwtSecret')"
@@ -263,6 +286,12 @@ repo.search.enabled: true
 repo.auth.enabled: true
 repo.auth.jwtSecret: $APP_JWT_SECRET
 repo.auth.bootstrap-admin-password: $BOOTSTRAP_ADMIN_PASSWORD
+repo.datacite.enabled: $DATACITE_ENABLED
+repo.datacite.api-url: $DATACITE_API_URL
+repo.datacite.repository-id: $DATACITE_REPOSITORY_ID
+repo.datacite.password: $DATACITE_PASSWORD
+repo.datacite.prefix: $DATACITE_PREFIX
+repo.datacite.public-base-url: https://$APP_DOMAIN$( [[ "$HAPROXY_FRONTEND_PORT" == 443 ]] || printf ':%s' "$HAPROXY_FRONTEND_PORT" )
 repo.mail.description: $MAIL_DESCRIPTION
 spring.mail.host: $MAIL_HOST
 spring.mail.port: $MAIL_PORT

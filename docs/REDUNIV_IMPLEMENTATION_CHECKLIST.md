@@ -16,8 +16,14 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [x] SHA-256 al cargar por la interfaz web, comprobación manual por curador y
       estado independiente visible en la ficha pública. Auditoría programada
       **opcional** (desactivada por defecto).
-- [x] Cliente backend DataCite y mapeo de metadatos mínimos probados contra
-      HTTP simulado; desactivados por defecto y sin credenciales en Git.
+- [x] Cliente backend DataCite y mapeo de metadatos obligatorios y opcionales
+      seguros (licencia, materias, institución/ROR y ORCID cuando hay un solo
+      autor), probados contra HTTP simulado; desactivados por defecto y sin
+      credenciales en Git.
+- [x] Reserva DOI Draft conceptual y por versión, registro persistente,
+      reintentos/reconciliación, publicación Findable por curador y landing
+      permanente; despliegue pregunta la configuración DOI sin mostrar secretos.
+      Una URL base HTTPS válida es requisito antes de la reserva.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
 
@@ -27,10 +33,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Rotar credenciales de producción; pruebas de seguridad y limitación distribuida de solicitudes.
 - [ ] Enlaces privados temporales para revisores externos y pruebas de concurrencia editorial.
-- [ ] Conectar el cliente DataCite al flujo editorial: reserva Draft persistente,
-      reconciliación de fallos/reintentos, publicación Findable y DOI conceptual/de
-      versión. El documento institucional especifica DataCite REST API, pero aún
-      faltan cuenta Repository, prefijo y credenciales de prueba/producción.
+- [ ] Validar el flujo DOI real con cuenta Repository, prefijo y credenciales
+      de DataCite Test/Production; probar resolución pública y conciliar DOI
+      manuales existentes antes de activar el modo automático en producción.
 - [ ] Verificar ORCID/ROR y admitir múltiples autores e instituciones.
 - [ ] Vocabularios controlados de licencia/disciplinas y relaciones tipadas.
 - [ ] Validación bibliotecaria de citas y estilos adicionales.

@@ -40,9 +40,10 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   auditoría semanal es opcional y está desactivada por defecto. Archivos
   anteriores o subidos por otros endpoints pueden no tener huella de referencia.
 - Historial editorial persistente de cambios de ficha, envío, devolución, publicación, retirada y derivación, visible para autor y curación; los DOI públicos se presentan como enlaces resolubles.
-- Cliente backend DataCite (Draft/Findable, actualización de metadatos/URL)
-  desactivado por defecto y probado sin red externa. **Aún no está conectado al
-  flujo editorial ni almacena DOI reservados; no activar en producción.**
+- Integración DataCite opt-in con reserva Draft conceptual/versión, estado e
+  historial persistentes, publicación Findable por curador, reconciliación y
+  landing permanente. Probada sin credenciales reales. **No activar en
+  producción hasta validar DataCite Test, migración y DOI manuales existentes.**
 - El registro por correo deja recuperar el envío cuando SMTP falla, y las rutas de verificación/reenvío son accesibles antes del primer login.
 - Cambio de contraseña propia, revocación de JWT anteriores, comprobación en
   cada solicitud de rol/estado/validación de la cuenta, contraseña de arranque

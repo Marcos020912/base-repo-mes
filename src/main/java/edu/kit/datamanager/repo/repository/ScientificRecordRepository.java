@@ -9,4 +9,6 @@ public interface ScientificRecordRepository extends JpaRepository<ScientificReco
     List<ScientificRecord> findByStatusOrderBySubmittedAtAsc(PublicationStatus status);
     boolean existsByVersionDoiIgnoreCaseAndResourceIdNot(String versionDoi, String resourceId);
     java.util.Optional<ScientificRecord> findFirstByPreviousResourceIdAndStatusOrderByPublishedAtDesc(String previousResourceId, PublicationStatus status);
+    List<ScientificRecord> findByConceptualDoiIgnoreCaseAndStatusOrderByPublishedAtDesc(String conceptualDoi, PublicationStatus status);
+    List<ScientificRecord> findByConceptualDoiIgnoreCase(String conceptualDoi);
 }

@@ -24,7 +24,7 @@ async function load() {
     results.replaceChildren(); pagination.replaceChildren();
     if (!data.items.length) results.append(text('p', 'No hay recursos publicados que coincidan con estos filtros.', 'panel empty'));
     for (const item of data.items) {
-      const link = document.createElement('a'); link.className = 'resource-card'; link.href = `public-resource.html?id=${encodeURIComponent(item.id)}`;
+      const link = document.createElement('a'); link.className = 'resource-card'; link.href = `/datasets/${encodeURIComponent(item.id)}`;
       link.append(text('span', item.type || 'RECURSO', 'resource-type'), text('h2', item.title || 'Sin título'),
         text('p', item.authors?.join(', ') || 'Autoría no informada', 'card-author'),
         text('p', `${item.publisher || 'Institución no informada'} · ${item.year || 'Año no informado'}`),
