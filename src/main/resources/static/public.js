@@ -23,7 +23,8 @@ async function load() {
       link.append(text('span', item.type || 'RECURSO', 'resource-type'), text('h2', item.title || 'Sin título'),
         text('p', item.authors?.join(', ') || 'Autoría no informada', 'card-author'),
         text('p', `${item.publisher || 'Institución no informada'} · ${item.year || 'Año no informado'}`),
-        text('small', /^10\.\d{4,9}\/\S+$/.test(item.identifier || '') ? `DOI: ${item.identifier}` : 'DOI en la ficha'));
+        text('small', /^10\.\d{4,9}\/\S+$/.test(item.identifier || '') ? `DOI: ${item.identifier}` : 'DOI en la ficha'),
+        text('small', ({OPEN:'Acceso abierto',RESTRICTED:'Acceso restringido',EMBARGOED:'Bajo embargo'})[item.accessLevel] || 'Acceso no informado'));
       results.append(link);
     }
     if (state.pages > 1) {

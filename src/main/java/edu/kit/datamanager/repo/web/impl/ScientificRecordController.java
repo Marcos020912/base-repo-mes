@@ -71,6 +71,11 @@ public class ScientificRecordController {
         String access = clean(input.accessLevel(), 30);
         if (access != null && !List.of("OPEN", "RESTRICTED", "EMBARGOED").contains(access)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nivel de acceso no válido.");
         record.setAccessLevel(access == null ? "OPEN" : access);
+        try { record.setEmbargoUntil(input.embargoUntil() == null || input.embargoUntil().isBlank() ? null : Instant.parse(input.embargoUntil())); }
+        catch (java.time.format.DateTimeParseException ex) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fecha de embargo no válida; use UTC ISO 8601."); }
+        if ("EMBARGOED".equals(record.getAccessLevel()) && record.getEmbargoUntil() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indique la fecha de fin del embargo.");
+        }
         record.setLanguage(clean(input.language(), 16));
         record.setDiscipline(clean(input.discipline(), 255));
         record.setKeywords(clean(input.keywords(), 2000));
@@ -196,7 +201,7 @@ public class ScientificRecordController {
     }
 
     public record UpdateRequest(String versionLabel, String versionDoi, String conceptualDoi, String licenseId,
-                                String accessLevel, String language, String discipline, String keywords,
+                                String accessLevel, String embargoUntil, String language, String discipline, String keywords,
                                 String orcid, String institution, String ror, String relatedPublications,
                                 String methodology) {}
     public record PublicationApproval(boolean doiRegisteredExternally) {}

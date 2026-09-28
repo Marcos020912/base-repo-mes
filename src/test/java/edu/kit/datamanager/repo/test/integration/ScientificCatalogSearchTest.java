@@ -49,5 +49,9 @@ public class ScientificCatalogSearchTest {
         var after = catalog.list("astronomía", "Ada", "DATASET", "2026", "CC-BY-4.0", "astro", true, 0, 20, publicRequest);
         assertEquals(1, after.total());
         assertEquals(data.getId(), after.items().get(0).id());
+        record.setAccessLevel("RESTRICTED"); records.saveAndFlush(record);
+        var restricted = catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", false, 0, 20, publicRequest);
+        assertEquals(1, restricted.total());
+        assertEquals("RESTRICTED", restricted.items().get(0).accessLevel());
     }
 }

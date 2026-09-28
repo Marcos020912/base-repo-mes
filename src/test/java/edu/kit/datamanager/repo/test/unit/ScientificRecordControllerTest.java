@@ -44,7 +44,7 @@ public class ScientificRecordControllerTest {
     @Test
     public void draftCanBeEditedAndSubmitted() {
         ScientificRecord updated = controller.update("r1", new ScientificRecordController.UpdateRequest(
-                "1.0", "10.1234/version-one", null, "CC-BY-4.0", "OPEN", "es", "Física", "datos",
+                "1.0", "10.1234/version-one", null, "CC-BY-4.0", "OPEN", null, "es", "Física", "datos",
                 "0000-0002-1825-0097", "Universidad", null, null, "Métodos reproducibles"));
         assertEquals(PublicationStatus.DRAFT, updated.getStatus());
         when(records.findById("r1")).thenReturn(Optional.of(updated));
@@ -64,7 +64,7 @@ public class ScientificRecordControllerTest {
         assertEquals(PublicationStatus.PUBLISHED, published.getStatus());
         assertNotNull(published.getPublishedAt());
         assertThrows(ResponseStatusException.class, () -> controller.update("r1", new ScientificRecordController.UpdateRequest(
-                null, null, null, null, null, null, null, null, null, null, null, null, null)));
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null)));
     }
 
     @Test

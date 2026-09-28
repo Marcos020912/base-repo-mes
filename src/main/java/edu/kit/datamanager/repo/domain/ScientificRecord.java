@@ -39,6 +39,7 @@ public class ScientificRecord {
     private String licenseId;
     @Column(length = 30)
     private String accessLevel = "OPEN";
+    private Instant embargoUntil;
     @Column(length = 16)
     private String language;
     @Column(length = 255)

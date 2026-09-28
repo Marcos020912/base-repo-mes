@@ -29,7 +29,9 @@ async function loadFiles(page = 0) {
     const info = document.createElement('span'); info.append(node('strong', file.path), node('small', `${file.size} bytes · ${file.mediaType || 'archivo'}`));
     if (file.sha256) { const checksum = node('small', `SHA-256: ${file.sha256}`); checksum.title = 'Huella registrada al subir el archivo; puede verificarla tras descargarlo con sha256sum.'; info.append(checksum); }
     const link = document.createElement('a'); link.className = 'secondary'; link.textContent = 'Descargar'; link.href = `/api/v1/public/resources/${encodeURIComponent(id)}/file?path=${encodeURIComponent(file.path)}`;
-    row.append(info, link); list.append(row);
+    const canDownload = detail.accessLevel === 'OPEN' ||
+      (detail.accessLevel === 'EMBARGOED' && detail.embargoUntil && Date.now() >= new Date(detail.embargoUntil).getTime());
+    row.append(info, canDownload ? link : node('span', 'Acceso restringido', 'muted')); list.append(row);
   }
   const pager = document.querySelector('#files-pagination'); pager.replaceChildren();
   if (data.pages > 1) {
@@ -44,12 +46,14 @@ async function load() {
     const response = await fetch(`/api/v1/public/resources/${encodeURIComponent(id)}`);
     const data = await response.json();
     if (response.status === 410) { document.querySelector('#title').textContent = data.title || 'Recurso retirado'; status.textContent = `Este recurso fue retirado. Motivo: ${data.reason || 'No informado'}`; return; }
-    if (!response.ok) throw new Error('El recurso no está publicado o no es de acceso abierto.');
+    if (!response.ok) throw new Error('El recurso no está publicado o no está disponible.');
     detail = data; document.querySelector('#landing').hidden = false;
     document.querySelector('#title').textContent = data.title;
     document.querySelector('#subtitle').textContent = `${data.authors?.join(', ') || 'Autoría no informada'} · ${data.year || 's. f.'}`;
     document.querySelector('#version').textContent = `Versión ${data.version || 'no informada'}`;
     field('DOI', data.doi); field('DOI conceptual', data.conceptualDoi); field('Licencia', data.license);
+    field('Acceso', ({OPEN:'Abierto',RESTRICTED:'Restringido',EMBARGOED:'Embargo'})[data.accessLevel] || data.accessLevel);
+    field('Fin del embargo', data.embargoUntil ? new Date(data.embargoUntil).toLocaleString('es') : null);
     field('Institución', data.institution); field('ORCID', data.orcid); field('ROR', data.ror);
     field('Idioma', data.language); field('Disciplina', data.discipline); field('Palabras clave', data.keywords);
     field('Métodos', data.methodology); field('Publicaciones relacionadas', data.relatedPublications);

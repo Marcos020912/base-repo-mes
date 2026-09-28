@@ -5,6 +5,7 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
+import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -29,7 +30,10 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping({"/api/v1/catalog", "/api/v1/public/catalog"})
 public class ScientificCatalogController {
     private final IDataResourceDao resources;
-    public ScientificCatalogController(IDataResourceDao resources) { this.resources = resources; }
+    private final ScientificRecordRepository scientificRecords;
+    public ScientificCatalogController(IDataResourceDao resources, ScientificRecordRepository scientificRecords) {
+        this.resources = resources; this.scientificRecords = scientificRecords;
+    }
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -85,7 +89,6 @@ public class ScientificCatalogController {
                 if (hasDoi) terms.add(cb.isNotNull(scientific.get("versionDoi")));
                 if (publicOnly) {
                     terms.add(cb.equal(scientific.get("status"), PublicationStatus.PUBLISHED));
-                    terms.add(cb.equal(scientific.get("accessLevel"), "OPEN"));
                 }
                 subquery.select(scientific.get("resourceId")).where(terms.toArray(Predicate[]::new));
                 predicates.add(cb.exists(subquery));
@@ -104,6 +107,9 @@ public class ScientificCatalogController {
             return cb.and(predicates.toArray(Predicate[]::new));
         };
         Page<DataResource> result = resources.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "lastUpdate")));
+        java.util.Map<String, ScientificRecord> scienceById = new java.util.HashMap<>();
+        scientificRecords.findAllById(result.getContent().stream().map(DataResource::getId).toList())
+                .forEach(record -> scienceById.put(record.getResourceId(), record));
         return new CatalogPage(result.getContent().stream().map(item -> new CatalogItem(item.getId(),
                 item.getTitles().stream().findFirst().map(title -> title.getValue()).orElse("Sin título"),
                 item.getCreators().stream().map(creator -> String.join(" ",
@@ -111,10 +117,12 @@ public class ScientificCatalogController {
                         creator.getFamilyName() == null ? "" : creator.getFamilyName()).trim()).toList(),
                 item.getPublisher(), item.getPublicationYear(),
                 item.getResourceType() == null ? null : item.getResourceType().getTypeGeneral().name(),
-                item.getIdentifier() == null ? null : item.getIdentifier().getValue())).toList(),
+                scienceById.containsKey(item.getId()) ? scienceById.get(item.getId()).getVersionDoi() :
+                        item.getIdentifier() == null ? null : item.getIdentifier().getValue(),
+                scienceById.containsKey(item.getId()) ? scienceById.get(item.getId()).getAccessLevel() : null)).toList(),
                 result.getTotalElements(), result.getNumber(), result.getTotalPages());
     }
 
-    public record CatalogItem(String id, String title, List<String> authors, String publisher, String year, String type, String identifier) {}
+    public record CatalogItem(String id, String title, List<String> authors, String publisher, String year, String type, String identifier, String accessLevel) {}
     public record CatalogPage(List<CatalogItem> items, long total, int page, int pages) {}
 }

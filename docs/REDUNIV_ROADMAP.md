@@ -32,7 +32,9 @@ segundo incremento descrito a continuación.
   fuera de la aplicación. **No hay integración automática con DataCite**.
 - Catálogo autenticado con búsqueda y paginación en servidor, filtros
   reproducibles en URL; catálogo y ficha públicos limitados a versiones
-  `PUBLISHED` de acceso `OPEN`. La retirada presenta un tombstone HTTP 410.
+  `PUBLISHED`. Los metadatos de versiones restringidas o embargadas son
+  visibles, pero la descarga pública de archivos solo se permite para acceso
+  abierto o al expirar el embargo. La retirada presenta un tombstone HTTP 410.
 - Exportaciones de cita APA preliminar, BibTeX, RIS y CSL-JSON para versiones
   publicadas. Requieren validación bibliotecaria antes de producción.
 - Huellas SHA-256 calculadas al subir por los endpoints web y visibles en la
@@ -58,7 +60,7 @@ aprobadas para fusión.
 1. Seguridad y calidad: rotar efectivamente las credenciales ya utilizadas en
    producción, rate limiting distribuido, auditoría y adecuar la suite heredada
    sin debilitar la política de autorización.
-2. Modelo de depósito: completar embargo, acceso de revisores, revisión real
+2. Modelo de depósito: acceso de revisores, revisión real
    de archivos por curador, restricciones sobre API heredada y pruebas de
    concurrencia/transiciones. Una versión nueva requiere cargar sus archivos.
 3. Identidad científica: integrar registro DOI con el proveedor institucional,

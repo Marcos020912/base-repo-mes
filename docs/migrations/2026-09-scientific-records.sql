@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS scientific_records (
     previous_resource_id varchar(255),
     license_id varchar(100),
     access_level varchar(30) DEFAULT 'OPEN',
+    embargo_until timestamptz,
     language varchar(16),
     discipline varchar(255),
     keywords varchar(2000),
@@ -25,6 +26,9 @@ CREATE TABLE IF NOT EXISTS scientific_records (
     withdrawn_at timestamptz,
     withdrawal_reason varchar(1000)
 );
+
+-- Safe when the table was created by an earlier revision of this branch.
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS embargo_until timestamptz;
 
 ALTER TABLE repo_users ADD COLUMN IF NOT EXISTS password_changed_at timestamptz;
 
