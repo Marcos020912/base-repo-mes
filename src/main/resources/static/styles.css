@@ -76,3 +76,18 @@ body { margin:0; background:var(--soft); color:var(--ink); font-family:Inter,ui-
 @media(max-width:800px) { .app-shell { grid-template-columns:1fr; }.sidebar { padding:15px; flex-direction:row; align-items:center; gap:15px; }.sidebar nav { display:flex; flex:1; }.sidebar-bottom { margin:0; display:flex; align-items:center; }.app-main { padding:25px 16px; }.page-header { flex-wrap:wrap; }.toolbar { grid-template-columns:1fr auto; }.toolbar .status { grid-column:1/-1; }.detail-layout,.form-grid { grid-template-columns:1fr; }.table-head { display:none; }.table-row { grid-template-columns:1fr; gap:7px; }.resource-page-header { display:block; }.resource-page-header .button-row { margin-top:15px; } }
 @media(max-width:800px) { .brand { padding:8px; font-size:12px; }.brand img { width:100px; }.scientific-identity { grid-template-columns:1fr; }.hero-search { grid-template-columns:1fr; }.advanced-fields { grid-template-columns:1fr 1fr; }.toolbar .status { justify-self:start; } }
 @media(max-width:560px) { .sidebar { flex-wrap:wrap; }.sidebar nav { order:3; flex-basis:100%; overflow-x:auto; }.sidebar-bottom { margin-left:auto; }.filter-controls,.advanced-fields { grid-template-columns:1fr; }.catalog-hero { padding:24px; }.toolbar { grid-template-columns:1fr; }.toolbar .status { grid-column:1; }.resource-page-header .button-row { flex-wrap:wrap; } }
+
+/* Automatic deposit validation */
+.quality-panel progress{display:block;width:100%;max-width:42rem;height:1rem;accent-color:#0b5aa8}
+.quality-panel ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:.45rem 1.5rem;padding-left:1.2rem}
+.quality-panel li{overflow-wrap:anywhere}
+.quality-ok{color:#17623b}
+.quality-missing{color:#9b2830}
+
+/* Read-only curator preview */
+.review-preview{margin-top:1rem;border-top:1px solid #d7e2e8;padding-top:1rem;min-width:0}
+.review-description{max-height:22rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f8fa;border:1px solid #d7e2e8;border-radius:.5rem;padding:1rem;font:inherit}
+.review-files{list-style:none;padding:0;display:grid;gap:.5rem}
+.review-files li{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-width:0;overflow-wrap:anywhere}
+.review-files li span{min-width:0}
+@media(max-width:600px){.review-files li{align-items:stretch;flex-direction:column}}

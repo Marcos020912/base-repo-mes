@@ -5,6 +5,7 @@ import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ResourceOwnershipRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.service.ScientificQualityService;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
@@ -35,11 +36,13 @@ public class ScientificRecordController {
     private final ScientificRecordRepository records;
     private final ResourceOwnershipRepository ownership;
     private final IDataResourceDao resources;
+    private final ScientificQualityService quality;
 
-    public ScientificRecordController(ScientificRecordRepository records, ResourceOwnershipRepository ownership, IDataResourceDao resources) {
+    public ScientificRecordController(ScientificRecordRepository records, ResourceOwnershipRepository ownership, IDataResourceDao resources, ScientificQualityService quality) {
         this.records = records;
         this.ownership = ownership;
         this.resources = resources;
+        this.quality = quality;
     }
 
     @GetMapping("/{id}")
@@ -97,12 +100,19 @@ public class ScientificRecordController {
         requireOwner(id);
         ScientificRecord record = records.findById(id).orElseGet(() -> new ScientificRecord(id));
         if (record.getStatus() != PublicationStatus.DRAFT) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso no está en borrador.");
-        if (record.getVersionLabel() == null || record.getLicenseId() == null || record.getInstitution() == null || record.getMethodology() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Complete versión, licencia, institución y metodología antes de solicitar revisión.");
-        }
+        var report = quality.inspect(record);
+        if (!report.blockers().isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Faltan datos para revisión: " + String.join(", ", report.blockers()));
         record.setStatus(PublicationStatus.IN_REVIEW);
         record.setSubmittedAt(Instant.now());
         return records.save(record);
+    }
+
+    @GetMapping("/{id}/quality")
+    @Transactional(readOnly = true)
+    public ScientificQualityService.QualityReport quality(@PathVariable String id) {
+        ScientificRecord record = get(id);
+        return quality.inspect(record);
     }
 
     @PostMapping("/{id}/derive-from/{previousId}")

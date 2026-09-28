@@ -27,7 +27,7 @@ segundo incremento descrito a continuación.
   versión, DOI suministrado, licencia, acceso, institución, ORCID, ROR,
   metodología y relaciones. La versión publicada queda bloqueada para cambios;
   una nueva versión se crea como otro recurso enlazado al anterior.
-- Cola de revisión para curadores y administradores. Publicar exige versión,
+- Cola de revisión para curadores y administradores con vista segura de metadatos, descripción y descarga de archivos (independiente de ACL heredadas). Publicar exige versión,
   licencia, DOI de versión y confirmación manual de que el DOI ya fue registrado
   fuera de la aplicación. **No hay integración automática con DataCite**.
 - Catálogo autenticado con búsqueda y paginación en servidor, filtros
@@ -37,6 +37,7 @@ segundo incremento descrito a continuación.
   abierto o al expirar el embargo. La retirada presenta un tombstone HTTP 410.
 - Exportaciones de cita APA preliminar, BibTeX, RIS y CSL-JSON para versiones
   publicadas. Requieren validación bibliotecaria antes de producción.
+- Lista automática de calidad con porcentaje, requisitos de metadatos, description.md y al menos un archivo; el envío a curación se bloquea si faltan requisitos. Esta validación no sustituye la curación humana.
 - Huellas SHA-256 calculadas al subir por los endpoints web y visibles en la
   ficha. La huella es una referencia de carga, **no** una auditoría periódica
   de integridad. Archivos anteriores o subidos por otros endpoints pueden no
@@ -60,9 +61,8 @@ aprobadas para fusión.
 1. Seguridad y calidad: rotar efectivamente las credenciales ya utilizadas en
    producción, rate limiting distribuido, auditoría y adecuar la suite heredada
    sin debilitar la política de autorización.
-2. Modelo de depósito: acceso de revisores, revisión real
-   de archivos por curador, restricciones sobre API heredada y pruebas de
-   concurrencia/transiciones. Una versión nueva requiere cargar sus archivos.
+2. Modelo de depósito: enlaces privados temporales para revisores externos, pruebas de
+   concurrencia/transiciones y evaluación curatorial de formatos/datos sensibles. Una versión nueva requiere cargar sus archivos.
 3. Identidad científica: integrar registro DOI con el proveedor institucional,
    verificación ORCID/ROR, autores e instituciones múltiples, vocabularios de
    licencia/disciplinas y relaciones tipadas procesables por máquinas.

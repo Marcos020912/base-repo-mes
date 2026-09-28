@@ -7,6 +7,7 @@ import edu.kit.datamanager.repo.domain.ResourceOwnership;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ResourceOwnershipRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.service.ScientificQualityService;
 import edu.kit.datamanager.repo.web.impl.ScientificRecordController;
 import java.util.Optional;
 import org.junit.After;
@@ -24,6 +25,7 @@ public class ScientificRecordControllerTest {
     private ScientificRecordRepository records;
     private ResourceOwnershipRepository owners;
     private IDataResourceDao resources;
+    private ScientificQualityService quality;
     private ScientificRecordController controller;
 
     @Before
@@ -31,11 +33,13 @@ public class ScientificRecordControllerTest {
         records = mock(ScientificRecordRepository.class);
         owners = mock(ResourceOwnershipRepository.class);
         resources = mock(IDataResourceDao.class);
+        quality = mock(ScientificQualityService.class);
         when(resources.findById("r1")).thenReturn(Optional.of(mock(DataResource.class)));
         when(owners.findById("r1")).thenReturn(Optional.of(new ResourceOwnership("r1", "author")));
         when(records.save(any(ScientificRecord.class))).thenAnswer(call -> call.getArgument(0));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("author", null));
-        controller = new ScientificRecordController(records, owners, resources);
+        when(quality.inspect(any(ScientificRecord.class))).thenReturn(new ScientificQualityService.QualityReport(100, java.util.List.of(), java.util.List.of()));
+        controller = new ScientificRecordController(records, owners, resources, quality);
     }
 
     @After
