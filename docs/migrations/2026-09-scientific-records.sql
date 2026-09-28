@@ -40,6 +40,14 @@ CREATE TABLE IF NOT EXISTS scientific_record_events (
 );
 CREATE INDEX IF NOT EXISTS idx_scientific_record_events_resource ON scientific_record_events(resource_id, created_at);
 
+CREATE TABLE IF NOT EXISTS file_fixity_states (
+    content_id bigint PRIMARY KEY,
+    expected_sha256 varchar(64),
+    actual_sha256 varchar(64),
+    status varchar(24) NOT NULL,
+    checked_at timestamptz NOT NULL
+);
+
 ALTER TABLE repo_users ADD COLUMN IF NOT EXISTS password_changed_at timestamptz;
 
 CREATE INDEX IF NOT EXISTS idx_scientific_records_status ON scientific_records(status);

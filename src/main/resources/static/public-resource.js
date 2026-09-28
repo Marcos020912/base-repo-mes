@@ -37,6 +37,11 @@ async function loadFiles(page = 0) {
     const row = document.createElement('div'); row.className = 'file-row';
     const info = document.createElement('span'); info.append(node('strong', file.path), node('small', `${file.size} bytes · ${file.mediaType || 'archivo'}`));
     if (file.sha256) { const checksum = node('small', `SHA-256: ${file.sha256}`); checksum.title = 'Huella registrada al subir el archivo; puede verificarla tras descargarlo con sha256sum.'; info.append(checksum); }
+    const fixityLabels = {MATCH:'Integridad comprobada',MISMATCH:'Advertencia: el archivo no coincide con su huella',MISSING_FILE:'Advertencia: archivo no disponible',NO_BASELINE:'Sin huella inicial',UNSUPPORTED_URI:'Comprobación no admitida',READ_ERROR:'No se pudo comprobar'};
+    if (file.fixityStatus) {
+      const verified = node('small', `${fixityLabels[file.fixityStatus] || file.fixityStatus}${file.fixityCheckedAt ? ` · ${new Date(file.fixityCheckedAt).toLocaleString('es')}` : ''}`);
+      verified.className = file.fixityStatus === 'MATCH' ? 'quality-ok' : 'quality-missing'; info.append(verified);
+    } else info.append(node('small', 'Integridad aún no comprobada'));
     const link = document.createElement('a'); link.className = 'secondary'; link.textContent = 'Descargar'; link.href = `/api/v1/public/resources/${encodeURIComponent(id)}/file?path=${encodeURIComponent(file.path)}`;
     const canDownload = detail.accessLevel === 'OPEN' ||
       (detail.accessLevel === 'EMBARGOED' && detail.embargoUntil && Date.now() >= new Date(detail.embargoUntil).getTime());

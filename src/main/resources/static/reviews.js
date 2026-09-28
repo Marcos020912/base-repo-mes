@@ -42,7 +42,13 @@ async function preview(id, container, page = 0) {
           anchor.href = url; anchor.download = file.path.split('/').pop(); anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (error) { toast.error(error.message); }
       });
-      row.append(label, download); files.append(row);
+      const verify = action('Comprobar SHA-256', 'secondary', async () => {
+        try {
+          const result = await request(`/api/v1/scientific/${encodeURIComponent(id)}/fixity?path=${encodeURIComponent(file.path)}`, { method: 'POST' });
+          toast[result.status === 'MATCH' ? 'success' : 'error'](`Integridad de ${file.path}: ${result.status}.`);
+        } catch (error) { toast.error(error.message); }
+      });
+      row.append(label, download, verify); files.append(row);
     }
     if (!listing.files.length) { const empty = document.createElement('li'); empty.textContent = 'No hay archivos en esta página.'; files.append(empty); }
     const pagination = document.createElement('div'); pagination.className = 'pagination';

@@ -7,6 +7,8 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.repository.FileFixityStateRepository;
+import edu.kit.datamanager.repo.domain.FileFixityState;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
@@ -34,11 +36,13 @@ public class PublicScientificResourceController {
     private final IDataResourceDao resources;
     private final ScientificRecordRepository records;
     private final IContentInformationDao contents;
+    private final FileFixityStateRepository fixityStates;
 
-    public PublicScientificResourceController(IDataResourceDao resources, ScientificRecordRepository records, IContentInformationDao contents) {
+    public PublicScientificResourceController(IDataResourceDao resources, ScientificRecordRepository records, IContentInformationDao contents, FileFixityStateRepository fixityStates) {
         this.resources = resources;
         this.records = records;
         this.contents = contents;
+        this.fixityStates = fixityStates;
     }
 
     @GetMapping("/{id}")
@@ -79,9 +83,14 @@ public class PublicScientificResourceController {
         DataResource resource = publishedResource(id);
         Page<ContentInformation> result = contents.findAll((root, query, cb) -> cb.and(
                 cb.equal(root.get("parentResource"), resource), cb.notEqual(root.get("relativePath"), "description.md")), PageRequest.of(page, size));
+        java.util.Map<Long, FileFixityState> fixityById = new java.util.HashMap<>();
+        fixityStates.findAllById(result.getContent().stream().map(ContentInformation::getId).toList())
+                .forEach(state -> fixityById.put(state.getContentId(), state));
         return new PublicFiles(result.getContent().stream()
                 .map(info -> new FileItem(info.getRelativePath(), info.getSize(), info.getMediaType(),
-                        info.getMetadata() == null ? null : info.getMetadata().get("sha256"))).toList(), result.getTotalElements(), result.getNumber(), result.getTotalPages());
+                        info.getMetadata() == null ? null : info.getMetadata().get("sha256"),
+                        fixityById.containsKey(info.getId()) ? fixityById.get(info.getId()).getStatus() : null,
+                        fixityById.containsKey(info.getId()) ? fixityById.get(info.getId()).getCheckedAt() : null)).toList(), result.getTotalElements(), result.getNumber(), result.getTotalPages());
     }
 
     @GetMapping("/{id}/file")
@@ -127,6 +136,6 @@ public class PublicScientificResourceController {
                                String orcid, String ror, String language, String discipline, String keywords,
                                String relatedPublications, String methodology, java.time.Instant publishedAt, String markdown,
                                String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil) {}
-    public record FileItem(String path, long size, String mediaType, String sha256) {}
+    public record FileItem(String path, long size, String mediaType, String sha256, String fixityStatus, java.time.Instant fixityCheckedAt) {}
     public record PublicFiles(List<FileItem> files, long total, int page, int pages) {}
 }
