@@ -5,6 +5,8 @@ import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ResourceOwnershipRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.repository.ScientificRecordEventRepository;
+import edu.kit.datamanager.repo.domain.ScientificRecordEvent;
 import edu.kit.datamanager.repo.service.ScientificQualityService;
 import jakarta.validation.Valid;
 import java.time.Instant;
@@ -37,12 +39,14 @@ public class ScientificRecordController {
     private final ResourceOwnershipRepository ownership;
     private final IDataResourceDao resources;
     private final ScientificQualityService quality;
+    private final ScientificRecordEventRepository events;
 
-    public ScientificRecordController(ScientificRecordRepository records, ResourceOwnershipRepository ownership, IDataResourceDao resources, ScientificQualityService quality) {
+    public ScientificRecordController(ScientificRecordRepository records, ResourceOwnershipRepository ownership, IDataResourceDao resources, ScientificQualityService quality, ScientificRecordEventRepository events) {
         this.records = records;
         this.ownership = ownership;
         this.resources = resources;
         this.quality = quality;
+        this.events = events;
     }
 
     @GetMapping("/{id}")
@@ -91,7 +95,9 @@ public class ScientificRecordController {
         record.setRor(ror);
         record.setRelatedPublications(clean(input.relatedPublications(), 2000));
         record.setMethodology(clean(input.methodology(), 2000));
-        return records.save(record);
+        ScientificRecord saved = records.save(record);
+        audit(id, "METADATA_UPDATED", null);
+        return saved;
     }
 
     @PostMapping("/{id}/submit")
@@ -105,7 +111,9 @@ public class ScientificRecordController {
                 "Faltan datos para revisión: " + String.join(", ", report.blockers()));
         record.setStatus(PublicationStatus.IN_REVIEW);
         record.setSubmittedAt(Instant.now());
-        return records.save(record);
+        ScientificRecord saved = records.save(record);
+        audit(id, "SUBMITTED", null);
+        return saved;
     }
 
     @GetMapping("/{id}/quality")
@@ -128,13 +136,27 @@ public class ScientificRecordController {
         }
         current.setPreviousResourceId(previousId);
         current.setConceptualDoi(previous.getConceptualDoi());
-        return records.save(current);
+        ScientificRecord saved = records.save(current);
+        audit(id, "VERSION_DERIVED", previousId);
+        return saved;
     }
 
     @GetMapping("/reviews")
     @PreAuthorize("hasAnyAuthority('ROLE_CURATOR','ROLE_ADMINISTRATOR')")
     public List<ScientificRecord> reviews() {
         return records.findByStatusOrderBySubmittedAtAsc(PublicationStatus.IN_REVIEW);
+    }
+
+    @GetMapping("/{id}/history")
+    @Transactional(readOnly = true)
+    public List<ScientificRecordEvent> history(@PathVariable String id) {
+        requireResource(id);
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean owner = ownership.findById(id).filter(item -> item.getUsername().equalsIgnoreCase(username)).isPresent();
+        boolean curator = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_CURATOR".equals(authority.getAuthority()) || "ROLE_ADMINISTRATOR".equals(authority.getAuthority()));
+        if (!owner && !curator) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Historial reservado al autor y a curación.");
+        return events.findByResourceIdOrderByCreatedAtAscIdAsc(id);
     }
 
     @PostMapping("/{id}/return-to-draft")
@@ -144,7 +166,9 @@ public class ScientificRecordController {
         ScientificRecord record = current(id);
         if (record.getStatus() != PublicationStatus.IN_REVIEW) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso no está en revisión.");
         record.setStatus(PublicationStatus.DRAFT);
-        return records.save(record);
+        ScientificRecord saved = records.save(record);
+        audit(id, "RETURNED_TO_DRAFT", null);
+        return saved;
     }
 
     @PostMapping("/{id}/publish")
@@ -162,7 +186,9 @@ public class ScientificRecordController {
         }
         record.setStatus(PublicationStatus.PUBLISHED);
         record.setPublishedAt(Instant.now());
-        return records.save(record);
+        ScientificRecord saved = records.save(record);
+        audit(id, "PUBLISHED", record.getVersionDoi());
+        return saved;
     }
 
     @PostMapping("/{id}/withdraw")
@@ -177,12 +203,18 @@ public class ScientificRecordController {
         if (record.getWithdrawalReason() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indique el motivo de la retirada.");
         record.setStatus(PublicationStatus.WITHDRAWN);
         record.setWithdrawnAt(Instant.now());
-        return records.save(record);
+        ScientificRecord saved = records.save(record);
+        audit(id, "WITHDRAWN", record.getWithdrawalReason());
+        return saved;
     }
 
     private ScientificRecord current(String id) {
         requireResource(id);
         return records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No hay ficha científica."));
+    }
+
+    private void audit(String id, String action, String detail) {
+        events.save(new ScientificRecordEvent(id, SecurityContextHolder.getContext().getAuthentication().getName(), action, detail));
     }
 
     private void requireResource(String id) {

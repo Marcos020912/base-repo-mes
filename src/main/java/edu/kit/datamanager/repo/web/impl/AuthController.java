@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,7 +42,15 @@ public class AuthController {
         if (users.existsByUsernameIgnoreCase(username) || users.existsByEmailIgnoreCase(request.email().trim())) return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "El usuario o correo ya está en uso."));
         if (request.password().length() < 8) return ResponseEntity.badRequest().body(Map.of("message", "La contraseña debe tener al menos 8 caracteres."));
         LocalUser user = new LocalUser(username, passwords.encode(request.password()), edu.kit.datamanager.repo.domain.LocalRole.USER);
-        user.setEmail(request.email().trim().toLowerCase()); users.save(user); verification.createAndSend(user); users.save(user);
+        user.setEmail(request.email().trim().toLowerCase()); users.save(user);
+        try { verification.createAndSend(user); }
+        catch (MailException | IllegalStateException error) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "code", "VERIFICATION_MAIL_UNAVAILABLE",
+                    "message", "La cuenta se creó, pero no pudimos enviar el código. Intente reenviarlo desde la página de verificación cuando el correo esté disponible.",
+                    "email", user.getEmail()));
+        }
+        users.save(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Cuenta creada. Revise su correo para verificarla.", "email", user.getEmail()));
     }
     @PostMapping("/verify") public ResponseEntity<?> verify(@Valid @RequestBody VerificationRequest request) { LocalUser user=users.findByEmailIgnoreCase(request.email().trim()).orElse(null); if(user==null || user.getVerificationCode()==null || !user.getVerificationCode().equals(request.code()) || user.getVerificationExpiresAt().isBefore(java.time.Instant.now())) return ResponseEntity.badRequest().body(Map.of("message","El código no es válido o venció.")); user.setVerified(true);user.setVerificationCode(null);user.setVerificationExpiresAt(null);users.save(user);return ResponseEntity.ok(Map.of("message","Correo verificado. Ya puede iniciar sesión.")); }

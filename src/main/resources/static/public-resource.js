@@ -3,6 +3,15 @@ const status = document.querySelector('#status');
 let detail;
 function node(tag, value, className) { const item = document.createElement(tag); item.textContent = value; if (className) item.className = className; return item; }
 function field(label, value) { if (!value) return; const list = document.querySelector('#identity'); list.append(node('dt', label), node('dd', value)); }
+function doiField(label, value) {
+  if (!value) return;
+  const list = document.querySelector('#identity'); const description = node('dt', label); const detail = document.createElement('dd');
+  if (/^10\.\d{4,9}\/\S+$/.test(value)) {
+    const link = document.createElement('a'); link.href = `https://doi.org/${value.split('/').map(encodeURIComponent).join('/')}`; link.textContent = value;
+    link.rel = 'noopener noreferrer'; detail.append(link);
+  } else detail.textContent = value;
+  list.append(description, detail);
+}
 function renderMarkdown(source) {
   const root = document.querySelector('#description'); root.replaceChildren();
   for (const line of source.split(/\r?\n/)) {
@@ -51,7 +60,7 @@ async function load() {
     document.querySelector('#title').textContent = data.title;
     document.querySelector('#subtitle').textContent = `${data.authors?.join(', ') || 'Autoría no informada'} · ${data.year || 's. f.'}`;
     document.querySelector('#version').textContent = `Versión ${data.version || 'no informada'}`;
-    field('DOI', data.doi); field('DOI conceptual', data.conceptualDoi); field('Licencia', data.license);
+    doiField('DOI', data.doi); doiField('DOI conceptual', data.conceptualDoi); field('Licencia', data.license);
     field('Acceso', ({OPEN:'Abierto',RESTRICTED:'Restringido',EMBARGOED:'Embargo'})[data.accessLevel] || data.accessLevel);
     field('Fin del embargo', data.embargoUntil ? new Date(data.embargoUntil).toLocaleString('es') : null);
     field('Institución', data.institution); field('ORCID', data.orcid); field('ROR', data.ror);

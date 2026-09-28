@@ -7,6 +7,7 @@ import edu.kit.datamanager.repo.domain.ResourceOwnership;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ResourceOwnershipRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.repository.ScientificRecordEventRepository;
 import edu.kit.datamanager.repo.service.ScientificQualityService;
 import edu.kit.datamanager.repo.web.impl.ScientificRecordController;
 import java.util.Optional;
@@ -26,6 +27,7 @@ public class ScientificRecordControllerTest {
     private ResourceOwnershipRepository owners;
     private IDataResourceDao resources;
     private ScientificQualityService quality;
+    private ScientificRecordEventRepository events;
     private ScientificRecordController controller;
 
     @Before
@@ -34,12 +36,13 @@ public class ScientificRecordControllerTest {
         owners = mock(ResourceOwnershipRepository.class);
         resources = mock(IDataResourceDao.class);
         quality = mock(ScientificQualityService.class);
+        events = mock(ScientificRecordEventRepository.class);
         when(resources.findById("r1")).thenReturn(Optional.of(mock(DataResource.class)));
         when(owners.findById("r1")).thenReturn(Optional.of(new ResourceOwnership("r1", "author")));
         when(records.save(any(ScientificRecord.class))).thenAnswer(call -> call.getArgument(0));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("author", null));
         when(quality.inspect(any(ScientificRecord.class))).thenReturn(new ScientificQualityService.QualityReport(100, java.util.List.of(), java.util.List.of()));
-        controller = new ScientificRecordController(records, owners, resources, quality);
+        controller = new ScientificRecordController(records, owners, resources, quality, events);
     }
 
     @After
@@ -55,6 +58,7 @@ public class ScientificRecordControllerTest {
         ScientificRecord submitted = controller.submit("r1");
         assertEquals(PublicationStatus.IN_REVIEW, submitted.getStatus());
         assertNotNull(submitted.getSubmittedAt());
+        verify(events, atLeastOnce()).save(any());
     }
 
     @Test
@@ -82,5 +86,12 @@ public class ScientificRecordControllerTest {
         assertEquals("r1", derived.getPreviousResourceId());
         assertEquals("10.1234/concept", derived.getConceptualDoi());
         assertEquals(PublicationStatus.DRAFT, derived.getStatus());
+    }
+
+    @Test
+    public void onlyAuthorOrCuratorCanReadInternalHistory() {
+        assertNotNull(controller.history("r1"));
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("other", null));
+        assertThrows(ResponseStatusException.class, () -> controller.history("r1"));
     }
 }

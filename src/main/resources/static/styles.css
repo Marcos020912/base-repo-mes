@@ -94,3 +94,6 @@ body { margin:0; background:var(--soft); color:var(--ink); font-family:Inter,ui-
 
 .version-warning{border-left:4px solid #b45f07;background:#fff5e7;padding:.65rem .8rem;color:#542e04}
 .version-warning a{font-weight:700}
+
+.history-list{display:grid;gap:.5rem;padding-left:1.5rem;overflow-wrap:anywhere}
+.history-list li{padding:.35rem 0;border-bottom:1px solid #e3ebef}
