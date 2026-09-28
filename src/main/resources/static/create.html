@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Datos RedUniv · Nuevo depósito</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">Datos RedUniv</a>
+      <nav aria-label="Navegación principal">
+        <a href="index.html">▦ Catálogo</a>
+        <a class="active" href="my-datasets.html">▣ Mis depósitos</a>
+        <a id="users-nav" href="users.html" hidden>◉ Usuarios</a>
+      </nav>
+      <div class="sidebar-bottom"><span id="current-user"></span><button class="link-button" data-logout>Cerrar sesión</button></div>
+    </aside>
+    <main class="app-main wizard-main">
+      <header class="page-header">
+        <div><a class="back-link" href="my-datasets.html">← Mis depósitos</a><p class="eyebrow">Nuevo depósito</p><h1>Crear dataset</h1><p class="lead">Completa los pasos y comprueba la vista previa antes de guardar o enviar a revisión.</p></div>
+      </header>
+      <nav aria-label="Pasos de creación" class="wizard-progress"><ol id="wizard-steps"><li aria-current="step">1. Identidad</li><li>2. Ficha científica</li><li>3. Contenido</li><li>4. Vista previa</li></ol></nav>
+      <form id="wizard-form" novalidate>
+        <section class="panel wizard-panel" data-step="0" aria-labelledby="step-identity">
+          <p class="eyebrow">Paso 1 de 4</p><h2 id="step-identity">Identidad del dataset</h2>
+          <p class="muted">Estos datos aparecerán en el catálogo y en la cita.</p>
+          <div class="wizard-fields">
+            <label>Título <input name="title" maxlength="500" required autocomplete="off"></label>
+            <div class="form-grid"><label>Año de publicación <input name="year" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required></label><label>Tipo de contenido <select name="type"><option value="DATASET">Datos tabulares</option><option value="IMAGE">Imágenes</option><option value="TEXT">Textos y documentos</option><option value="AUDIOVISUAL">Videos</option><option value="OTHER">Otro</option></select></label></div>
+            <label>Editorial o institución que publica <input name="publisher" required maxlength="255"></label>
+            <div><label>Autores o creadores</label><div id="creator-list" class="creator-list"></div><button id="add-creator" type="button" class="secondary">+ Agregar autor</button></div>
+          </div>
+        </section>
+        <section class="panel wizard-panel" data-step="1" aria-labelledby="step-science" hidden>
+          <p class="eyebrow">Paso 2 de 4</p><h2 id="step-science">Ficha científica</h2>
+          <p class="muted">Versión, licencia, institución y metodología son necesarias para solicitar revisión.</p>
+          <div class="wizard-fields">
+            <div class="form-grid"><label>Versión <input name="versionLabel" value="1.0" maxlength="40" required></label><label>Licencia <small>Ejemplo: CC-BY-4.0</small><input name="licenseId" maxlength="100" required></label></div>
+            <div class="form-grid"><label>Institución <input name="institution" maxlength="255" required></label><label>ROR institucional <small>Opcional</small><input name="ror" placeholder="https://ror.org/..."></label></div>
+            <div class="form-grid"><label>ORCID de autoría <small>Opcional; solo se exporta a DataCite si hay un autor</small><input name="orcid" placeholder="0000-0000-0000-0000"></label><label>Idioma <input name="language" placeholder="es" maxlength="16"></label></div>
+            <div class="form-grid"><label>Disciplina <input name="discipline" maxlength="255"></label><label>Palabras clave <small>Separadas por comas</small><input name="keywords" maxlength="2000"></label></div>
+            <label>Metodología <textarea name="methodology" rows="5" maxlength="2000" required></textarea></label>
+            <div class="form-grid"><label>Acceso <select name="accessLevel"><option value="OPEN">Abierto</option><option value="RESTRICTED">Restringido</option><option value="EMBARGOED">Embargo</option></select></label><label>Fin del embargo (UTC) <small>Obligatorio si seleccionas embargo</small><input name="embargoUntil" placeholder="2027-01-01T00:00:00Z"></label></div>
+            <label>Publicaciones relacionadas <small>DOI o URL, una por línea</small><textarea name="relatedPublications" rows="3" maxlength="2000"></textarea></label>
+          </div>
+        </section>
+        <section class="panel wizard-panel" data-step="2" aria-labelledby="step-content" hidden>
+          <p class="eyebrow">Paso 3 de 4</p><h2 id="step-content">Descripción y archivos</h2>
+          <p class="muted">Puedes cargar varios archivos. El servidor comprobará el tipo y descomprimirá los ZIP admitidos.</p>
+          <div class="wizard-fields">
+            <label>Descripción del proyecto <small>Archivo llamado exactamente description.md, o ZIP con description.md en su raíz e imágenes auxiliares</small><input id="description-file" name="description" type="file" accept=".md,.zip,text/markdown,application/zip" required></label>
+            <label>Archivos del dataset <small id="file-type-hint"></small><input id="dataset-files" name="files" type="file" multiple required></label>
+            <p id="file-count" class="muted" role="status"></p>
+          </div>
+        </section>
+        <section class="panel wizard-panel" data-step="3" aria-labelledby="step-preview" hidden>
+          <p class="eyebrow">Paso 4 de 4</p><h2 id="step-preview">Vista previa y confirmación</h2>
+          <p class="muted">Revisa lo que se guardará. Todavía no se ha creado ni enviado ningún depósito.</p>
+          <div id="preview-content" class="wizard-preview"></div>
+          <p class="wizard-warning">Si algún archivo falla después de crear el borrador, se conservará el depósito para que puedas corregirlo. No se enviará a revisión parcialmente.</p>
+        </section>
+        <p id="wizard-message" class="message" role="status" aria-live="polite"></p>
+        <div class="wizard-actions"><button id="wizard-back" type="button" class="secondary" hidden>← Anterior</button><button id="wizard-next" type="button" class="primary">Siguiente →</button><button id="save-draft" type="button" class="secondary" hidden>Guardar borrador</button><button id="save-submit" type="button" class="primary" hidden>Guardar y enviar a revisión</button></div>
+      </form>
+    </main>
+  </div>
+  <script src="auth.js"></script><script src="create.js"></script>
+</body>
+</html>

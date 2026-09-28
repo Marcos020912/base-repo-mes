@@ -24,6 +24,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       reintentos/reconciliación, publicación Findable por curador y landing
       permanente; despliegue pregunta la configuración DOI sin mostrar secretos.
       Una URL base HTTPS válida es requisito antes de la reserva.
+- [x] Asistente de depósito en cuatro pasos (identidad, ficha científica,
+      contenido y vista previa), con validación por etapa, tipos de archivo,
+      guardado como borrador o envío a revisión. Antes de enviar un borrador
+      existente, el autor ve metadatos, descripción renderizada, archivos y
+      bloqueos de calidad. Si falla una carga, conserva el enlace al borrador.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
 
@@ -31,6 +36,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 
 - [ ] Validar migración/retroceso con copia de PostgreSQL y archivos en entorno de prueba.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
+- [ ] Probar el nuevo asistente en un navegador conectado a una instancia de
+      prueba: carga de Markdown/ZIP, fallos parciales, envío y nueva versión.
 - [ ] Rotar credenciales de producción; pruebas de seguridad y limitación distribuida de solicitudes.
 - [ ] Enlaces privados temporales para revisores externos y pruebas de concurrencia editorial.
 - [ ] Validar el flujo DOI real con cuenta Repository, prefijo y credenciales
@@ -40,7 +47,6 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Vocabularios controlados de licencia/disciplinas y relaciones tipadas.
 - [ ] Validación bibliotecaria de citas y estilos adicionales.
 - [ ] Facetas agregadas y estados explícitos de resultados vacíos/fallo de búsqueda.
-- [ ] Asistente de depósito guiado y vista previa integral antes de envío.
 - [ ] Definir operación de auditoría SHA-256 (I/O, calendario, alertas y bloqueo
       distribuido si hay varias instancias); gestionar archivos antiguos sin huella.
 - [ ] Paquetes de preservación/procedencia, métricas e internacionalización.
