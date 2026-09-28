@@ -17,16 +17,12 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 - Mensajes emergentes construidos como nodos de texto para evitar inyectar HTML
   procedente de respuestas de error.
 
-**Límite actual:** el catálogo sigue protegido por autenticación y consulta
-como máximo 200 recursos en la primera entrega; ese límite se abordó en el
-segundo incremento descrito a continuación.
-
-## Segundo incremento en desarrollo
+## Incrementos científicos en esta rama
 
 - `ScientificRecord` almacena estado de borrador/revisión/publicación/retirada,
   versión, DOI suministrado, licencia, acceso, institución, ORCID, ROR,
   metodología y relaciones. La versión publicada queda bloqueada para cambios;
-  una nueva versión se crea como otro recurso enlazado al anterior.
+  una nueva versión se crea como otro recurso enlazado al anterior; la ficha pública avisa cuando existe una sucesora publicada.
 - Cola de revisión para curadores y administradores con vista segura de metadatos, descripción y descarga de archivos (independiente de ACL heredadas). Publicar exige versión,
   licencia, DOI de versión y confirmación manual de que el DOI ya fue registrado
   fuera de la aplicación. **No hay integración automática con DataCite**.
@@ -64,7 +60,7 @@ Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calida
    verificación ORCID/ROR, autores e instituciones múltiples, vocabularios de
    licencia/disciplinas y relaciones tipadas procesables por máquinas.
 4. Citación: validar estilos con bibliotecarios, agregar Vancouver/Chicago/IEEE,
-   descarga completa de metadatos y advertencias de versiones antiguas.
+   descarga completa de metadatos y validación bibliográfica de citas.
 5. Descubrimiento: facetas agregadas y estados de catálogo
    vacío, cero coincidencias, falta de permisos y fallo de búsqueda.
 6. Depósito guiado: asistente con guardado de borrador, metadatos, archivos,

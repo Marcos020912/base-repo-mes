@@ -62,6 +62,13 @@ async function load() {
       const previous = document.createElement('a'); previous.href = `public-resource.html?id=${encodeURIComponent(data.previousResourceId)}`;
       previous.textContent = 'Ver versión anterior'; document.querySelector('#version-links').append(previous);
     }
+    if (data.newerVersionId) {
+      const warning = document.createElement('p'); warning.className = 'version-warning';
+      warning.textContent = 'Está consultando una versión anterior. ';
+      const newer = document.createElement('a'); newer.href = `public-resource.html?id=${encodeURIComponent(data.newerVersionId)}`;
+      newer.textContent = 'Ver la versión posterior'; warning.append(newer);
+      document.querySelector('#version-links').append(warning);
+    }
     renderMarkdown(data.markdown || ''); await loadFiles(); status.textContent = '';
     const citation = `${data.authors?.join(', ') || 'Autor no informado'} (${data.year || 's. f.'}). ${data.title} (versión ${data.version}) [${data.type || 'Recurso'}]. ${data.publisher || 'Editorial no informada'}. https://doi.org/${data.doi}`;
     document.querySelector('#citation').textContent = citation;

@@ -9,6 +9,7 @@ import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.domain.Title;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.web.impl.ScientificCatalogController;
+import edu.kit.datamanager.repo.web.impl.PublicScientificResourceController;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ public class ScientificCatalogSearchTest {
     @Autowired private ScientificCatalogController catalog;
     @Autowired private IDataResourceDao resources;
     @Autowired private ScientificRecordRepository records;
+    @Autowired private PublicScientificResourceController publicResources;
 
     @Test
     @Transactional
@@ -59,5 +61,23 @@ public class ScientificCatalogSearchTest {
         assertEquals(0, catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "csv", false, "newest", 0, 20, publicRequest).total());
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
                 catalog.list("", "", "", "", "", "", "", "", "", "", false, "arbitrary", 0, 20, publicRequest));
+    }
+
+    @Test
+    @Transactional
+    public void olderLandingLinksToPublishedSuccessor() throws Exception {
+        DataResource first = DataResource.factoryNewDataResource("catalog-version-one");
+        first.getTitles().add(Title.factoryTitle("Versión inicial", Title.TYPE.OTHER));
+        first = resources.save(first);
+        ScientificRecord firstRecord = new ScientificRecord(first.getId());
+        firstRecord.setStatus(PublicationStatus.PUBLISHED); records.saveAndFlush(firstRecord);
+        DataResource second = DataResource.factoryNewDataResource("catalog-version-two");
+        second.getTitles().add(Title.factoryTitle("Versión posterior", Title.TYPE.OTHER));
+        second = resources.save(second);
+        ScientificRecord next = new ScientificRecord(second.getId());
+        next.setPreviousResourceId(first.getId()); next.setStatus(PublicationStatus.PUBLISHED);
+        records.saveAndFlush(next);
+        var landing = (PublicScientificResourceController.PublicDetail) publicResources.detail(first.getId()).getBody();
+        assertEquals(second.getId(), landing.newerVersionId());
     }
 }

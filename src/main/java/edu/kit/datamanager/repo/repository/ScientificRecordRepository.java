@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ScientificRecordRepository extends JpaRepository<ScientificRecord, String> {
     List<ScientificRecord> findByStatusOrderBySubmittedAtAsc(PublicationStatus status);
     boolean existsByVersionDoiIgnoreCaseAndResourceIdNot(String versionDoi, String resourceId);
+    java.util.Optional<ScientificRecord> findFirstByPreviousResourceIdAndStatusOrderByPublishedAtDesc(String previousResourceId, PublicationStatus status);
 }

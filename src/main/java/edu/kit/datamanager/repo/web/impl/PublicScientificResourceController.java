@@ -62,12 +62,14 @@ public class PublicScientificResourceController {
                         return Files.size(path) <= 1024 * 1024 ? Files.readString(path) : "Descripción demasiado grande para mostrarla aquí.";
                     } catch (IOException | IllegalArgumentException ex) { return "La descripción no está disponible."; }
                 }).orElse("No hay descripción.");
+        String newerVersionId = records.findFirstByPreviousResourceIdAndStatusOrderByPublishedAtDesc(id, PublicationStatus.PUBLISHED)
+                .map(ScientificRecord::getResourceId).orElse(null);
         return ResponseEntity.ok(new PublicDetail(id, title, authors, resource.getPublisher(), resource.getPublicationYear(),
                 resource.getResourceType() == null ? null : resource.getResourceType().getTypeGeneral().name(),
                 science.getVersionLabel(), science.getVersionDoi(), science.getConceptualDoi(), science.getLicenseId(),
                 science.getInstitution(), science.getOrcid(), science.getRor(), science.getLanguage(), science.getDiscipline(),
                 science.getKeywords(), science.getRelatedPublications(), science.getMethodology(), science.getPublishedAt(), markdown,
-                science.getPreviousResourceId(), science.getAccessLevel(), science.getEmbargoUntil()));
+                science.getPreviousResourceId(), newerVersionId, science.getAccessLevel(), science.getEmbargoUntil()));
     }
 
     @GetMapping("/{id}/files")
@@ -124,7 +126,7 @@ public class PublicScientificResourceController {
                                String version, String doi, String conceptualDoi, String license, String institution,
                                String orcid, String ror, String language, String discipline, String keywords,
                                String relatedPublications, String methodology, java.time.Instant publishedAt, String markdown,
-                               String previousResourceId, String accessLevel, java.time.Instant embargoUntil) {}
+                               String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil) {}
     public record FileItem(String path, long size, String mediaType, String sha256) {}
     public record PublicFiles(List<FileItem> files, long total, int page, int pages) {}
 }
