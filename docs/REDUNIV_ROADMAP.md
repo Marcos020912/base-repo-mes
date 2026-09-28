@@ -18,28 +18,56 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   procedente de respuestas de error.
 
 **Límite actual:** el catálogo sigue protegido por autenticación y consulta
-como máximo 200 recursos; sus filtros y paginación siguen siendo locales. La
-cita no representa todavía un formato bibliográfico certificado ni una versión
-publicada inmutable. Este incremento no implementa DOI, licencias o flujo de
-publicación.
+como máximo 200 recursos en la primera entrega; ese límite se abordó en el
+segundo incremento descrito a continuación.
+
+## Segundo incremento en desarrollo
+
+- `ScientificRecord` almacena estado de borrador/revisión/publicación/retirada,
+  versión, DOI suministrado, licencia, acceso, institución, ORCID, ROR,
+  metodología y relaciones. La versión publicada queda bloqueada para cambios;
+  una nueva versión se crea como otro recurso enlazado al anterior.
+- Cola de revisión para curadores y administradores. Publicar exige versión,
+  licencia, DOI de versión y confirmación manual de que el DOI ya fue registrado
+  fuera de la aplicación. **No hay integración automática con DataCite**.
+- Catálogo autenticado con búsqueda y paginación en servidor, filtros
+  reproducibles en URL; catálogo y ficha públicos limitados a versiones
+  `PUBLISHED` de acceso `OPEN`. La retirada presenta un tombstone HTTP 410.
+- Exportaciones de cita APA preliminar, BibTeX, RIS y CSL-JSON para versiones
+  publicadas. Requieren validación bibliotecaria antes de producción.
+- Huellas SHA-256 calculadas al subir por los endpoints web y visibles en la
+  ficha. La huella es una referencia de carga, **no** una auditoría periódica
+  de integridad. Archivos anteriores o subidos por otros endpoints pueden no
+  tenerla.
+- Cambio de contraseña propia, revocación de JWT anteriores, comprobación en
+  cada solicitud de rol/estado/validación de la cuenta, contraseña de arranque
+  no predeterminada y secreto JWT único generado por el despliegue nuevo.
+
+### Migración y pruebas
+
+Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
+`docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
+probar restauración. No desplegar esta rama directamente en producción.
+Las pruebas focalizadas de flujo, búsqueda pública y SHA-256 pasan. La suite
+heredada todavía contiene expectativas de acceso anónimo que no coinciden con
+la política actual: 31 de 366 pruebas siguen fallando; no se consideran
+aprobadas para fusión.
 
 ## Próximos incrementos propuestos
 
-1. Seguridad y calidad: rotar la credencial utilizada en la revisión, retirar
-   secretos predeterminados, pruebas de autorización por recurso, rate limiting,
-   auditoría y suite automatizada.
-2. Modelo de depósito: estados de borrador, revisión, publicación, restricción
-   y retirada; versión publicada inmutable; nueva versión para corregir datos
-   publicados; políticas de eliminación y tombstone.
-3. Identidad científica: DOI conceptual y de versión, autores/ORCID,
-   organizaciones/ROR, licencia, acceso, fechas, idioma, disciplina y
-   relaciones con publicaciones y software. Validar cada dato en backend.
-4. Citación: generación por versión, estilos bibliográficos y exportaciones
-   BibTeX, RIS y CSL-JSON; descarga de metadatos y advertencia de versiones
-   antiguas.
-5. Descubrimiento: API de búsqueda paginada en servidor con facetas, orden y
-   filtros reflejados en URL. Diferenciar catálogo vacío, cero coincidencias,
-   falta de permisos y fallo de búsqueda.
+1. Seguridad y calidad: rotar efectivamente las credenciales ya utilizadas en
+   producción, rate limiting distribuido, auditoría y adecuar la suite heredada
+   sin debilitar la política de autorización.
+2. Modelo de depósito: completar embargo, acceso de revisores, revisión real
+   de archivos por curador, restricciones sobre API heredada y pruebas de
+   concurrencia/transiciones. Una versión nueva requiere cargar sus archivos.
+3. Identidad científica: integrar registro DOI con el proveedor institucional,
+   verificación ORCID/ROR, autores e instituciones múltiples, vocabularios de
+   licencia/disciplinas y relaciones tipadas procesables por máquinas.
+4. Citación: validar estilos con bibliotecarios, agregar Vancouver/Chicago/IEEE,
+   descarga completa de metadatos y advertencias de versiones antiguas.
+5. Descubrimiento: facetas agregadas, orden configurable y estados de catálogo
+   vacío, cero coincidencias, falta de permisos y fallo de búsqueda.
 6. Depósito guiado: asistente con guardado de borrador, metadatos, archivos,
    documentación, licencia, privacidad, relaciones, revisión de calidad y
    vista previa antes de enviar a curación.

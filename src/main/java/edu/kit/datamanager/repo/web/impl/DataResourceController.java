@@ -38,6 +38,8 @@ import edu.kit.datamanager.repo.domain.TabulatorLocalPagination;
 import edu.kit.datamanager.repo.domain.acl.AclEntry;
 import edu.kit.datamanager.repo.domain.ResourceOwnership;
 import edu.kit.datamanager.repo.repository.ResourceOwnershipRepository;
+import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.elastic.DataResourceRepository;
 import edu.kit.datamanager.repo.elastic.ElasticWrapper;
 import edu.kit.datamanager.repo.service.IContentInformationService;
@@ -64,6 +66,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
@@ -105,6 +108,10 @@ public class DataResourceController implements IDataResourceController {
     private Optional<DataResourceRepository> dataResourceRepository;
     @Autowired
     private ResourceOwnershipRepository ownershipRepository;
+    @Autowired
+    private ScientificRecordRepository scientificRecords;
+    @Value("${repo.catalog.shared-read:false}")
+    private boolean sharedRead;
 
     /**
      * Default constructor.
@@ -135,10 +142,11 @@ public class DataResourceController implements IDataResourceController {
 
         LOGGER.trace("Removing user-provided @Ids from resource.");
         EntityUtils.removeIds(resource);
-        resource.getAcls().add(new AclEntry(AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL, PERMISSION.READ));
+        if (sharedRead) resource.getAcls().add(new AclEntry(AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL, PERMISSION.READ));
 
         DataResource result = DataResourceUtils.createResource(repositoryProperties, resource);
         ownershipRepository.save(new ResourceOwnership(result.getId(), AuthenticationHelper.getPrincipal()));
+        scientificRecords.save(new ScientificRecord(result.getId()));
         try {
             LOGGER.trace("Creating controller link for resource identifier {}.", result.getId());
             //do some hacking in order to properly escape the resource identifier
@@ -320,6 +328,8 @@ public class DataResourceController implements IDataResourceController {
             return WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).getById(t, 1l, request, response)).toString();
         };
         DataResourceUtils.deleteResource(repositoryProperties, identifier, request, getById);
+        scientificRecords.findById(identifier).ifPresent(scientificRecords::delete);
+        ownershipRepository.findById(identifier).ifPresent(ownershipRepository::delete);
 
         unindexResource(identifier);
 

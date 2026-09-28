@@ -4,6 +4,7 @@ import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.util.ContentDataUtils;
 import edu.kit.datamanager.repo.util.DataResourceUtils;
+import edu.kit.datamanager.repo.service.ContentDigestService;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,9 +32,11 @@ public class DescriptionPackageController {
     private static final int MAX_ENTRIES = 200;
     private static final long MAX_UNCOMPRESSED_BYTES = 50L * 1024 * 1024;
     private final RepoBaseConfiguration repository;
+    private final ContentDigestService digests;
 
-    public DescriptionPackageController(RepoBaseConfiguration repository) {
+    public DescriptionPackageController(RepoBaseConfiguration repository, ContentDigestService digests) {
         this.repository = repository;
+        this.digests = digests;
     }
 
     @PostMapping(consumes = "multipart/form-data")
@@ -54,7 +57,7 @@ public class DescriptionPackageController {
                 return ResponseEntity.badRequest().body("El ZIP debe contener description.md en su carpeta raíz.");
             }
             for (Upload entry : files) {
-                ContentDataUtils.addFile(repository, resource, new BytesMultipartFile(entry.path(), entry.bytes()), entry.path(), null, true, value -> value);
+                digests.record(ContentDataUtils.addFile(repository, resource, new BytesMultipartFile(entry.path(), entry.bytes()), entry.path(), null, true, value -> value));
             }
             return ResponseEntity.status(HttpStatus.CREATED).body(new UploadResult(files.size(), "description.md"));
         } catch (IOException | IllegalArgumentException ex) {

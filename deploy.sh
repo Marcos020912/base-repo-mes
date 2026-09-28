@@ -13,6 +13,7 @@ if [[ ! -s "$CONF" ]]; then
   cp "$APP_DIR/config/application-default.properties" "$CONF"
   echo "Creado $CONF desde application-default.properties."
 fi
+chmod 600 "$CONF"
 ask(){
   local var=$1 prompt=$2 default=${3:-} value=""
   # El despliegue es interactivo. Leer desde la terminal evita que una entrada
@@ -22,6 +23,14 @@ ask(){
     exit 1
   fi
   printf -v "$var" '%s' "${value:-$default}"
+}
+ask_secret(){
+  local var=$1 prompt=$2 value=""
+  if ! read -r -s -p "$prompt: " value </dev/tty; then
+    echo "No se pudo leer '$prompt'." >&2; exit 1
+  fi
+  echo
+  printf -v "$var" '%s' "$value"
 }
 install_if_missing(){ command -v "$1" >/dev/null 2>&1 || { apt-get update; apt-get install -y "$2"; }; }
 # Obtiene el último valor de una clave YAML simple sin interpretar la clave como una expresión regular.
@@ -34,7 +43,7 @@ boolean_value(){
 }
 remove_managed_properties(){
   local tmp keys
-  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port'
+  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password'
   tmp="$(mktemp "$CONF.XXXXXX")"
   awk -v keys="$keys" '
     BEGIN { count=split(keys, items, ","); for (i=1; i<=count; i++) managed[items[i]]=1 }
@@ -179,6 +188,12 @@ if [[ "${REUSE_CONFIGURATION,,}" == "s" || "${REUSE_CONFIGURATION,,}" == "si" ||
     [[ -n "$MAIL_PASSWORD" ]] || ask MAIL_PASSWORD "Contraseña SMTP"
   fi
   echo "Reutilizando la configuración existente para $APP_DOMAIN."
+  if [[ "$(property_value 'repo.auth.bootstrap-admin-password')" == 'admin12345' ]]; then
+    echo "ADVERTENCIA: la clave inicial conocida no se cambiará en la base de datos. Use Mi cuenta para rotarla." >&2
+  fi
+  if [[ "$(property_value 'repo.auth.jwtSecret')" == 'vkfvoswsohwrxgjaxipuiyyjgubggzdaqrcuupbugxtnalhiegkppdgjgwxsmvdb' ]]; then
+    echo "ADVERTENCIA: la clave JWT es la de ejemplo. Vuelva a ejecutar y responda N a reutilizar para generar una única." >&2
+  fi
 else
   ask APP_PORT "Puerto de Base Repo" "$(property_value 'server.port')"; APP_PORT=${APP_PORT:-8090}
   ask APP_DOMAIN "Dominio público (sin http)" "$(property_value 'repo.public-domain')"; APP_DOMAIN=${APP_DOMAIN:-localhost}
@@ -203,6 +218,17 @@ else
   MAIL_STARTTLS="$(boolean_value "$MAIL_STARTTLS")"
   ask ES_URL "URL de Elasticsearch" "$(property_value 'repo.search.url')"; ES_URL=${ES_URL:-http://localhost:9200}
   ask CONFIGURE_FIREWALL "¿Configurar UFW para que solo HAProxy acceda al puerto de la app? (s/N)" "N"
+  APP_JWT_SECRET="$(property_value 'repo.auth.jwtSecret')"
+  if [[ -z "$APP_JWT_SECRET" || "$APP_JWT_SECRET" == 'vkfvoswsohwrxgjaxipuiyyjgubggzdaqrcuupbugxtnalhiegkppdgjgwxsmvdb' ]]; then
+    install_if_missing openssl openssl
+    APP_JWT_SECRET="$(openssl rand -hex 48)"
+    echo "Se generó una clave JWT única para esta instalación. Las sesiones anteriores quedarán invalidadas."
+  fi
+  BOOTSTRAP_ADMIN_PASSWORD="$(property_value 'repo.auth.bootstrap-admin-password')"
+  if [[ -z "$BOOTSTRAP_ADMIN_PASSWORD" || "$BOOTSTRAP_ADMIN_PASSWORD" == 'admin12345' ]]; then
+    ask_secret BOOTSTRAP_ADMIN_PASSWORD "Contraseña inicial única del administrador (solo para crear una cuenta nueva, mínimo 12 caracteres)"
+    [[ ${#BOOTSTRAP_ADMIN_PASSWORD} -ge 12 ]] || { echo "La contraseña inicial debe tener al menos 12 caracteres." >&2; exit 1; }
+  fi
 fi
 
 if [[ "$(boolean_value "$SETUP_POSTGRES")" == true ]]; then
@@ -234,6 +260,9 @@ spring.jpa.database-platform: org.hibernate.dialect.PostgreSQLDialect
 repo.basepath: file:$REPO_DATA_DIR/
 repo.search.url: $ES_URL
 repo.search.enabled: true
+repo.auth.enabled: true
+repo.auth.jwtSecret: $APP_JWT_SECRET
+repo.auth.bootstrap-admin-password: $BOOTSTRAP_ADMIN_PASSWORD
 repo.mail.description: $MAIL_DESCRIPTION
 spring.mail.host: $MAIL_HOST
 spring.mail.port: $MAIL_PORT
@@ -254,6 +283,7 @@ repo.deploy.private-host: $APP_PRIVATE_HOST
 repo.deploy.haproxy-port: $HAPROXY_FRONTEND_PORT
 # END Managed by deploy.sh
 EOF
+chmod 600 "$CONF"
 
 # This file is copied to the remote HAProxy administrator; it is not applied locally.
 cat > "$APP_DIR/haproxy-base-repo.cfg" <<EOF

@@ -28,3 +28,21 @@ document.querySelectorAll('.brand').forEach((brand) => {
   name.textContent = 'Datos RedUniv';
   brand.replaceChildren(logo, name);
 });
+const signedInUser = auth.user();
+document.querySelectorAll('.sidebar nav').forEach((nav) => {
+  if (!nav.querySelector('a[href="account.html"]')) {
+    const link = document.createElement('a');
+    link.href = 'account.html'; link.textContent = '◉ Mi cuenta';
+    nav.insertBefore(link, nav.querySelector('#users-nav'));
+  }
+});
+if (['CURATOR', 'ADMINISTRATOR'].includes(signedInUser?.role)) {
+  document.querySelectorAll('.sidebar nav').forEach((nav) => {
+    if (!nav.querySelector('a[href="reviews.html"]')) {
+      const link = document.createElement('a');
+      link.href = 'reviews.html';
+      link.textContent = '✓ Curación';
+      nav.insertBefore(link, nav.querySelector('#users-nav'));
+    }
+  });
+}

@@ -5,6 +5,7 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.util.ContentDataUtils;
 import edu.kit.datamanager.repo.util.DataResourceUtils;
+import edu.kit.datamanager.repo.service.ContentDigestService;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -37,7 +38,8 @@ public class ResourceAttachmentController {
             ResourceType.TYPE_GENERAL.AUDIOVISUAL, Set.of("mp4", "webm", "mov", "avi", "mkv", "mpeg", "mpg", "m4v"),
             ResourceType.TYPE_GENERAL.DATASET, Set.of("csv", "tsv", "tab", "xls", "xlsx", "ods", "parquet", "sav", "dta", "json", "xml"));
     private final RepoBaseConfiguration repository;
-    public ResourceAttachmentController(RepoBaseConfiguration repository) { this.repository = repository; }
+    private final ContentDigestService digests;
+    public ResourceAttachmentController(RepoBaseConfiguration repository, ContentDigestService digests) { this.repository = repository; this.digests = digests; }
 
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<?> upload(@PathVariable String id, @RequestParam String path, @RequestPart("file") MultipartFile file) {
@@ -54,12 +56,12 @@ public class ResourceAttachmentController {
                 }
                 for (Entry entry : entries) {
                     String target = entry.path().equals("description/description.md") ? "description.md" : entry.path().startsWith("description/") ? entry.path().substring("description/".length()) : entry.path();
-                    ContentDataUtils.addFile(repository, resource, new BytesFile(target, entry.bytes()), target, null, true, value -> value);
+                    digests.record(ContentDataUtils.addFile(repository, resource, new BytesFile(target, entry.bytes()), target, null, true, value -> value));
                 }
                 return ResponseEntity.noContent().build();
             }
             validate(allowed, cleanPath);
-            ContentDataUtils.addFile(repository, resource, file, cleanPath, null, true, value -> value);
+            digests.record(ContentDataUtils.addFile(repository, resource, file, cleanPath, null, true, value -> value));
             return ResponseEntity.noContent().build();
         } catch (IOException ex) { return ResponseEntity.badRequest().body(ex.getMessage()); }
     }

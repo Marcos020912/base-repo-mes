@@ -11,6 +11,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,9 +47,26 @@ public class AuthController {
     @PostMapping("/verify") public ResponseEntity<?> verify(@Valid @RequestBody VerificationRequest request) { LocalUser user=users.findByEmailIgnoreCase(request.email().trim()).orElse(null); if(user==null || user.getVerificationCode()==null || !user.getVerificationCode().equals(request.code()) || user.getVerificationExpiresAt().isBefore(java.time.Instant.now())) return ResponseEntity.badRequest().body(Map.of("message","El código no es válido o venció.")); user.setVerified(true);user.setVerificationCode(null);user.setVerificationExpiresAt(null);users.save(user);return ResponseEntity.ok(Map.of("message","Correo verificado. Ya puede iniciar sesión.")); }
     @PostMapping("/resend-verification") public ResponseEntity<?> resend(@Valid @RequestBody EmailRequest request) { LocalUser user=users.findByEmailIgnoreCase(request.email().trim()).orElse(null); if(user==null) return ResponseEntity.ok(Map.of("message","Si el correo existe, recibirá un código.")); if(!user.isVerified()){verification.createAndSend(user);users.save(user);}return ResponseEntity.ok(Map.of("message","Si el correo existe, recibirá un código.")); }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody PasswordChangeRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        LocalUser user = users.findByUsernameIgnoreCase(username).orElse(null);
+        if (user == null || !passwords.matches(request.currentPassword(), user.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "La contraseña actual no es correcta."));
+        }
+        if (request.newPassword().length() < 12 || request.newPassword().equals(request.currentPassword())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "La nueva contraseña debe tener al menos 12 caracteres y ser diferente de la actual."));
+        }
+        user.setPasswordHash(passwords.encode(request.newPassword()));
+        user.setPasswordChangedAt(java.time.Instant.now());
+        users.save(user);
+        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada. Inicie sesión de nuevo."));
+    }
+
     public record LoginRequest(@NotBlank String username, @NotBlank String password) {}
     public record RegistrationRequest(@NotBlank String username, @Email @NotBlank String email, @NotBlank String password) {}
     public record VerificationRequest(@Email @NotBlank String email, @NotBlank String code) {}
     public record EmailRequest(@Email @NotBlank String email) {}
+    public record PasswordChangeRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {}
     public record LoginResponse(String token, UserController.UserView user) {}
 }

@@ -29,6 +29,7 @@ public class LocalUser {
     @Column(length = 128)
     private String verificationCode;
     private Instant verificationExpiresAt;
+    private Instant passwordChangedAt;
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

@@ -17,11 +17,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class LocalJwtService {
     private final byte[] secret;
+    private final String legacySecret;
     private final long validityMinutes;
 
     public LocalJwtService(@Value("${repo.auth.jwtSecret}") String secret,
             @Value("${repo.auth.token-validity-minutes:480}") long validityMinutes) {
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
+        this.legacySecret = secret;
         this.validityMinutes = validityMinutes;
         if (this.secret.length < 32) throw new IllegalArgumentException("repo.auth.jwtSecret must contain at least 32 bytes");
     }
@@ -40,7 +42,12 @@ public class LocalJwtService {
 
     public JWTClaimsSet verify(String token) throws ParseException, com.nimbusds.jose.JOSEException {
         SignedJWT jwt = SignedJWT.parse(token);
-        if (!jwt.verify(new MACVerifier(secret)) || jwt.getJWTClaimsSet().getExpirationTime().before(new Date())) throw new com.nimbusds.jose.JOSEException("Invalid or expired token");
+        Date expires = jwt.getJWTClaimsSet().getExpirationTime();
+        if (!jwt.verify(new MACVerifier(secret)) || expires == null || !expires.after(new Date())) throw new com.nimbusds.jose.JOSEException("Invalid or expired token");
         return jwt.getJWTClaimsSet();
+    }
+
+    public java.util.Map<String, Object> verifyLegacy(String token) {
+        return new java.util.HashMap<>(io.jsonwebtoken.Jwts.parser().setSigningKey(legacySecret).build().parseSignedClaims(token).getPayload());
     }
 }

@@ -93,8 +93,10 @@ public class WebSecurityConfig {
         HttpSecurity httpSecurity = http.authorizeHttpRequests(
                 authorize -> authorize.
                         requestMatchers(HttpMethod.OPTIONS).permitAll().
-                        requestMatchers("/", "/index.html", "/resource.html", "/users.html", "/my-datasets.html", "/login.html", "/register.html", "/verify.html", "/app.js", "/resource.js", "/users.js", "/my-datasets.js", "/auth.js", "/login.js", "/register.js", "/verify.js", "/styles.css", "/resource.css", "/login.css", "/logo*").permitAll().
+                        requestMatchers("/", "/index.html", "/resource.html", "/users.html", "/my-datasets.html", "/reviews.html", "/account.html", "/public.html", "/public-resource.html", "/login.html", "/register.html", "/verify.html", "/app.js", "/resource.js", "/users.js", "/my-datasets.js", "/reviews.js", "/account.js", "/public.js", "/public-resource.js", "/auth.js", "/login.js", "/register.js", "/verify.js", "/styles.css", "/resource.css", "/login.css", "/logo*").permitAll().
                         requestMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll().
+                        requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll().
+                        requestMatchers(HttpMethod.GET, "/api/v1/scientific/*/citation").permitAll().
                         requestMatchers(EndpointRequest.to(
                                 InfoEndpoint.class,
                                 HealthEndpoint.class
