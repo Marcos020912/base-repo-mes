@@ -4,6 +4,7 @@ document.querySelector('#current-user').textContent = user?.username || '';
 if (user?.role === 'ADMINISTRATOR') document.querySelector('#users-nav').hidden = false;
 document.querySelectorAll('[data-logout]').forEach(button => button.addEventListener('click', auth.logout));
 const list = document.querySelector('#reviews-list');
+const preservation = document.querySelector('#preservation-summary');
 async function request(path, options = {}) {
   const response = await fetch(path, { ...options, headers: auth.headers({ Accept: 'application/json', ...options.headers }) });
   const data = await response.json().catch(() => ({}));
@@ -58,7 +59,25 @@ async function preview(id, container, page = 0) {
       const label = document.createElement('span'); label.textContent = `Página ${page + 1} de ${listing.pages}`;
       pagination.append(previous, label, next);
     }
-    container.append(heading, byline, validation, descriptionHeading, description, filesHeading, files, pagination);
+    const packageButton = action('Descargar paquete de preservación', 'secondary', async () => {
+      try {
+        const response = await fetch(`/api/v1/scientific/preservation/${encodeURIComponent(id)}/package`, { headers: auth.headers() });
+        if (!response.ok) throw new Error('No se pudo preparar el paquete; comprueba que todos los archivos estén presentes.');
+        const url = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a'); link.href = url; link.download = `preservation-${id}.zip`; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (error) { toast.error(error.message); }
+    });
+    const historyButton = action('Ver procedencia de archivos', 'secondary', async () => {
+      try {
+        const history = await request(`/api/v1/scientific/${encodeURIComponent(id)}/file-history?size=20`);
+        const lines = (history.content || []).map(event => `${new Date(event.occurredAt).toLocaleString()} · ${event.actor} · ${event.action} · ${event.relativePath}`);
+        historyView.textContent = lines.length ? lines.join('\n') : 'No hay eventos de carga o borrado registrados para este depósito.';
+        historyView.hidden = false;
+      } catch (error) { toast.error(error.message); }
+    });
+    const historyView = document.createElement('pre'); historyView.className = 'review-description'; historyView.hidden = true;
+    container.append(heading, byline, validation, descriptionHeading, description, filesHeading, files, pagination, packageButton, historyButton, historyView);
   } catch (error) { container.textContent = ''; toast.error(error.message); }
 }
 async function load() {
@@ -91,5 +110,21 @@ async function load() {
     }
   } catch (error) { list.textContent = ''; toast.error(error.message); }
 }
+async function loadPreservation() {
+  try {
+    const metrics = await request('/api/v1/scientific/preservation/metrics');
+    const latest = metrics.latestAudit?.id ? `${metrics.latestAudit.status}: ${metrics.latestAudit.checked} comprobados, ${metrics.latestAudit.mismatched} alterados, ${metrics.latestAudit.missing} ausentes, ${metrics.latestAudit.noBaseline} sin huella inicial.` : 'Todavía no hay auditorías.';
+    preservation.textContent = `${metrics.published} publicados · ${metrics.inReview} en revisión · ${metrics.files} archivos · ${metrics.filesChecked} con resultado de verificación · ${metrics.mismatched} alterados · ${metrics.missing} ausentes. Última auditoría: ${latest}`;
+  } catch (error) { preservation.textContent = 'No se pudieron consultar las métricas de preservación.'; }
+}
+document.querySelector('#start-audit').addEventListener('click', async () => {
+  if (!confirm('Esta operación leerá todos los archivos almacenados. ¿Iniciar auditoría?')) return;
+  try {
+    await request('/api/v1/scientific/preservation/audits', { method: 'POST' });
+    toast.success('Auditoría iniciada. Consulta el estado más tarde.');
+    await loadPreservation();
+  } catch (error) { toast.error(error.message); }
+});
 document.querySelector('#refresh-reviews').addEventListener('click', load);
 load();
+loadPreservation();

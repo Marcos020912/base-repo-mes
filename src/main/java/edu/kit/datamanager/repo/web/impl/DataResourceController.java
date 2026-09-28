@@ -37,7 +37,10 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.TabulatorLocalPagination;
 import edu.kit.datamanager.repo.domain.acl.AclEntry;
 import edu.kit.datamanager.repo.domain.ResourceOwnership;
+import edu.kit.datamanager.repo.domain.FileProvenanceEvent;
 import edu.kit.datamanager.repo.repository.ResourceOwnershipRepository;
+import edu.kit.datamanager.repo.repository.FileProvenanceEventRepository;
+import edu.kit.datamanager.repo.repository.FileFixityStateRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.elastic.DataResourceRepository;
@@ -110,6 +113,10 @@ public class DataResourceController implements IDataResourceController {
     private ResourceOwnershipRepository ownershipRepository;
     @Autowired
     private ScientificRecordRepository scientificRecords;
+    @Autowired(required = false)
+    private FileProvenanceEventRepository fileProvenance;
+    @Autowired(required = false)
+    private FileFixityStateRepository fileFixityStates;
     @Value("${repo.catalog.shared-read:false}")
     private boolean sharedRead;
 
@@ -537,10 +544,28 @@ public class DataResourceController implements IDataResourceController {
             final HttpServletResponse response) {
         String path = decodeContentPath(request);
         String eTag = ControllerUtils.getEtagFromHeader(request);
+        DataResource resource = null;
+        ContentInformation prior = null;
+        if (contentInformationDao != null && fileProvenance != null) {
+            try {
+                resource = DataResourceUtils.getResourceByIdentifierOrRedirect(repositoryProperties, identifier, null, value -> value);
+                prior = contentInformationDao.findByParentResourceAndRelativePath(resource, path).orElse(null);
+            } catch (RuntimeException ignored) {
+                // Preserve the legacy deletion endpoint's own error semantics.
+            }
+        }
         Function<String, String> deleteContent = (t) -> {
             return WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).deleteContent(t, request, response)).toString();
         };
         ContentDataUtils.deleteFile(repositoryProperties, identifier, path, eTag, deleteContent);
+
+        if (prior != null && fileProvenance != null) {
+            String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() == null
+                    ? "SYSTEM" : org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+            fileProvenance.save(new FileProvenanceEvent(resource.getId(), prior.getId(), path, "DELETED", actor,
+                    prior.getMetadata() == null ? null : prior.getMetadata().get("sha256")));
+            if (fileFixityStates != null && fileFixityStates.existsById(prior.getId())) fileFixityStates.deleteById(prior.getId());
+        }
 
         indexResource(identifier, true);
 

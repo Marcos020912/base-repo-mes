@@ -2,6 +2,8 @@ package edu.kit.datamanager.repo.service;
 
 import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.domain.ContentInformation;
+import edu.kit.datamanager.repo.domain.FileProvenanceEvent;
+import edu.kit.datamanager.repo.repository.FileProvenanceEventRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -11,13 +13,18 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 /** Captures a SHA-256 baseline after each upload without buffering large files. */
 @Service
 public class ContentDigestService {
     private final IContentInformationDao contents;
-    public ContentDigestService(IContentInformationDao contents) { this.contents = contents; }
+    private final FileProvenanceEventRepository provenance;
+    public ContentDigestService(IContentInformationDao contents, FileProvenanceEventRepository provenance) {
+        this.contents = contents;
+        this.provenance = provenance;
+    }
 
     public void record(ContentInformation info) throws IOException {
         if (info.getContentUri() == null || !info.getContentUri().startsWith("file:")) return;
@@ -26,6 +33,10 @@ public class ContentDigestService {
         metadata.put("sha256", digest);
         info.setMetadata(metadata);
         contents.save(info);
+        String actor = SecurityContextHolder.getContext().getAuthentication() == null ? "SYSTEM" :
+                SecurityContextHolder.getContext().getAuthentication().getName();
+        provenance.save(new FileProvenanceEvent(info.getParentResource().getId(), info.getId(),
+                info.getRelativePath(), "STORED", actor, digest));
     }
 
     public static String calculate(Path file) throws IOException {

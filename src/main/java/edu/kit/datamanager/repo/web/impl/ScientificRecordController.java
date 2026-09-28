@@ -8,6 +8,7 @@ import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordEventRepository;
 import edu.kit.datamanager.repo.domain.ScientificRecordEvent;
 import edu.kit.datamanager.repo.service.ScientificQualityService;
+import edu.kit.datamanager.repo.service.ScientificVocabularyService;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,6 +43,8 @@ public class ScientificRecordController {
     private final IDataResourceDao resources;
     private final ScientificQualityService quality;
     private final ScientificRecordEventRepository events;
+    @Autowired(required = false)
+    private ScientificVocabularyService vocabularies;
     @Value("${repo.datacite.enabled:false}")
     private boolean automatedDoiEnabled;
 
@@ -84,7 +88,10 @@ public class ScientificRecordController {
             record.setVersionDoi(validDoi(input.versionDoi()));
             record.setConceptualDoi(validDoi(input.conceptualDoi()));
         }
-        record.setLicenseId(clean(input.licenseId(), 100));
+        String license = clean(input.licenseId(), 100);
+        if (vocabularies != null && !vocabularies.validLicense(license))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La licencia no pertenece al vocabulario configurado.");
+        record.setLicenseId(license);
         String access = clean(input.accessLevel(), 30);
         if (access != null && !List.of("OPEN", "RESTRICTED", "EMBARGOED").contains(access)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nivel de acceso no válido.");
         record.setAccessLevel(access == null ? "OPEN" : access);
@@ -94,7 +101,10 @@ public class ScientificRecordController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indique la fecha de fin del embargo.");
         }
         record.setLanguage(clean(input.language(), 16));
-        record.setDiscipline(clean(input.discipline(), 255));
+        String discipline = clean(input.discipline(), 255);
+        if (vocabularies != null && !vocabularies.validDiscipline(discipline))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La disciplina no pertenece al vocabulario configurado.");
+        record.setDiscipline(discipline);
         record.setKeywords(clean(input.keywords(), 2000));
         String orcid = clean(input.orcid(), 255);
         if (orcid != null && !ORCID.matcher(orcid).matches()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ORCID no válido.");

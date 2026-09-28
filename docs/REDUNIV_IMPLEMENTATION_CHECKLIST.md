@@ -31,6 +31,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       bloqueos de calidad. Si falla una carga, conserva el enlace al borrador.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
+- [x] Ítem 7 (curación/preservación): auditorías SHA-256 manuales y programadas
+      con bloqueo distribuido PostgreSQL, histórico de ejecuciones y métricas;
+      eventos de procedencia de altas/bajas de archivos web y exportación ZIP
+      curatorial con metadatos, archivos, historial y manifiesto de huellas
+      iniciales. Sugerencias configurables de licencia y disciplina en formularios.
 
 ## Pendiente o sujeto a validación
 
@@ -44,12 +49,16 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       de DataCite Test/Production; probar resolución pública y conciliar DOI
       manuales existentes antes de activar el modo automático en producción.
 - [ ] Verificar ORCID/ROR y admitir múltiples autores e instituciones.
-- [ ] Vocabularios controlados de licencia/disciplinas y relaciones tipadas.
+- [ ] Aprobar vocabularios institucionales de licencia/disciplinas y activar
+      `repo.scientific.strict-vocabulary=true` después de migrar valores
+      heredados; las listas actuales no son un catálogo institucional aprobado.
+      Relaciones tipadas pendientes.
 - [ ] Validación bibliotecaria de citas y estilos adicionales.
 - [ ] Facetas agregadas y estados explícitos de resultados vacíos/fallo de búsqueda.
-- [ ] Definir operación de auditoría SHA-256 (I/O, calendario, alertas y bloqueo
-      distribuido si hay varias instancias); gestionar archivos antiguos sin huella.
-- [ ] Paquetes de preservación/procedencia, métricas e internacionalización.
+- [ ] Dimensionar I/O y pool JDBC para la auditoría, configurar alerta externa
+      por `MISMATCH`/`MISSING_FILE` y política de archivos anteriores sin huella.
+- [ ] Validar paquetes de preservación y procedencia en almacenamiento externo,
+      firmar manifiestos si la institución lo requiere e internacionalizar la UI.
 
 ## Operación de la auditoría SHA-256
 
@@ -58,8 +67,23 @@ rol CURATOR o ADMINISTRATOR. Compara el archivo actual con la huella registrada
 al subirlo, sin modificar esa referencia. Posibles estados: `MATCH`, `MISMATCH`,
 `MISSING_FILE`, `NO_BASELINE`, `UNSUPPORTED_URI`, `READ_ERROR`.
 
-Después de aplicar la migración, la comprobación semanal puede activarse en una
-instancia con `repo.fixity.enabled=true`; su cron por defecto es
-`0 0 3 * * SUN` y puede cambiarse con `repo.fixity.cron`. Antes de activarla,
-medir el impacto de lectura de todos los archivos y definir alertas. No habilitar
-simultáneamente en múltiples instancias sin un bloqueo distribuido.
+Después de aplicar la migración, la comprobación semanal puede activarse con
+`repo.fixity.enabled=true`; su cron por defecto es `0 0 3 * * SUN` y puede
+cambiarse con `repo.fixity.cron`. El servicio usa `pg_try_advisory_lock(6413,7)`:
+solo una instancia ejecuta el barrido a la vez. También puede iniciarse en
+Curación o por `POST /api/v1/scientific/preservation/audits`. Historial:
+`GET /api/v1/scientific/preservation/audits`; métricas:
+`GET /api/v1/scientific/preservation/metrics`. El servicio mantiene una conexión
+JDBC durante todo el barrido; dimensionar pool e I/O antes de habilitarlo.
+`NO_BASELINE` identifica archivos anteriores sin huella; no se adopta la huella
+actual automáticamente porque ocultaría una alteración previa. El paquete
+`GET /api/v1/scientific/preservation/{id}/package` está reservado a curadores;
+su manifiesto contiene huellas **al ingreso**, no certifica el estado actual.
+Los eventos `STORED`/`DELETED` se registran en las rutas web integradas, no en
+todas las cargas realizadas por clientes legados o directamente en el disco.
+Las sugerencias del depósito usan `repo.scientific.licenses` y
+`repo.scientific.disciplines` (valores separados por comas). Actualmente
+permiten texto libre para no rechazar depósitos previos. La opción
+`repo.scientific.strict-vocabulary=true` hace que el backend rechace nuevos
+valores fuera de esas listas; definir y aprobar la taxonomía y migrar datos
+heredados antes de activarla.
