@@ -524,7 +524,7 @@ public class DataResourceControllerTestReadOnly{
     DataResource resource = new DataResource();
     ObjectMapper mapper = createObjectMapper();
 
-    this.mockMvc.perform(post("/api/v1/dataresources/").contentType("application/json").content(mapper.writeValueAsString(resource))).andExpect(status().isServiceUnavailable());
+    this.mockMvc.perform(post("/api/v1/dataresources/").contentType("application/json").content(mapper.writeValueAsString(resource))).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -652,12 +652,12 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testDeleteResourceAnonymousWithoutETag() throws Exception{
     this.mockMvc.perform(delete("/api/v1/dataresources/" + sampleResource.getId())
-            .contentType("application/json")).andExpect(status().isPreconditionRequired());
+            .contentType("application/json")).andExpect(status().isUnauthorized());
   }
   @Test
   public void testDeleteResourceAnonymous() throws Exception{
     this.mockMvc.perform(delete("/api/v1/dataresources/" + sampleResource.getId())
-            .header("If-Match", "anyEtag").contentType("application/json")).andExpect(status().isServiceUnavailable());
+            .header("If-Match", "anyEtag").contentType("application/json")).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -728,14 +728,14 @@ public class DataResourceControllerTestReadOnly{
    */
   public void testPatchResourceAnonymousWithoutEtag() throws Exception{
     String patch = "[{\"op\": \"replace\",\"path\": \"/publicationYear\",\"value\": \"1900\"}]";
-    this.mockMvc.perform(patch("/api/v1/dataresources/" + sampleResource.getId()).contentType("application/json-patch+json").content(patch)).andDo(print()).andExpect(status().isPreconditionRequired());
+    this.mockMvc.perform(patch("/api/v1/dataresources/" + sampleResource.getId()).contentType("application/json-patch+json").content(patch)).andDo(print()).andExpect(status().isUnauthorized());
   }
   @Test
   public void testPatchResourceAnonymousWithEtag() throws Exception{
     String patch = "[{\"op\": \"replace\",\"path\": \"/publicationYear\",\"value\": \"1900\"}]";
     String etag = this.mockMvc.perform(get("/api/v1/dataresources/" + sampleResource.getId()).header(HttpHeaders.AUTHORIZATION,
             "Bearer " + otherUserToken).header(HttpHeaders.ACCEPT, "application/json")).andDo(print()).andExpect(status().isOk()).andReturn().getResponse().getHeader("ETag");
-    this.mockMvc.perform(patch("/api/v1/dataresources/" + sampleResource.getId()).header("If-Match", etag).contentType("application/json-patch+json").content(patch)).andDo(print()).andExpect(status().isServiceUnavailable());
+    this.mockMvc.perform(patch("/api/v1/dataresources/" + sampleResource.getId()).header("If-Match", etag).contentType("application/json-patch+json").content(patch)).andDo(print()).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -899,7 +899,7 @@ public class DataResourceControllerTestReadOnly{
     DataResource resource = mapper.readValue(resourceString, DataResource.class);
 
     resource.setPublisher("Anonymous");
-    this.mockMvc.perform(put("/api/v1/dataresources/" + sampleResource.getId()).header("If-Match", etag).contentType("application/json").content(mapper.writeValueAsString(resource))).andDo(print()).andExpect(status().isServiceUnavailable());
+    this.mockMvc.perform(put("/api/v1/dataresources/" + sampleResource.getId()).header("If-Match", etag).contentType("application/json").content(mapper.writeValueAsString(resource))).andDo(print()).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -961,7 +961,7 @@ public class DataResourceControllerTestReadOnly{
   public void testUploadFileAnonymous() throws Exception{
     Path temp = Files.createTempFile("testUploadFileAnonymous", "test");
     MockMultipartFile fstmp = new MockMultipartFile("file", "bibtex.txt", "multipart/form-data", Files.newInputStream(temp));
-    this.mockMvc.perform(multipart("/api/v1/dataresources/" + sampleResource.getId() + "/data/bibtex.txt").file(fstmp)).andDo(print()).andExpect(status().isForbidden());
+    this.mockMvc.perform(multipart("/api/v1/dataresources/" + sampleResource.getId() + "/data/bibtex.txt").file(fstmp)).andDo(print()).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -1481,7 +1481,7 @@ public class DataResourceControllerTestReadOnly{
 
     String patch = "[{\"op\": \"replace\",\"path\": \"/size\",\"value\": \"4711\"}]";
 
-    this.mockMvc.perform(patch("/api/v1/dataresources/" + sampleResource.getId() + "/data/validFile").header("If-Match", etag).contentType("application/json-patch+json").content(patch)).andDo(print()).andExpect(status().isServiceUnavailable());
+    this.mockMvc.perform(patch("/api/v1/dataresources/" + sampleResource.getId() + "/data/validFile").header("If-Match", etag).contentType("application/json-patch+json").content(patch)).andDo(print()).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -1546,7 +1546,7 @@ public class DataResourceControllerTestReadOnly{
     this.mockMvc.perform(get("/api/v1/dataresources/" + sampleResource.getId() + "/data/validFile").header(HttpHeaders.AUTHORIZATION,
             "Bearer " + adminToken).header(HttpHeaders.ACCEPT, "application/vnd.datamanager.content-information+json")).andDo(print()).andExpect(status().isOk());
 
-    this.mockMvc.perform(delete("/api/v1/dataresources/" + sampleResource.getId() + "/data/validFile").header("If-Match", etag)).andDo(print()).andExpect(status().isServiceUnavailable());
+    this.mockMvc.perform(delete("/api/v1/dataresources/" + sampleResource.getId() + "/data/validFile").header("If-Match", etag)).andDo(print()).andExpect(status().isUnauthorized());
 
     this.mockMvc.perform(get("/api/v1/dataresources/" + sampleResource.getId() + "/data/validFile").header(HttpHeaders.AUTHORIZATION,
             "Bearer " + adminToken).header(HttpHeaders.ACCEPT, "application/vnd.datamanager.content-information+json")).andDo(print()).andExpect(status().isOk());

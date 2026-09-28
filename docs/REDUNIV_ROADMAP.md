@@ -51,16 +51,12 @@ segundo incremento descrito a continuación.
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública y SHA-256 pasan. La suite
-heredada todavía contiene expectativas de acceso anónimo que no coinciden con
-la política actual: 31 de 366 pruebas siguen fallando; no se consideran
-aprobadas para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad y SHA-256 pasan. La suite completa pasa: 373 pruebas, 0 fallos (28 de septiembre de 2026). Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
 
 ## Próximos incrementos propuestos
 
 1. Seguridad y calidad: rotar efectivamente las credenciales ya utilizadas en
-   producción, rate limiting distribuido, auditoría y adecuar la suite heredada
-   sin debilitar la política de autorización.
+   producción, rate limiting distribuido, auditoría y pruebas de seguridad funcionales. La suite heredada ya se adecuó al comportamiento 401 sin debilitar la autorización.
 2. Modelo de depósito: enlaces privados temporales para revisores externos, pruebas de
    concurrencia/transiciones y evaluación curatorial de formatos/datos sensibles. Una versión nueva requiere cargar sus archivos.
 3. Identidad científica: integrar registro DOI con el proveedor institucional,

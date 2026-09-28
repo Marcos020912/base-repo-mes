@@ -754,7 +754,7 @@ public class DataResourceControllerTest {
     @Test
     public void testDeleteResourceAnonymousWithoutETag() throws Exception {
         this.mockMvc.perform(delete("/api/v1/dataresources/" + sampleResource.getId())
-                .contentType("application/json")).andExpect(status().isPreconditionRequired());
+                .contentType("application/json")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -832,7 +832,7 @@ public class DataResourceControllerTest {
     @Test
     public void testPatchResourceAnonymousWithoutEtag() throws Exception {
         String patch = "[{\"op\": \"replace\",\"path\": \"/publicationYear\",\"value\": \"1900\"}]";
-        this.mockMvc.perform(patch("/api/v1/dataresources/" + sampleResource.getId()).contentType("application/json-patch+json").content(patch)).andDo(print()).andExpect(status().isPreconditionRequired());
+        this.mockMvc.perform(patch("/api/v1/dataresources/" + sampleResource.getId()).contentType("application/json-patch+json").content(patch)).andDo(print()).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -1093,7 +1093,7 @@ public class DataResourceControllerTest {
     public void testUploadFileAnonymous() throws Exception {
         Path temp = Files.createTempFile("testUploadFileAnonymous", "test");
         MockMultipartFile fstmp = new MockMultipartFile("file", "bibtex.txt", "multipart/form-data", Files.newInputStream(temp));
-        this.mockMvc.perform(multipart("/api/v1/dataresources/" + sampleResource.getId() + "/data/bibtex.txt").file(fstmp)).andDo(print()).andExpect(status().isForbidden());
+        this.mockMvc.perform(multipart("/api/v1/dataresources/" + sampleResource.getId() + "/data/bibtex.txt").file(fstmp)).andDo(print()).andExpect(status().isUnauthorized());
     }
 
     @Test

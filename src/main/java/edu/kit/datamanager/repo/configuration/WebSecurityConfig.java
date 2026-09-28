@@ -111,6 +111,11 @@ public class WebSecurityConfig {
                 cors(cors -> cors.configurationSource(corsConfigurationSource())).
                 sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        httpSecurity.exceptionHandling(exceptions -> exceptions.authenticationEntryPoint((request, response, failure) -> {
+            response.setStatus(401);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"message\":\"Debe iniciar sesión para continuar.\"}");
+        }));
         
         logger.info("CSRF disabled!");
         httpSecurity = httpSecurity.csrf(csrf -> csrf.disable());
