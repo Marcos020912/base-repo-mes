@@ -11,7 +11,9 @@ const toast = {
     let container = document.querySelector('#toast-container');
     if (!container) { container = document.createElement('div'); container.id = 'toast-container'; container.setAttribute('aria-live', 'polite'); document.body.append(container); }
     const item = document.createElement('div'); item.className = `toast ${kind}`;
-    item.innerHTML = `<span class="toast-icon">${kind === 'success' ? '✓' : '×'}</span><span>${String(text)}</span>`;
+    const icon = document.createElement('span'); icon.className = 'toast-icon'; icon.textContent = kind === 'success' ? '✓' : '×';
+    const label = document.createElement('span'); label.textContent = String(text);
+    item.append(icon, label);
     container.append(item); setTimeout(() => item.remove(), 5500);
   },
   success: (text) => toast.show('success', text),
@@ -19,5 +21,10 @@ const toast = {
 };
 
 document.querySelectorAll('.brand').forEach((brand) => {
-  brand.innerHTML = '<img src="logo%20mes.png" alt="50 MES · Ministerio de Educación Superior">';
+  const logo = document.createElement('img');
+  logo.src = 'logo%20mes.png';
+  logo.alt = '50 MES · Ministerio de Educación Superior';
+  const name = document.createElement('span');
+  name.textContent = 'Datos RedUniv';
+  brand.replaceChildren(logo, name);
 });
