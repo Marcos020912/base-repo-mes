@@ -30,8 +30,9 @@ segundo incremento descrito a continuación.
 - Cola de revisión para curadores y administradores con vista segura de metadatos, descripción y descarga de archivos (independiente de ACL heredadas). Publicar exige versión,
   licencia, DOI de versión y confirmación manual de que el DOI ya fue registrado
   fuera de la aplicación. **No hay integración automática con DataCite**.
-- Catálogo autenticado con búsqueda y paginación en servidor, filtros
-  reproducibles en URL; catálogo y ficha públicos limitados a versiones
+- Catálogo autenticado y público con búsqueda y paginación en servidor, orden
+  por actualización/año y filtros reproducibles en URL (autor, tipo, año,
+  licencia, disciplina, institución, idioma, acceso, formato y DOI); catálogo y ficha públicos limitados a versiones
   `PUBLISHED`. Los metadatos de versiones restringidas o embargadas son
   visibles, pero la descarga pública de archivos solo se permite para acceso
   abierto o al expirar el embargo. La retirada presenta un tombstone HTTP 410.
@@ -64,7 +65,7 @@ Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calida
    licencia/disciplinas y relaciones tipadas procesables por máquinas.
 4. Citación: validar estilos con bibliotecarios, agregar Vancouver/Chicago/IEEE,
    descarga completa de metadatos y advertencias de versiones antiguas.
-5. Descubrimiento: facetas agregadas, orden configurable y estados de catálogo
+5. Descubrimiento: facetas agregadas y estados de catálogo
    vacío, cero coincidencias, falta de permisos y fallo de búsqueda.
 6. Depósito guiado: asistente con guardado de borrador, metadatos, archivos,
    documentación, licencia, privacidad, relaciones, revisión de calidad y

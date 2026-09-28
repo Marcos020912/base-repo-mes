@@ -2,6 +2,7 @@ package edu.kit.datamanager.repo.web.impl;
 
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.DataResource;
+import edu.kit.datamanager.repo.domain.ContentInformation;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
@@ -43,12 +44,20 @@ public class ScientificCatalogController {
                             @RequestParam(defaultValue = "") String year,
                             @RequestParam(defaultValue = "") String license,
                             @RequestParam(defaultValue = "") String discipline,
+                            @RequestParam(defaultValue = "") String institution,
+                            @RequestParam(defaultValue = "") String language,
+                            @RequestParam(defaultValue = "") String access,
+                            @RequestParam(defaultValue = "") String format,
                             @RequestParam(defaultValue = "false") boolean hasDoi,
+                            @RequestParam(defaultValue = "newest") String sort,
                             @RequestParam(defaultValue = "0") int page,
                             @RequestParam(defaultValue = "20") int size,
                             HttpServletRequest request) {
         final boolean publicOnly = request.getRequestURI().startsWith("/api/v1/public/");
-        if (page < 0 || page > 100000 || size < 1 || size > 100 || q.length() > 200 || author.length() > 200) {
+        if (page < 0 || page > 100000 || size < 1 || size > 100 || q.length() > 200 || author.length() > 200 ||
+                institution.length() > 200 || language.length() > 16 || !format.matches("[a-zA-Z0-9]{0,16}") ||
+                (!access.isBlank() && !List.of("OPEN", "RESTRICTED", "EMBARGOED").contains(access)) ||
+                !List.of("newest", "oldest", "year_asc", "year_desc").contains(sort)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parámetros de búsqueda no válidos.");
         }
         ResourceType.TYPE_GENERAL selectedType = null;
@@ -79,18 +88,29 @@ public class ScientificCatalogController {
             }
             if (category != null) predicates.add(cb.equal(root.join("resourceType", JoinType.INNER).get("typeGeneral"), category));
             if (!year.isBlank()) predicates.add(cb.equal(root.get("publicationYear"), year.trim()));
-            if (!license.isBlank() || !discipline.isBlank() || hasDoi || publicOnly) {
+            if (!license.isBlank() || !discipline.isBlank() || !institution.isBlank() || !language.isBlank() || !access.isBlank() || hasDoi || publicOnly) {
                 Subquery<String> subquery = query.subquery(String.class);
                 Root<ScientificRecord> scientific = subquery.from(ScientificRecord.class);
                 List<Predicate> terms = new ArrayList<>();
                 terms.add(cb.equal(scientific.get("resourceId"), root.get("id")));
                 if (!license.isBlank()) terms.add(cb.equal(cb.lower(scientific.get("licenseId")), license.trim().toLowerCase()));
                 if (!discipline.isBlank()) terms.add(cb.like(cb.lower(scientific.get("discipline")), "%" + discipline.trim().toLowerCase() + "%"));
+                if (!institution.isBlank()) terms.add(cb.like(cb.lower(scientific.get("institution")), "%" + institution.trim().toLowerCase() + "%"));
+                if (!language.isBlank()) terms.add(cb.equal(cb.lower(scientific.get("language")), language.trim().toLowerCase()));
+                if (!access.isBlank()) terms.add(cb.equal(scientific.get("accessLevel"), access));
                 if (hasDoi) terms.add(cb.isNotNull(scientific.get("versionDoi")));
                 if (publicOnly) {
                     terms.add(cb.equal(scientific.get("status"), PublicationStatus.PUBLISHED));
                 }
                 subquery.select(scientific.get("resourceId")).where(terms.toArray(Predicate[]::new));
+                predicates.add(cb.exists(subquery));
+            }
+            if (!format.isBlank()) {
+                Subquery<Long> subquery = query.subquery(Long.class);
+                Root<ContentInformation> content = subquery.from(ContentInformation.class);
+                subquery.select(content.get("id")).where(
+                        cb.equal(content.get("parentResource"), root),
+                        cb.like(cb.lower(content.get("relativePath")), "%." + format.toLowerCase()));
                 predicates.add(cb.exists(subquery));
             }
             if (!publicOnly) {
@@ -106,7 +126,13 @@ public class ScientificCatalogController {
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };
-        Page<DataResource> result = resources.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "lastUpdate")));
+        Sort order = switch (sort) {
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "lastUpdate", "id");
+            case "year_asc" -> Sort.by(Sort.Direction.ASC, "publicationYear", "id");
+            case "year_desc" -> Sort.by(Sort.Direction.DESC, "publicationYear", "id");
+            default -> Sort.by(Sort.Direction.DESC, "lastUpdate", "id");
+        };
+        Page<DataResource> result = resources.findAll(spec, PageRequest.of(page, size, order));
         java.util.Map<String, ScientificRecord> scienceById = new java.util.HashMap<>();
         scientificRecords.findAllById(result.getContent().stream().map(DataResource::getId).toList())
                 .forEach(record -> scienceById.put(record.getResourceId(), record));

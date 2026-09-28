@@ -39,19 +39,25 @@ public class ScientificCatalogSearchTest {
         data = resources.save(data);
         ScientificRecord record = records.saveAndFlush(new ScientificRecord(data.getId()));
         MockHttpServletRequest publicRequest = new MockHttpServletRequest("GET", "/api/v1/public/catalog");
-        var before = catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", false, 0, 20, publicRequest);
+        var before = catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "", false, "newest", 0, 20, publicRequest);
         assertEquals(0, before.total());
         MockHttpServletRequest internalRequest = new MockHttpServletRequest("GET", "/api/v1/catalog");
-        assertEquals(0, catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", false, 0, 20, internalRequest).total());
+        assertEquals(0, catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "", false, "newest", 0, 20, internalRequest).total());
         record.setStatus(PublicationStatus.PUBLISHED); record.setAccessLevel("OPEN");
         record.setVersionDoi("10.1234/astro"); record.setLicenseId("CC-BY-4.0"); record.setDiscipline("Astronomía");
+        record.setInstitution("Universidad"); record.setLanguage("es");
         records.saveAndFlush(record);
-        var after = catalog.list("astronomía", "Ada", "DATASET", "2026", "CC-BY-4.0", "astro", true, 0, 20, publicRequest);
+        var after = catalog.list("astronomía", "Ada", "DATASET", "2026", "CC-BY-4.0", "astro", "", "", "", "", true, "newest", 0, 20, publicRequest);
         assertEquals(1, after.total());
         assertEquals(data.getId(), after.items().get(0).id());
         record.setAccessLevel("RESTRICTED"); records.saveAndFlush(record);
-        var restricted = catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", false, 0, 20, publicRequest);
+        var restricted = catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "", false, "newest", 0, 20, publicRequest);
         assertEquals(1, restricted.total());
         assertEquals("RESTRICTED", restricted.items().get(0).accessLevel());
+        var filtered = catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "Universidad", "es", "RESTRICTED", "", false, "year_desc", 0, 20, publicRequest);
+        assertEquals(1, filtered.total());
+        assertEquals(0, catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "csv", false, "newest", 0, 20, publicRequest).total());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
+                catalog.list("", "", "", "", "", "", "", "", "", "", false, "arbitrary", 0, 20, publicRequest));
     }
 }
