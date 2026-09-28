@@ -16,6 +16,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [x] SHA-256 al cargar por la interfaz web, comprobación manual por curador y
       estado independiente visible en la ficha pública. Auditoría programada
       **opcional** (desactivada por defecto).
+- [x] Cliente backend DataCite y mapeo de metadatos mínimos probados contra
+      HTTP simulado; desactivados por defecto y sin credenciales en Git.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
 
@@ -25,8 +27,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Rotar credenciales de producción; pruebas de seguridad y limitación distribuida de solicitudes.
 - [ ] Enlaces privados temporales para revisores externos y pruebas de concurrencia editorial.
-- [ ] Integrar el servidor DOI institucional existente: confirmar proveedor/API,
-      prefijo, entorno de pruebas, autorización y política de publicación.
+- [ ] Conectar el cliente DataCite al flujo editorial: reserva Draft persistente,
+      reconciliación de fallos/reintentos, publicación Findable y DOI conceptual/de
+      versión. El documento institucional especifica DataCite REST API, pero aún
+      faltan cuenta Repository, prefijo y credenciales de prueba/producción.
 - [ ] Verificar ORCID/ROR y admitir múltiples autores e instituciones.
 - [ ] Vocabularios controlados de licencia/disciplinas y relaciones tipadas.
 - [ ] Validación bibliotecaria de citas y estilos adicionales.
