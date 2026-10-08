@@ -55,7 +55,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       los ZIP requieren revisar la ficha renderizada antes de enviar a curación.
       Smoke test local con Chrome y H2: tres depósitos correctos, Markdown con
       imagen, rechazo de ZIP sin descripción o con extensión incorrecta y
-      envío del paquete a revisión tras la vista previa real.
+      envío del paquete a revisión tras la vista previa real. También simula
+      una carga de datos interrumpida: conserva el borrador, permite repararlo
+      desde su ficha y enviarlo después.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
 - [x] Ítem 7 (curación/preservación): auditorías SHA-256 manuales y programadas
@@ -156,9 +158,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       aprobada antes de activar las descargas restringidas por ruta.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Completar pruebas del asistente con usuarios en staging: fallos de red o
-      almacenamiento a mitad de subida, nueva versión y
+      almacenamiento reales a mitad de subida, nueva versión y
       comportamiento con PostgreSQL/HAProxy. La prueba local automatizada con
-      Chrome y H2 ya cubre cargas Markdown/ZIP, validación de archivos y envío.
+      Chrome y H2 ya cubre cargas Markdown/ZIP, validación, envío y reparación
+      de un fallo de red simulado.
 - [ ] Rotar credenciales/JWT de producción y revisar logs históricos; pruebas
       de seguridad y de carga del limitador con varias instancias y HAProxy
       realmente desplegado. Restringir acceso directo al backend.

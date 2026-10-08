@@ -194,6 +194,57 @@ async function rejectPackage(page, base, id, archive, expected) {
   assert(response.status === 400 && body.includes(expected),
     `El ZIP inválido no fue rechazado correctamente: HTTP ${response.status} ${body}`);
 }
+async function recoverInterruptedUpload(page, base, files) {
+  const title = `Depósito E2E interrumpido ${Date.now()}`;
+  await page.goto(base + '/create.html', {waitUntil:'load'});
+  await page.waitForSelector('.creator-given');
+  await page.type('input[name=title]', title);
+  await page.type('.creator-given', 'Eva');
+  await page.click('#wizard-next');
+  await page.waitForSelector('.wizard-panel[data-step="1"]:not([hidden])');
+  await page.type('input[name=licenseId]', 'CC-BY-4.0');
+  await page.type('input[name=institution]', 'RedUniv');
+  await page.type('textarea[name=methodology]', 'Prueba de recuperación.');
+  await page.click('#wizard-next');
+  await page.waitForSelector('.wizard-panel[data-step="2"]:not([hidden])');
+  await (await page.$('#description-file')).uploadFile(files.description);
+  await (await page.$('#dataset-files')).uploadFile(files.csv1);
+  await page.click('#wizard-next');
+  await page.waitForFunction(() => !document.querySelector('#save-submit').disabled);
+  const interrupt = request => request.url().includes('/attachments?') ? request.abort('failed') : request.continue();
+  await page.setRequestInterception(true);
+  page.on('request', interrupt);
+  try {
+    await page.click('#save-submit');
+    await page.waitForSelector('#wizard-message a[href^="resource.html?id="]', {timeout:30000});
+    assert(new URL(page.url()).pathname.endsWith('/create.html'), 'El depósito se envió pese al fallo de subida.');
+  } finally {
+    page.off('request', interrupt);
+    await page.setRequestInterception(false);
+  }
+  const link = await page.$eval('#wizard-message a', anchor => anchor.href);
+  const id = new URL(link).searchParams.get('id');
+  const before = await page.evaluate(async resourceId => {
+    const response = await fetch(`/api/v1/scientific/${resourceId}`, {headers:{Authorization:`Bearer ${localStorage.getItem('base-repo-token')}`}});
+    return (await response.json()).status;
+  }, id);
+  assert(before === 'DRAFT', `El fallo de subida cambió el estado a ${before}.`);
+  await page.goto(link, {waitUntil:'load'});
+  await page.waitForFunction(() => document.querySelector('#markdown-rendered')?.textContent.includes('Descripción de prueba'));
+  assert(!(await page.$eval('#download-list', element => element.textContent)).includes('datos-uno.csv'),
+    'La prueba de interrupción no abortó la subida de datos.');
+  await page.click('[data-open-modal="files-modal"]');
+  await (await page.$('#resource-files')).uploadFile(files.csv1);
+  await page.click('#files-form button.primary');
+  await page.waitForFunction(() => document.querySelector('#download-list')?.textContent.includes('datos-uno.csv'));
+  await page.click('#submit-science');
+  await page.waitForFunction(() => document.querySelector('#submit-preview-content')?.textContent.includes('Descripción de prueba'));
+  assert(await page.$eval('#confirm-submit-science', element => !element.disabled),
+    'El depósito recuperado sigue bloqueado para revisión.');
+  await page.click('#confirm-submit-science');
+  await page.waitForFunction(() => document.querySelector('#publication-status')?.textContent.includes('En revisión'));
+  return title;
+}
 async function cleanup() {
   if (browser) await browser.close().catch(() => {});
   if (app && app.exitCode === null) {
@@ -237,8 +288,9 @@ async function main() {
       return (await response.json()).status;
     });
     assert(submitted === 'IN_REVIEW', `El depósito no llegó a revisión: ${submitted}`);
+    const recovered = await recoverInterruptedUpload(page, base, files);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);
-    process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title} (ZIP integral, vista previa y envío a revisión).\n`);
+    process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered} (subida interrumpida y recuperada).\n`);
   } catch (error) {
     process.stderr.write(`${error.stack || error}\n`);
     const log = path.join(temp, 'application.log');

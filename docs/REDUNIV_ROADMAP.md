@@ -73,8 +73,9 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   contenido en el navegador antes de cargarlo, se guarda como borrador y el
   autor confirma el envío tras ver la descripción y los archivos reales.
   `tools/e2e/wizard-smoke.cjs` probó los tres modos, dos ZIP inválidos y el
-  envío tras la vista previa real en Chrome contra un JAR local con H2, no
-  contra staging.
+  envío tras la vista previa real en Chrome contra un JAR local con H2; también
+  interrumpió una subida, conservó el borrador y lo reparó desde la ficha.
+  No sustituye staging ni fallos de almacenamiento real.
 - El asistente conserva localmente metadatos y autores por 14 días para poder
   reanudar un formulario interrumpido; por seguridad, los archivos se
   seleccionan de nuevo. El catálogo público muestra facetas agregadas con

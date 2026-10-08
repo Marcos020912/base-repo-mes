@@ -17,6 +17,9 @@ y dos CSV. Comprueba la vista previa, el borrador y la imagen renderizada.
 Además intenta subir ZIP integrales sin descripción o con una extensión no
 permitida, verifica que no alteren el depósito y confirma el envío a revisión
 solo después de mostrar la descripción y los archivos extraídos.
+También corta deliberadamente una carga de CSV después de crear el borrador:
+comprueba que permanece en `DRAFT`, abre el enlace de recuperación, vuelve a
+subir el archivo desde la ficha y solo entonces lo envía a revisión.
 Al terminar detiene Java y elimina la base, credenciales y archivos temporales.
 No toca la configuración ni los datos del despliegue. `CHROME_BIN` y `JAVA_BIN`
 permiten indicar rutas alternativas.
@@ -26,4 +29,5 @@ una vista previa real antes de confirmar el envío a curación; la vista previa
 del paso 4 solo puede mostrar el nombre del ZIP antes de descomprimirlo.
 
 Esto **no** sustituye pruebas con personas, PostgreSQL/HAProxy reales, fallos
-de red a mitad de subida, curación posterior ni la creación de una nueva versión.
+de almacenamiento a mitad de escritura, curación posterior ni la creación de
+una nueva versión.
