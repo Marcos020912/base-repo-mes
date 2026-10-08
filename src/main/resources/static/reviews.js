@@ -77,7 +77,40 @@ async function preview(id, container, page = 0) {
       } catch (error) { toast.error(error.message); }
     });
     const historyView = document.createElement('pre'); historyView.className = 'review-description'; historyView.hidden = true;
-    container.append(heading, byline, validation, descriptionHeading, description, filesHeading, files, pagination, packageButton, historyButton, historyView);
+    const shareHeading = document.createElement('h4'); shareHeading.textContent = 'Revisión externa';
+    const shareNote = document.createElement('p'); shareNote.textContent = 'Los enlaces son de solo lectura y caducan en 48 horas. Compártelos únicamente con el revisor previsto; el enlace completo se muestra una sola vez.';
+    const shareActions = document.createElement('div'); shareActions.className = 'button-row';
+    const shareResult = document.createElement('p'); shareResult.className = 'review-share-result';
+    const linksView = document.createElement('div'); linksView.className = 'review-links';
+    const showLinks = async () => {
+      const links = await request(`/api/v1/scientific/${encodeURIComponent(id)}/review-links`);
+      linksView.replaceChildren();
+      if (!links.length) linksView.append(document.createTextNode('No hay enlaces registrados.'));
+      for (const link of links) {
+        const line = document.createElement('p');
+        const state = link.revokedAt ? 'Revocado' : new Date(link.expiresAt).getTime() <= Date.now() ? 'Vencido' : 'Activo';
+        line.append(document.createTextNode(`Enlace ${link.id} · ${state} · vence ${new Date(link.expiresAt).toLocaleString('es')}`));
+        if (state === 'Activo') line.append(action('Revocar', 'danger-outline', async () => {
+          try { await request(`/api/v1/scientific/${encodeURIComponent(id)}/review-links/${link.id}`, {method:'DELETE'});
+            toast.success('Enlace revocado.'); await showLinks(); } catch (error) { toast.error(error.message); }
+        }));
+        linksView.append(line);
+      }
+    };
+    shareActions.append(action('Crear enlace 48 h', 'secondary', async () => {
+      try {
+        const created = await request(`/api/v1/scientific/${encodeURIComponent(id)}/review-links`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({hours:48})
+        });
+        const url = new URL(created.relativeUrl, location.origin).href;
+        shareResult.replaceChildren(document.createTextNode('Enlace creado. Cópialo ahora; no podrá volver a mostrarse: '));
+        const input = document.createElement('input'); input.readOnly = true; input.value = url; input.setAttribute('aria-label','Enlace privado de revisión');
+        const copy = action('Copiar', 'secondary', async () => { try { await navigator.clipboard.writeText(url); toast.success('Enlace copiado.'); } catch { input.select(); toast.error('Copia manualmente el enlace seleccionado.'); } });
+        shareResult.append(input, copy); await showLinks();
+      } catch (error) { toast.error(error.message); }
+    }), action('Ver enlaces', 'secondary', async () => { try { await showLinks(); } catch (error) { toast.error(error.message); } }));
+    container.append(heading, byline, validation, descriptionHeading, description, filesHeading, files, pagination,
+      packageButton, historyButton, historyView, shareHeading, shareNote, shareActions, shareResult, linksView);
   } catch (error) { container.textContent = ''; toast.error(error.message); }
 }
 async function load() {

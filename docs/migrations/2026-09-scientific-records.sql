@@ -100,6 +100,19 @@ CREATE TABLE IF NOT EXISTS scientific_creators (
 );
 CREATE INDEX IF NOT EXISTS idx_scientific_creators_resource ON scientific_creators(resource_id);
 
+-- Short-lived, curator-issued read-only access for an external reviewer.
+-- The plaintext bearer token must never be stored in this table.
+CREATE TABLE IF NOT EXISTS reviewer_access_links (
+    id BIGSERIAL PRIMARY KEY,
+    resource_id VARCHAR(255) NOT NULL,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    created_by VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_reviewer_access_resource ON reviewer_access_links(resource_id);
+
 CREATE TABLE IF NOT EXISTS doi_registrations (
     registration_key varchar(260) PRIMARY KEY,
     revision bigint NOT NULL DEFAULT 0,

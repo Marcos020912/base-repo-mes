@@ -11,6 +11,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
@@ -29,6 +30,13 @@ public class VerificationAccessTest {
                 .andExpect(status().isOk());
         mvc.perform(post("/api/v1/auth/change-password").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"old\",\"newPassword\":\"new\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test public void reviewerReadRouteIsAnonymousButManagementRequiresLogin() throws Exception {
+        mvc.perform(get("/api/v1/reviewer/metadata")).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/scientific/r1/review-links")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"hours\":48}"))
                 .andExpect(status().isUnauthorized());
     }
 }

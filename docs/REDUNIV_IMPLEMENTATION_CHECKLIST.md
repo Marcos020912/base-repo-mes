@@ -54,6 +54,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [x] Búsqueda institucional ROR v2 bajo demanda en el editor de autores,
       con URL de servicio fija, límites de consulta y respuesta, timeout y
       opción `repo.scientific.ror-lookup.enabled=false` si la VM no tiene salida.
+- [x] Enlaces privados temporales de revisión emitidos/revocables por curación:
+      token aleatorio de 256 bits, solo huella SHA-256 en PostgreSQL, caducidad
+      máxima de 14 días, vista de solo lectura y descargas. El token viaja en
+      fragmento de URL y después en cabecera, no en la ruta del servidor.
 
 ## Pendiente o sujeto a validación
 
@@ -62,7 +66,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Probar el nuevo asistente en un navegador conectado a una instancia de
       prueba: carga de Markdown/ZIP, fallos parciales, envío y nueva versión.
 - [ ] Rotar credenciales de producción; pruebas de seguridad y limitación distribuida de solicitudes.
-- [ ] Enlaces privados temporales para revisores externos y pruebas de concurrencia editorial.
+- [ ] Probar con revisores externos el acceso temporal detrás de HAProxy,
+      políticas de logs/caché y pruebas de concurrencia editorial.
 - [ ] Validar el flujo DOI real con cuenta Repository, prefijo y credenciales
       de DataCite Test/Production; probar resolución pública y conciliar DOI
       manuales existentes antes de activar el modo automático en producción.
