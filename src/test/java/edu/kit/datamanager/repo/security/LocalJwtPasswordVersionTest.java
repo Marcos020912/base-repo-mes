@@ -15,7 +15,8 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class LocalJwtPasswordVersionTest {
-    private final LocalJwtService tokens = new LocalJwtService("test-only-secret-at-least-thirty-two-characters", 480);
+    private static final String SECRET = "test-only-secret-at-least-thirty-two-characters";
+    private final LocalJwtService tokens = new LocalJwtService(SECRET, 480);
     @After public void clearContext() { SecurityContextHolder.clearContext(); }
     private LocalUser user() {
         LocalUser user = new LocalUser("fixture", "unused-hash", LocalRole.USER);
@@ -53,4 +54,24 @@ public class LocalJwtPasswordVersionTest {
         user.setPasswordChangedAt(user.getPasswordChangedAt().truncatedTo(ChronoUnit.MICROS));
         assertTrue(accepted(user, token));
     }
+    private String oldFormatToken(Instant issuedAt) throws Exception {
+        var claims = new com.nimbusds.jwt.JWTClaimsSet.Builder().subject("fixture").issuer("base-repo")
+                .issueTime(java.util.Date.from(issuedAt))
+                .expirationTime(java.util.Date.from(Instant.now().plusSeconds(60))).build();
+        var jwt = new com.nimbusds.jwt.SignedJWT(
+                new com.nimbusds.jose.JWSHeader(com.nimbusds.jose.JWSAlgorithm.HS256), claims);
+        jwt.sign(new com.nimbusds.jose.crypto.MACSigner(SECRET));
+        return jwt.serialize();
+    }
+    @Test public void oldFormatTokenBeforePasswordChangeRemainsRejected() throws Exception {
+        LocalUser user = user();
+        user.setPasswordChangedAt(Instant.now().minusSeconds(5));
+        assertFalse(accepted(user, oldFormatToken(user.getPasswordChangedAt().minusSeconds(2))));
+    }
+    @Test public void oldFormatTokenAfterPasswordChangeRetainsCompatibility() throws Exception {
+        LocalUser user = user();
+        user.setPasswordChangedAt(Instant.now().minusSeconds(5));
+        assertTrue(accepted(user, oldFormatToken(Instant.now())));
+    }
+
 }

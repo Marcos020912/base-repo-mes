@@ -188,3 +188,14 @@ ya emitido queda bloqueado y el login devuelve ACCOUNT_RESTRICTED.
 El escenario multiusuario cambia también la contraseña propia: el token anterior
 debe dejar de servir y un login inmediato con la nueva contraseña debe producir
 una sesión utilizable, antes de comprobar la suspensión administrativa.
+
+Todos los escenarios opcionales pueden ejecutarse juntos:
+
+```bash
+E2E_POSTGRES=1 E2E_MAIL=1 E2E_POSTGRES_RESTORE=1 node tools/e2e/wizard-smoke.cjs
+```
+
+La compatibilidad de tokens locales anteriores sin passwordVersion se prueba
+en LocalJwtPasswordVersionTest: se aceptan si se emitieron después del último
+cambio de contraseña y se rechazan si lo preceden. No se habilitan JWT de
+emisores externos ni se desactiva la validación de firma.
