@@ -133,7 +133,6 @@ public class DataResourceController implements IDataResourceController {
         auditService = repositoryConfig.getAuditService();
         contentAuditService = repositoryConfig.getContentInformationAuditService();
         repositoryProperties = repositoryConfig;
-        LOGGER.trace("Show Config: {}", repositoryConfig);
     }
 
     @Override

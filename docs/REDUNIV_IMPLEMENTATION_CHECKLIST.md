@@ -64,6 +64,12 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       tabla `scientific_funding` de la migración antes del despliegue.
 - [x] El arranque ya no vuelca propiedades de entorno en los logs; el filtro
       anterior podía revelar `repo.auth.jwtSecret`.
+- [x] Limitación distribuida de intentos de inicio de sesión, registro,
+      verificación, reenvío y cambio de contraseña mediante PostgreSQL:
+      ventanas por cuenta+IP y por IP, claves HMAC en vez de datos personales,
+      respuesta 429 con `Retry-After` y limpieza de ventanas expiradas.
+      HAProxy sobrescribe las cabeceras de reenvío para evitar IP falsificada;
+      la plantilla ya no contiene una clave JWT utilizable.
 
 ## Pendiente o sujeto a validación
 
@@ -71,7 +77,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Probar el nuevo asistente en un navegador conectado a una instancia de
       prueba: carga de Markdown/ZIP, fallos parciales, envío y nueva versión.
-- [ ] Rotar credenciales de producción; pruebas de seguridad y limitación distribuida de solicitudes.
+- [ ] Rotar credenciales/JWT de producción y revisar logs históricos; pruebas
+      de seguridad y de carga del limitador con varias instancias y HAProxy
+      realmente desplegado. Restringir acceso directo al backend.
 - [ ] Probar con revisores externos el acceso temporal detrás de HAProxy,
       políticas de logs/caché y pruebas de concurrencia editorial.
 - [ ] Validar el flujo DOI real con cuenta Repository, prefijo y credenciales

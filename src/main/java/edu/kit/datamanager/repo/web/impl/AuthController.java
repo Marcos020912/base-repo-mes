@@ -4,6 +4,8 @@ import edu.kit.datamanager.repo.domain.LocalUser;
 import edu.kit.datamanager.repo.repository.LocalUserRepository;
 import edu.kit.datamanager.repo.security.LocalJwtService;
 import edu.kit.datamanager.repo.service.VerificationMailService;
+import edu.kit.datamanager.repo.service.AuthRateLimitService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,6 +16,7 @@ import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,10 +28,23 @@ public class AuthController {
     private final PasswordEncoder passwords;
     private final LocalJwtService tokens;
     private final VerificationMailService verification;
-    public AuthController(LocalUserRepository users, PasswordEncoder passwords, LocalJwtService tokens, VerificationMailService verification) { this.users = users; this.passwords = passwords; this.tokens = tokens; this.verification=verification; }
+    private final AuthRateLimitService rateLimits;
+    public AuthController(LocalUserRepository users, PasswordEncoder passwords, LocalJwtService tokens,
+            VerificationMailService verification, AuthRateLimitService rateLimits) {
+        this.users = users; this.passwords = passwords; this.tokens = tokens;
+        this.verification = verification; this.rateLimits = rateLimits;
+    }
+
+    @ExceptionHandler(AuthRateLimitService.TooManyAttempts.class)
+    public ResponseEntity<?> tooManyAttempts(AuthRateLimitService.TooManyAttempts error) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", Long.toString(error.retryAfterSeconds()))
+                .body(Map.of("message", "Demasiados intentos. Inténtelo más tarde."));
+    }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        rateLimits.login(request.username(), httpRequest);
         LocalUser user = users.findByUsernameIgnoreCase(request.username().trim()).orElse(null);
         if (user != null && !user.isEnabled()) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("code", "ACCOUNT_RESTRICTED", "message", "Su cuenta fue restringida. Póngase en contacto con soporte.", "supportEmail", "soporte@mes.gob.cu"));
         if (user == null || !passwords.matches(request.password(), user.getPasswordHash())) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Usuario o contraseña inválidos"));
@@ -37,7 +53,8 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegistrationRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegistrationRequest request, HttpServletRequest httpRequest) {
+        rateLimits.register(request.email(), httpRequest);
         String username = request.username().trim();
         if (users.existsByUsernameIgnoreCase(username) || users.existsByEmailIgnoreCase(request.email().trim())) return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "El usuario o correo ya está en uso."));
         if (request.password().length() < 8) return ResponseEntity.badRequest().body(Map.of("message", "La contraseña debe tener al menos 8 caracteres."));
@@ -53,12 +70,38 @@ public class AuthController {
         users.save(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Cuenta creada. Revise su correo para verificarla.", "email", user.getEmail()));
     }
-    @PostMapping("/verify") public ResponseEntity<?> verify(@Valid @RequestBody VerificationRequest request) { LocalUser user=users.findByEmailIgnoreCase(request.email().trim()).orElse(null); if(user==null || user.getVerificationCode()==null || !user.getVerificationCode().equals(request.code()) || user.getVerificationExpiresAt().isBefore(java.time.Instant.now())) return ResponseEntity.badRequest().body(Map.of("message","El código no es válido o venció.")); user.setVerified(true);user.setVerificationCode(null);user.setVerificationExpiresAt(null);users.save(user);return ResponseEntity.ok(Map.of("message","Correo verificado. Ya puede iniciar sesión.")); }
-    @PostMapping("/resend-verification") public ResponseEntity<?> resend(@Valid @RequestBody EmailRequest request) { LocalUser user=users.findByEmailIgnoreCase(request.email().trim()).orElse(null); if(user==null) return ResponseEntity.ok(Map.of("message","Si el correo existe, recibirá un código.")); if(!user.isVerified()){verification.createAndSend(user);users.save(user);}return ResponseEntity.ok(Map.of("message","Si el correo existe, recibirá un código.")); }
+    @PostMapping("/verify")
+    public ResponseEntity<?> verify(@Valid @RequestBody VerificationRequest request, HttpServletRequest httpRequest) {
+        rateLimits.verify(request.email(), httpRequest);
+        LocalUser user = users.findByEmailIgnoreCase(request.email().trim()).orElse(null);
+        if (user == null || user.getVerificationCode() == null || user.getVerificationExpiresAt() == null
+                || !user.getVerificationCode().equals(request.code())
+                || user.getVerificationExpiresAt().isBefore(java.time.Instant.now()))
+            return ResponseEntity.badRequest().body(Map.of("message", "El código no es válido o venció."));
+        user.setVerified(true); user.setVerificationCode(null); user.setVerificationExpiresAt(null);
+        users.save(user);
+        return ResponseEntity.ok(Map.of("message", "Correo verificado. Ya puede iniciar sesión."));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resend(@Valid @RequestBody EmailRequest request, HttpServletRequest httpRequest) {
+        rateLimits.resend(request.email(), httpRequest);
+        LocalUser user = users.findByEmailIgnoreCase(request.email().trim()).orElse(null);
+        if (user != null && !user.isVerified()) {
+            try { verification.createAndSend(user); users.save(user); }
+            catch (MailException | IllegalStateException error) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                        "message", "No se pudo enviar el código. Inténtelo más tarde."));
+            }
+        }
+        return ResponseEntity.ok(Map.of("message", "Si el correo existe, recibirá un código."));
+    }
 
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@Valid @RequestBody PasswordChangeRequest request) {
+    public ResponseEntity<?> changePassword(@Valid @RequestBody PasswordChangeRequest request,
+            HttpServletRequest httpRequest) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        rateLimits.changePassword(username, httpRequest);
         LocalUser user = users.findByUsernameIgnoreCase(username).orElse(null);
         if (user == null || !passwords.matches(request.currentPassword(), user.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "La contraseña actual no es correcta."));

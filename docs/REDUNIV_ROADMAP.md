@@ -70,13 +70,17 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 - El arranque ya no registra valores arbitrarios de propiedades: el antiguo
   volcado podía incluir `repo.auth.jwtSecret` y otros secretos sin `password`
   en su nombre. Revisar y rotar secretos expuestos en logs anteriores.
+- Los endpoints de autenticación tienen cuotas compartidas por PostgreSQL y
+  devuelven `Retry-After` al agotarlas. El HAProxy de referencia reemplaza
+  `X-Forwarded-For`/`Forwarded`; no exponer el backend directamente. La
+  plantilla no incorpora un secreto JWT válido: despliegue genera uno único.
 
 ### Migración y pruebas
 
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256 y cliente DataCite pasan. La suite completa pasó con 414 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256 y cliente DataCite pasan. La suite completa pasó con 418 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
 [`REDUNIV_IMPLEMENTATION_CHECKLIST.md`](REDUNIV_IMPLEMENTATION_CHECKLIST.md).
@@ -84,7 +88,9 @@ El estado detallado y actualizado de cada ítem está en
 ## Próximos incrementos propuestos
 
 1. Seguridad y calidad: rotar efectivamente las credenciales ya utilizadas en
-   producción, rate limiting distribuido, auditoría y pruebas de seguridad funcionales. La suite heredada ya se adecuó al comportamiento 401 sin debilitar la autorización.
+   producción; validar el limitador distribuido con HAProxy y carga real,
+   auditoría y pruebas de seguridad funcionales. La suite heredada ya se adecuó
+   al comportamiento 401 sin debilitar la autorización.
 2. Modelo de depósito: validar enlaces privados temporales con revisores
    externos reales, pruebas de concurrencia/transiciones y evaluación curatorial
    de formatos/datos sensibles. Una versión nueva requiere cargar sus archivos.

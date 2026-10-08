@@ -79,7 +79,6 @@ public class DataResourceAuditController implements IDataResourceAuditController
         auditService = repositoryConfig.getAuditService();
         contentAuditService = repositoryConfig.getContentInformationAuditService();
         repositoryProperties = repositoryConfig;
-        LOGGER.trace("Show Config: {}", repositoryConfig);
     }
 
     @Override

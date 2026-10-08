@@ -192,8 +192,9 @@ if [[ "${REUSE_CONFIGURATION,,}" == "s" || "${REUSE_CONFIGURATION,,}" == "si" ||
   if [[ "$(property_value 'repo.auth.bootstrap-admin-password')" == 'admin12345' ]]; then
     echo "ADVERTENCIA: la clave inicial conocida no se cambiará en la base de datos. Use Mi cuenta para rotarla." >&2
   fi
-  if [[ "$(property_value 'repo.auth.jwtSecret')" == 'vkfvoswsohwrxgjaxipuiyyjgubggzdaqrcuupbugxtnalhiegkppdgjgwxsmvdb' ]]; then
-    echo "ADVERTENCIA: la clave JWT es la de ejemplo. Vuelva a ejecutar y responda N a reutilizar para generar una única." >&2
+  if [[ -z "$(property_value 'repo.auth.jwtSecret')" || "$(property_value 'repo.auth.jwtSecret')" == 'vkfvoswsohwrxgjaxipuiyyjgubggzdaqrcuupbugxtnalhiegkppdgjgwxsmvdb' ]]; then
+    echo "La clave JWT no es segura. Vuelva a ejecutar y responda N a reutilizar para generar una única." >&2
+    exit 1
   fi
 else
   ask APP_PORT "Puerto de Base Repo" "$(property_value 'server.port')"; APP_PORT=${APP_PORT:-8090}
@@ -318,7 +319,9 @@ chmod 600 "$CONF"
 cat > "$APP_DIR/haproxy-base-repo.cfg" <<EOF
 # Añadir en el HAProxy remoto (TLS se termina en el frontend HTTPS).
 backend base_repo_backend
-    option forwardfor
+    # Overwrite client-supplied forwarding headers before Spring consumes them.
+    http-request del-header Forwarded
+    http-request set-header X-Forwarded-For %[src]
     http-request set-header X-Forwarded-Proto https
     http-request set-header X-Forwarded-Host %[req.hdr(Host)]
     http-request set-header X-Forwarded-Port $HAPROXY_FRONTEND_PORT

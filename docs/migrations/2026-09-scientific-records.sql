@@ -111,6 +111,14 @@ CREATE TABLE IF NOT EXISTS scientific_funding (
 );
 CREATE INDEX IF NOT EXISTS idx_scientific_funding_resource ON scientific_funding(resource_id);
 
+-- Shared authentication rate limits; bucket_key is an HMAC, not an email or IP.
+CREATE TABLE IF NOT EXISTS auth_rate_windows (
+    bucket_key VARCHAR(64) PRIMARY KEY,
+    expires_at TIMESTAMPTZ NOT NULL,
+    attempts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_auth_rate_windows_expires ON auth_rate_windows(expires_at);
+
 -- Short-lived, curator-issued read-only access for an external reviewer.
 -- The plaintext bearer token must never be stored in this table.
 CREATE TABLE IF NOT EXISTS reviewer_access_links (

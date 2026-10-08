@@ -222,9 +222,7 @@ public class Application {
         contentInformationService().configure(rbc);
         rbc.setAuditService(auditServiceDataResource);
         rbc.setContentInformationAuditService(contentAuditService);
-        LOG.trace("Show Config: {}", rbc);
         LOG.trace("getBasepath {}", rbc.getBasepath());
-        LOG.trace("getJwtSecret {}", rbc.getJwtSecret());
         LOG.trace("isAuditEnabled {}", rbc.isAuditEnabled());
         LOG.trace("isAuthEnabled {}", rbc.isAuthEnabled());
         LOG.trace("isReadOnly {}", rbc.isReadOnly());
