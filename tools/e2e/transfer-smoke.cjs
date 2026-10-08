@@ -6,6 +6,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const puppeteer = require('../a11y/node_modules/puppeteer-core');
 const script = fs.readFileSync(path.resolve(__dirname, '../../src/main/resources/static/transfers.js'));
+const styles = fs.readFileSync(path.resolve(__dirname, '../../src/main/resources/static/styles.css'));
 let closed = false;
 let uploadClosed = false;
 let uploadStarted = false;
@@ -15,7 +16,9 @@ const server = http.createServer((request, response) => {
   unauthorizedHeader ||= Boolean(request.headers.authorization);
   if (request.url === '/') {
     response.setHeader('Content-Type', 'text/html; charset=utf-8');
-    response.end('<header class="page-header"></header><script src="/transfers.js"></script>');
+    response.end('<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><title>Transferencias fixture</title></head><body><header class="page-header"></header><script src="/transfers.js"></script></body></html>');
+  } else if (request.url === '/styles.css') {
+    response.setHeader('Content-Type','text/css; charset=utf-8'); response.end(styles);
   } else if (request.url === '/transfers.js') {
     response.setHeader('Content-Type', 'application/javascript; charset=utf-8'); response.end(script);
   } else if (request.url === '/upload') {
@@ -221,6 +224,18 @@ const server = http.createServer((request, response) => {
     });
     assert.equal(await page.evaluate(()=>window.pickerError),'AbortError');
     assert.equal(await page.$eval('.transfer-item span',el=>el.textContent),'Descarga cancelada');
+    await page.setViewport({width:320,height:740});
+    const layout = await page.evaluate(() => {
+      const panel = document.querySelector('#transfer-panel');
+      const bounds = panel.getBoundingClientRect();
+      const option = document.querySelector('.transfer-disk-option').getBoundingClientRect();
+      return {left:bounds.left,right:bounds.right,width:innerWidth,
+        overflow:panel.scrollWidth>panel.clientWidth,
+        optionInside:option.left>=bounds.left && option.right<=bounds.right};
+    });
+    assert(layout.left>=0 && layout.right<=layout.width,'Monitor fuera del viewport móvil.');
+    assert.equal(layout.overflow,false,'Monitor tiene desbordamiento horizontal.');
+    assert.equal(layout.optionInside,true,'Opción de disco fuera del monitor.');
     await page.addScriptTag({path:require.resolve('../a11y/node_modules/axe-core/axe.min.js')});
     const accessibility=await page.evaluate(async () => (await axe.run('#transfer-panel')).violations);
     assert.deepEqual(accessibility,[]);
