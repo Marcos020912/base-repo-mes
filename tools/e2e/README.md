@@ -42,3 +42,9 @@ del paso 4 solo puede mostrar el nombre del ZIP antes de descomprimirlo.
 Esto **no** sustituye pruebas con personas, PostgreSQL/HAProxy reales, fallos
 de almacenamiento a mitad de escritura, curación real, DataCite ni versiones
 con datos históricos de staging.
+
+El smoke test también abre un contexto de navegador sin sesión para probar las
+descargas públicas del depósito publicado de prueba: valida el contenido CSV,
+la integridad del ZIP y la inclusión de description.md/datos, y la exportación
+BibTeX. Comprueba los estados finales del monitor, no el guardado en disco del
+usuario. Sigue pendiente validar archivos grandes y despliegue real.

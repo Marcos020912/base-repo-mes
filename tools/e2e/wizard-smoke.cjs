@@ -334,6 +334,43 @@ async function deriveNewVersion(page, base, files, previous) {
     'La nueva versión no conservó el DOI conceptual del conjunto.');
   return id;
 }
+async function publicDownloads(base, resource) {
+  const context = await browser.createBrowserContext();
+  try {
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(`${base}/public-resource.html?id=${encodeURIComponent(resource.id)}`, {waitUntil:'load'});
+    await page.waitForSelector('#files .file-row a');
+    assert(await page.evaluate(() => localStorage.getItem('base-repo-token')) === null,
+      'La prueba pública heredó una sesión autenticada.');
+    const fileResponse = page.waitForResponse(response => response.url().includes('/file?path='));
+    await page.click('#files .file-row a');
+    const file = await fileResponse;
+    assert(file.ok(), 'Descarga pública individual rechazada.');
+    assert((await file.text()).includes('nombre,valor'), 'Contenido público individual incorrecto.');
+    await page.waitForFunction(() => document.querySelector('.transfer-list')?.textContent.includes('Descarga preparada'));
+    const archiveResponse = page.waitForResponse(response => response.url().endsWith('/archive'));
+    await page.click('#download-archive');
+    const archive = await archiveResponse;
+    assert(archive.ok(), 'ZIP público rechazado.');
+    const zip = path.join(temp, 'public-download.zip');
+    fs.writeFileSync(zip, await archive.buffer());
+    const inspected = spawnSync('python3', ['-c',
+      "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None; names=z.namelist(); assert any(n.endswith('description.md') for n in names), names; assert any(n.endswith('datos-uno.csv') for n in names), names",
+      zip], {encoding:'utf8'});
+    assert(inspected.status === 0, `ZIP público incompleto: ${inspected.stderr}`);
+    await page.waitForFunction(() => [...document.querySelectorAll('.transfer-item span')].filter(node => node.textContent === 'Descarga preparada').length === 2);
+    await page.select('#format', 'bibtex');
+    const citationResponse = page.waitForResponse(response => response.url().includes('/citation?format=bibtex'));
+    await page.click('#export');
+    const citation = await citationResponse;
+    assert(citation.ok() && (await citation.text()).includes('@'), 'Exportación pública BibTeX inválida.');
+    await page.waitForFunction(() => [...document.querySelectorAll('.transfer-item span')].filter(node => node.textContent === 'Descarga preparada').length === 3);
+    assert(errors.length === 0, `Errores JavaScript públicos: ${errors.join('; ')}`);
+    process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción y BibTeX.\n');
+  } finally { await context.close(); }
+}
 async function cleanup() {
   if (browser) await browser.close().catch(() => {});
   if (app && app.exitCode === null) {
@@ -383,6 +420,7 @@ async function main() {
     assert(submitted === 'IN_REVIEW', `El depósito no llegó a revisión: ${submitted}`);
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
+    await publicDownloads(base, markdown);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);
     process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered}; nueva versión ${newVersionId}.\n`);
   } catch (error) {
