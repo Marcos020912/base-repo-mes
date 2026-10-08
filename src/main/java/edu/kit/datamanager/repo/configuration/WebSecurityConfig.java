@@ -100,6 +100,7 @@ public class WebSecurityConfig {
                         requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll().
                         requestMatchers(HttpMethod.GET, "/api/v1/reviewer/**").permitAll().
                         requestMatchers(HttpMethod.GET, "/api/v1/scientific/*/citation").permitAll().
+                        requestMatchers(HttpMethod.GET, "/api/v1/scientific/orcid/callback").permitAll().
                         requestMatchers(EndpointRequest.to(
                                 InfoEndpoint.class,
                                 HealthEndpoint.class

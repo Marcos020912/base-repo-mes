@@ -55,8 +55,9 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 - Los recursos científicos pueden declarar relaciones tipadas DOI/URL que se
   muestran públicamente y se transmiten a DataCite. ORCID e institución/ROR
   pueden asignarse a cada creador por separado, con múltiples afiliaciones
-  ordenadas por autor; faltan autenticación ORCID y
-  verificación institucional en vivo antes de considerarlos certificados.
+  ordenadas por autor. OAuth ORCID opcional autentica el control de la cuenta
+  vinculada a un autor seleccionado; falta validación Sandbox real y una
+  política para coautores. No certifica la correspondencia del nombre.
 - Cada versión puede registrar financiadores y proyectos estructurados; la
   ficha pública, las facetas del catálogo y `fundingReferences` de DataCite
   usan esos datos. Falta validar con DataCite Test y medir las consultas de
@@ -81,7 +82,7 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256 y cliente DataCite pasan. La suite completa pasó con 422 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite y ORCID pasan. La suite completa pasó con 431 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`, con procesos de prueba reiniciados cada cinco clases para evitar falta de memoria local); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
 [`REDUNIV_IMPLEMENTATION_CHECKLIST.md`](REDUNIV_IMPLEMENTATION_CHECKLIST.md).
@@ -96,7 +97,7 @@ El estado detallado y actualizado de cada ítem está en
    externos reales, pruebas de concurrencia/transiciones y evaluación curatorial
    de formatos/datos sensibles. Una versión nueva requiere cargar sus archivos.
 3. Identidad científica: validar integración DOI con el proveedor institucional,
-   autenticación ORCID y consulta ROR, validación de múltiples afiliaciones y
+   OAuth ORCID en Sandbox y consulta ROR, validación de múltiples afiliaciones y
    aprobación de vocabularios de licencia/disciplinas. Las relaciones tipadas
    y el mapeo por creador ya están implementados localmente.
 4. Citación: validar todos los estilos con bibliotecarios y el orden de

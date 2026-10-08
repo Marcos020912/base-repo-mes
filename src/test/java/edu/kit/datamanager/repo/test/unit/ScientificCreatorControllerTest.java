@@ -103,4 +103,28 @@ public class ScientificCreatorControllerTest {
         assertEquals(1, ana.affiliations().size());
         assertEquals("Universidad histórica", ana.affiliations().get(0).institution());
     }
+
+    @Test public void keepsAuthenticationOnlyForTheSameCreatorAndSameOrcid() {
+        ScientificCreator verified = new ScientificCreator("r1", 1L, null, null, null);
+        verified.authenticateOrcid("0000-0002-1825-0097", "ana", java.time.Instant.now());
+        when(creators.findByResourceIdAndCreatorId("r1", 1L)).thenReturn(Optional.of(verified));
+        controller.replace("r1", List.of(
+                new ScientificCreatorController.CreatorInput(1L, "0000-0002-1825-0097", null, null),
+                new ScientificCreatorController.CreatorInput(2L, null, null, null)));
+        verify(creators).saveAll(argThat(values -> {
+            for (ScientificCreator item : values) if (item.getCreatorId() == 1L)
+                return item.getOrcidAuthenticatedAt() != null;
+            return false;
+        }));
+        reset(creators);
+        when(creators.findByResourceIdAndCreatorId("r1", 1L)).thenReturn(Optional.of(verified));
+        controller.replace("r1", List.of(
+                new ScientificCreatorController.CreatorInput(1L, "0000-0003-2804-688X", null, null),
+                new ScientificCreatorController.CreatorInput(2L, null, null, null)));
+        verify(creators).saveAll(argThat(values -> {
+            for (ScientificCreator item : values) if (item.getCreatorId() == 1L)
+                return item.getOrcidAuthenticatedAt() == null;
+            return false;
+        }));
+    }
 }

@@ -43,7 +43,7 @@ boolean_value(){
 }
 remove_managed_properties(){
   local tmp keys
-  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url'
+  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,repo.mail.from,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url,repo.scientific.orcid.enabled,repo.scientific.orcid.environment,repo.scientific.orcid.client-id,repo.scientific.orcid.client-secret,repo.scientific.orcid.redirect-uri'
   tmp="$(mktemp "$CONF.XXXXXX")"
   awk -v keys="$keys" '
     BEGIN { count=split(keys, items, ","); for (i=1; i<=count; i++) managed[items[i]]=1 }
@@ -240,6 +240,20 @@ else
     [[ -n "$DATACITE_REPOSITORY_ID" && -n "$DATACITE_PASSWORD" && "$DATACITE_PREFIX" =~ ^10\.[0-9]{4,9}$ ]] || { echo "Faltan datos válidos de DataCite." >&2; exit 1; }
   fi
   DATACITE_API_URL=${DATACITE_API_URL:-https://api.test.datacite.org}
+  ask ORCID_ENABLED "¿Configurar autenticación ORCID? (s/N)" "$(property_value 'repo.scientific.orcid.enabled')"; ORCID_ENABLED="$(boolean_value "${ORCID_ENABLED:-false}")"
+  ORCID_ENVIRONMENT="$(property_value 'repo.scientific.orcid.environment')"; ORCID_ENVIRONMENT=${ORCID_ENVIRONMENT:-sandbox}
+  ORCID_CLIENT_ID="$(property_value 'repo.scientific.orcid.client-id')"
+  ORCID_CLIENT_SECRET="$(property_value 'repo.scientific.orcid.client-secret')"
+  ORCID_REDIRECT_URI="$(property_value 'repo.scientific.orcid.redirect-uri')"
+  if [[ "$ORCID_ENABLED" == true ]]; then
+    ask ORCID_ENVIRONMENT "Entorno ORCID (sandbox/production)" "$ORCID_ENVIRONMENT"
+    [[ "$ORCID_ENVIRONMENT" == sandbox || "$ORCID_ENVIRONMENT" == production ]] || { echo "Entorno ORCID no válido." >&2; exit 1; }
+    ask ORCID_CLIENT_ID "Client ID de ORCID" "$ORCID_CLIENT_ID"
+    ask_secret NEW_ORCID_CLIENT_SECRET "Client secret ORCID (vacío = conservar anterior)"
+    ORCID_CLIENT_SECRET=${NEW_ORCID_CLIENT_SECRET:-$ORCID_CLIENT_SECRET}
+    ask ORCID_REDIRECT_URI "URL de retorno ORCID registrada en ORCID" "${ORCID_REDIRECT_URI:-https://$APP_DOMAIN$( [[ "$HAPROXY_FRONTEND_PORT" == 443 ]] || printf ':%s' "$HAPROXY_FRONTEND_PORT" )/api/v1/scientific/orcid/callback}"
+    [[ -n "$ORCID_CLIENT_ID" && -n "$ORCID_CLIENT_SECRET" && "$ORCID_REDIRECT_URI" == https://*/api/v1/scientific/orcid/callback ]] || { echo "Faltan datos válidos de ORCID; se requiere HTTPS público." >&2; exit 1; }
+  fi
   ask ES_URL "URL de Elasticsearch" "$(property_value 'repo.search.url')"; ES_URL=${ES_URL:-http://localhost:9200}
   ask CONFIGURE_FIREWALL "¿Configurar UFW para que solo HAProxy acceda al puerto de la app? (s/N)" "N"
   APP_JWT_SECRET="$(property_value 'repo.auth.jwtSecret')"
@@ -293,6 +307,11 @@ repo.datacite.repository-id: $DATACITE_REPOSITORY_ID
 repo.datacite.password: $DATACITE_PASSWORD
 repo.datacite.prefix: $DATACITE_PREFIX
 repo.datacite.public-base-url: https://$APP_DOMAIN$( [[ "$HAPROXY_FRONTEND_PORT" == 443 ]] || printf ':%s' "$HAPROXY_FRONTEND_PORT" )
+repo.scientific.orcid.enabled: $ORCID_ENABLED
+repo.scientific.orcid.environment: $ORCID_ENVIRONMENT
+repo.scientific.orcid.client-id: $ORCID_CLIENT_ID
+repo.scientific.orcid.client-secret: $ORCID_CLIENT_SECRET
+repo.scientific.orcid.redirect-uri: $ORCID_REDIRECT_URI
 repo.mail.description: $MAIL_DESCRIPTION
 spring.mail.host: $MAIL_HOST
 spring.mail.port: $MAIL_PORT

@@ -91,7 +91,8 @@ public class PublicScientificResourceController {
             return new AuthorIdentity(item.getGivenName(), item.getFamilyName(),
                     identity == null ? null : identity.getOrcid(),
                     identity == null ? null : identity.getInstitution(),
-                    identity == null ? null : identity.getRor(), knownAffiliations);
+                    identity == null ? null : identity.getRor(), knownAffiliations,
+                    identity != null && identity.getOrcidAuthenticatedAt() != null);
         }).toList();
         String markdown = contents.findByParentResourceAndRelativePath(resource, "description.md")
                 .map(info -> {
@@ -175,7 +176,7 @@ public class PublicScientificResourceController {
                                List<ScientificRelation> relations, List<AuthorIdentity> authorIdentities,
                                List<ScientificFunding> funding) {}
     public record AuthorIdentity(String givenName, String familyName, String orcid, String institution,
-                                 String ror, List<AuthorAffiliation> affiliations) {}
+                                 String ror, List<AuthorAffiliation> affiliations, boolean orcidAuthenticated) {}
     public record AuthorAffiliation(String institution, String ror) {}
     public record FileItem(String path, long size, String mediaType, String sha256, String fixityStatus, java.time.Instant fixityCheckedAt) {}
     public record PublicFiles(List<FileItem> files, long total, int page, int pages) {}

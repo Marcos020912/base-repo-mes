@@ -1,6 +1,12 @@
 (() => {
   const id = new URLSearchParams(location.search).get('id');
   if (!id) return;
+  const callbackResult = new URLSearchParams(location.search).get('orcid');
+  if (callbackResult) {
+    if (callbackResult === 'authenticated') toast.success('Cuenta ORCID autenticada y asociada al autor seleccionado.');
+    else toast.error('No se pudo completar la autenticación ORCID. Inténtalo de nuevo.');
+    const url = new URL(location.href); url.searchParams.delete('orcid'); history.replaceState(null, '', url);
+  }
   const panel = document.createElement('section'); panel.className = 'panel';
   const heading = document.createElement('div'); heading.className = 'section-heading';
   const title = document.createElement('h2'); title.textContent = 'Autores e instituciones';
@@ -13,7 +19,7 @@
   const dialog = document.createElement('dialog'); dialog.className = 'modal';
   const form = document.createElement('form');
   const dialogTitle = document.createElement('h2'); dialogTitle.textContent = 'Identidad de autores';
-  const hint = document.createElement('p'); hint.textContent = 'Asigna ORCID y hasta diez instituciones con ROR a cada autor. Los identificadores se vinculan a su registro individual.';
+  const hint = document.createElement('p'); hint.textContent = 'Asigna ORCID y hasta diez instituciones con ROR a cada autor. Un ORCID escrito manualmente no está autenticado; guarda primero y luego usa el botón ORCID junto al autor que eres tú.';
   const rows = document.createElement('div'); rows.className = 'creator-identity-editor';
   const actions = document.createElement('div'); actions.className = 'button-row';
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'secondary';
@@ -104,26 +110,50 @@
   }
   async function load() {
     try {
-      const response = await fetch(`/api/v1/scientific/${encodeURIComponent(id)}/creators`, {headers: auth.headers()});
-      if (!response.ok) { panel.hidden = true; return; }
+      const [response, scienceResponse, mineResponse, orcidResponse] = await Promise.all([
+        fetch(`/api/v1/scientific/${encodeURIComponent(id)}/creators`, {headers: auth.headers()}),
+        fetch(`/api/v1/scientific/${encodeURIComponent(id)}`, {headers: auth.headers()}),
+        fetch('/api/v1/my-dataresources', {headers: auth.headers()}),
+        fetch('/api/v1/scientific/orcid/status', {headers: auth.headers()})
+      ]);
+      if (!response.ok || !scienceResponse.ok || !mineResponse.ok) { panel.hidden = true; return; }
       current = await response.json(); panel.hidden = false; listing.replaceChildren();
+      const science = await scienceResponse.json(), mine = await mineResponse.json();
+      const orcidAvailable = orcidResponse.ok && (await orcidResponse.json()).enabled;
+      const canEdit = science.status === 'DRAFT' && Array.isArray(mine) && mine.some(item => item.id === id);
       for (const author of current) {
         const row = document.createElement('p'); row.className = 'author-identity';
         const name = document.createElement('strong');
         name.textContent = [author.givenName, author.familyName].filter(Boolean).join(' ') || 'Autor sin nombre';
         row.append(name);
-        if (author.orcid) row.append(' · ', externalLink('https://orcid.org/', author.orcid, `ORCID ${author.orcid}`));
+        if (author.orcid) {
+          row.append(' · ', externalLink('https://orcid.org/', author.orcid, `ORCID ${author.orcid}`));
+          const label = document.createElement('small');
+          label.textContent = author.orcidAuthenticated ? ' · ORCID autenticado por el depositante (autoría no contrastada)' : ' · ORCID declarado, sin autenticar';
+          row.append(label);
+        }
         for (const affiliation of author.affiliations || []) {
           row.append(` · ${affiliation.institution}`);
           if (affiliation.ror) row.append(' (', externalLink('https://ror.org/', affiliation.ror, 'ROR'), ')');
         }
+        if (canEdit && orcidAvailable) {
+          const verify = document.createElement('button'); verify.type = 'button'; verify.className = 'secondary';
+          verify.textContent = 'Autenticar mi ORCID para este autor';
+          verify.title = 'Úsalo solo si este autor eres tú; autentica el control de la cuenta ORCID, no comprueba el nombre.';
+          verify.onclick = async () => {
+            verify.disabled = true;
+            try {
+              const request = await fetch(`/api/v1/scientific/${encodeURIComponent(id)}/creators/${author.creatorId}/orcid/start`,
+                {method: 'POST', headers: auth.headers()});
+              if (!request.ok) throw new Error('No se pudo iniciar ORCID. Comprueba que el depósito siga en borrador.');
+              const payload = await request.json(); location.assign(payload.authorizeUrl);
+            } catch (failure) { toast.error(failure.message); verify.disabled = false; }
+          };
+          row.append(' ', verify);
+        }
         listing.append(row);
       }
-      const [science, mine] = await Promise.all([
-        fetch(`/api/v1/scientific/${encodeURIComponent(id)}`, {headers: auth.headers()}).then(r => r.json()),
-        fetch('/api/v1/my-dataresources', {headers: auth.headers()}).then(r => r.json())
-      ]);
-      edit.hidden = science.status !== 'DRAFT' || !Array.isArray(mine) || !mine.some(item => item.id === id);
+      edit.hidden = !canEdit;
     } catch { panel.hidden = true; }
   }
   load();

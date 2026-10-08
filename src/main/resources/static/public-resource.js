@@ -52,6 +52,9 @@ function renderAuthors(authors) {
     if (author.orcid) {
       const link = document.createElement('a'); link.href = `https://orcid.org/${author.orcid.replace(/^https:\/\/orcid\.org\//, '')}`;
       link.textContent = `ORCID ${author.orcid}`; link.rel = 'noopener noreferrer'; row.append(' · ', link);
+      const status = document.createElement('small');
+      status.textContent = author.orcidAuthenticated ? ' · ORCID autenticado por el depositante (autoría no contrastada)' : ' · ORCID declarado, sin autenticar';
+      row.append(status);
     }
     const affiliations = Array.isArray(author.affiliations) ? author.affiliations :
       (author.institution ? [{institution: author.institution, ror: author.ror}] : []);

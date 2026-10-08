@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -27,6 +28,11 @@ public class ScientificCreator {
     private String institution;
     @Column(length = 255)
     private String ror;
+    /** OAuth proves control of an ORCID account, not that the author's name matches it. */
+    @Column(name = "orcid_authenticated_at")
+    private Instant orcidAuthenticatedAt;
+    @Column(name = "orcid_authenticated_by", length = 80)
+    private String orcidAuthenticatedBy;
 
     public ScientificCreator(String resourceId, Long creatorId, String orcid, String institution, String ror) {
         this.resourceId = resourceId;
@@ -34,5 +40,18 @@ public class ScientificCreator {
         this.orcid = orcid;
         this.institution = institution;
         this.ror = ror;
+    }
+
+    public void authenticateOrcid(String orcid, String username, Instant when) {
+        this.orcid = orcid;
+        this.orcidAuthenticatedBy = username;
+        this.orcidAuthenticatedAt = when;
+    }
+
+    public void retainAuthentication(ScientificCreator previous) {
+        if (previous != null && orcid != null && orcid.equals(previous.orcid)) {
+            this.orcidAuthenticatedBy = previous.orcidAuthenticatedBy;
+            this.orcidAuthenticatedAt = previous.orcidAuthenticatedAt;
+        }
     }
 }

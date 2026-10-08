@@ -55,6 +55,13 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [x] Búsqueda institucional ROR v2 bajo demanda en el editor de autores,
       con URL de servicio fija, límites de consulta y respuesta, timeout y
       opción `repo.scientific.ror-lookup.enabled=false` si la VM no tiene salida.
+- [x] Autenticación ORCID OAuth opcional por autor seleccionado: estado aleatorio
+      de un solo uso (solo SHA-256 persistido), caducidad de diez minutos,
+      intercambio del código en backend y distintivo separado para ORCID
+      autenticado frente a declarado. Solo el depositante puede iniciarla en
+      borrador; la devolución vuelve a comprobar cuenta y propiedad. Las
+      credenciales y URL de retorno se configuran en `deploy.sh`, no en JS/Git.
+      **OAuth prueba el control de la cuenta ORCID, no el nombre del autor**.
 - [x] Enlaces privados temporales de revisión emitidos/revocables por curación:
       token aleatorio de 256 bits, solo huella SHA-256 en PostgreSQL, caducidad
       máxima de 14 días, vista de solo lectura y descargas. El token viaja en
@@ -86,12 +93,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Validar el flujo DOI real con cuenta Repository, prefijo y credenciales
       de DataCite Test/Production; probar resolución pública y conciliar DOI
       manuales existentes antes de activar el modo automático en producción.
-- [ ] Integrar autenticación/verificación ORCID; la captura actual valida solo
-      el formato y ya permite varias instituciones por autor. La búsqueda ORCID necesita
-      token de su API y no debe usarse para atribuir identidad por coincidencia
-      de nombres; para acreditar titularidad se requiere OAuth ORCID y
-      autorización del investigador. La consulta ROR necesita salida a Internet
-      desde la VM o un proxy institucional.
+- [ ] Validar ORCID OAuth con credenciales Sandbox reales y usuarios de prueba,
+      registrar el callback HTTPS institucional y acordar política para
+      coautores que no pueden autenticarse con la cuenta del depositante.
+      La búsqueda ORCID por nombre no debe utilizarse para atribuir identidad;
+      ROR necesita salida a Internet desde la VM o un proxy institucional.
 - [ ] Aprobar vocabularios institucionales de licencia/disciplinas y activar
       `repo.scientific.strict-vocabulary=true` después de migrar valores
       heredados; las listas actuales no son un catálogo institucional aprobado.

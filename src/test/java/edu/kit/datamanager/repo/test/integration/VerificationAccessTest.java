@@ -39,4 +39,12 @@ public class VerificationAccessTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"hours\":48}"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test public void orcidCallbackIsPublicButInitiationRequiresLogin() throws Exception {
+        // The browser returns from ORCID without the local JWT header; state guards the callback.
+        mvc.perform(get("/api/v1/scientific/orcid/callback").param("state", "invalid"))
+                .andExpect(status().isServiceUnavailable()); // OAuth is disabled in the test profile.
+        mvc.perform(post("/api/v1/scientific/r1/creators/1/orcid/start"))
+                .andExpect(status().isUnauthorized());
+    }
 }

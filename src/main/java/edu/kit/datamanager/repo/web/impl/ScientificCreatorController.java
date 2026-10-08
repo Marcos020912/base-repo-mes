@@ -66,7 +66,8 @@ public class ScientificCreatorController {
                 knownAffiliations = List.of(new AffiliationView(item.getInstitution(), item.getRor()));
             return new CreatorView(agent.getId(), agent.getGivenName(), agent.getFamilyName(),
                     item == null ? null : item.getOrcid(), item == null ? null : item.getInstitution(),
-                    item == null ? null : item.getRor(), knownAffiliations);
+                    item == null ? null : item.getRor(), knownAffiliations,
+                    item != null && item.getOrcidAuthenticatedAt() != null);
         }).toList();
     }
 
@@ -113,11 +114,16 @@ public class ScientificCreatorController {
             }
             ScientificAffiliation first = newAffiliations.stream().filter(value -> value.getCreatorId().equals(item.creatorId()))
                     .findFirst().orElse(null);
-            return new ScientificCreator(id, item.creatorId(), orcid,
+            ScientificCreator updated = new ScientificCreator(id, item.creatorId(), orcid,
                     first == null ? null : first.getInstitution(), first == null ? null : first.getRor());
+            updated.retainAuthentication(creators.findByResourceIdAndCreatorId(id, item.creatorId()).orElse(null));
+            return updated;
         }).toList();
         affiliations.deleteByResourceId(id);
         creators.deleteByResourceId(id);
+        // Flush deletes before reusing the same (resource_id, creator_id) unique keys.
+        affiliations.flush();
+        creators.flush();
         creators.saveAll(values);
         affiliations.saveAll(newAffiliations);
         events.save(new ScientificRecordEvent(id, username(), "CREATORS_UPDATED", Integer.toString(values.size())));
@@ -157,5 +163,6 @@ public class ScientificCreatorController {
         }
     }
     public record CreatorView(Long creatorId, String givenName, String familyName, String orcid,
-                              String institution, String ror, List<AffiliationView> affiliations) {}
+                              String institution, String ror, List<AffiliationView> affiliations,
+                              boolean orcidAuthenticated) {}
 }
