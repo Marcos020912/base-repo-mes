@@ -279,3 +279,4 @@ heredados antes de activarla.
 ### E2E PostgreSQL aislado — 2026-10-08
 - [x] `E2E_POSTGRES=1 node tools/e2e/wizard-smoke.cjs` pasó en PostgreSQL 18 efímero: asistente, ZIP, recuperación, versiones, Curación/preservación, acceso externo/revocación y descargas públicas.
 - Clúster nuevo loopback/SCRAM con credenciales aleatorias; sin tocar bases existentes. Esquema Hibernate nuevo: los pendientes de migración/restauración con staging real y HAProxy no se consideran cerrados.
+- [x] Ensayo PostgreSQL sintético con arranque restaurado: `E2E_POSTGRES=1 E2E_POSTGRES_RESTORE=1 node tools/e2e/wizard-smoke.cjs` pasó. Aplica migración dos veces, dump/restore a DB nueva, reinicia JAR, verifica login/dataset/CSV y hashes de archivos sin cambios. Esquema inicial actual; no cierra migración legacy ni staging real.

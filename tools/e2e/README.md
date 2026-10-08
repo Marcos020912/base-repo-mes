@@ -120,3 +120,18 @@ servicio ni las bases existentes. Ejecuta todos los escenarios del mismo smoke.
 El modo sin E2E_POSTGRES sigue usando H2.
 Esto comprueba flujo funcional PostgreSQL con esquema generado por Hibernate:
 **no** prueba migración/retroceso, restauración de staging ni HAProxy real.
+
+## Migración y restauración del fixture PostgreSQL
+
+```bash
+E2E_POSTGRES=1 E2E_POSTGRES_RESTORE=1 node tools/e2e/wizard-smoke.cjs
+```
+
+Tras los escenarios detiene el JAR, aplica la migración SQL dos veces al
+fixture, hace pg_dump custom y pg_restore en otra base del mismo clúster
+temporal, y arranca el JAR apuntando a esa restauración. Verifica login, título
+del dataset publicado, descarga CSV y huellas SHA-256 del árbol de archivos
+sin cambios. No modifica ni importa bases existentes.
+El fixture empieza con el esquema actual generado por Hibernate; no representa
+todas las variantes de esquemas antiguos ni sustituye el ensayo de staging.
+El reinicio renueva la clave JWT efímera y exige volver a iniciar sesión.

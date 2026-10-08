@@ -84,6 +84,9 @@ async function databaseProperties() {
     'spring.datasource.url=jdbc:h2:mem:reduniv_wizard_smoke;DB_CLOSE_DELAY=-1;MODE=LEGACY;NON_KEYWORDS=VALUE',
     'spring.datasource.username=sa', 'spring.datasource.password=sa'
   ];
+  if (postgres) return ['spring.datasource.driver-class-name=org.postgresql.Driver',
+    `spring.datasource.url=jdbc:postgresql://127.0.0.1:${postgres.port}/${postgres.database}`,
+    'spring.datasource.username=e2e_admin', `spring.datasource.password=${postgres.secret}`];
   assert(process.getuid() !== 0, 'Ejecute PostgreSQL efímero sin sudo.');
   const bin = process.env.PG_BIN || '/usr/lib/postgresql/18/bin';
   const data = path.join(temp, 'pgdata');
@@ -96,7 +99,7 @@ async function databaseProperties() {
   const port = await freePort();
   const started = spawnSync(path.join(bin, 'pg_ctl'), ['-D', data, '-l', path.join(temp, 'postgres.log'),
     '-o', `-h 127.0.0.1 -p ${port} -k ${temp}`, '-w', 'start'], {encoding:'utf8'});
-  postgres = {bin, data};
+  postgres = {bin, data, port, secret, database:'reduniv_e2e'};
   assert(started.status === 0, `PostgreSQL efímero no inició: ${started.stderr}`);
   const created = spawnSync(path.join(bin, 'createdb'), ['-h', '127.0.0.1', '-p', String(port), '-U', 'e2e_admin', 'reduniv_e2e'],
     {encoding:'utf8', env:{...process.env, PGPASSWORD:secret}});
@@ -397,13 +400,58 @@ async function publicDownloads(base, resource) {
     process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción y BibTeX.\n');
   } finally { await context.close(); }
 }
-async function cleanup() {
-  if (browser) await browser.close().catch(() => {});
-  if (app && app.exitCode === null) {
+async function restorePostgresFixture(page, base, files, published) {
+  if (!postgres || process.env.E2E_POSTGRES_RESTORE !== '1') return;
+  await stopApp();
+  const args = ['-h','127.0.0.1','-p',String(postgres.port),'-U','e2e_admin'];
+  function pg(command, extra) {
+    const result = spawnSync(path.join(postgres.bin, command), [...args,...extra],
+      {encoding:'utf8',env:{...process.env,PGPASSWORD:postgres.secret}});
+    assert(result.status === 0, `Ensayo PostgreSQL ${command} falló: ${result.stderr}`);
+    return result;
+  }
+  function tree(directory, prefix='') {
+    const result = {};
+    for (const entry of fs.readdirSync(directory,{withFileTypes:true})) {
+      const relative = prefix + entry.name, target = path.join(directory,entry.name);
+      if (entry.isDirectory()) Object.assign(result,tree(target,relative+'/'));
+      else if (entry.isFile()) result[relative]=crypto.createHash('sha256').update(fs.readFileSync(target)).digest('hex');
+      else throw new Error('El fixture de restauración contiene enlace o archivo no regular.');
+    }
+    return result;
+  }
+  const baseline = tree(files.data);
+  const migration = path.join(root,'docs/migrations/2026-09-scientific-records.sql');
+  for (let i=0;i<2;i++) pg('psql',['-X','-v','ON_ERROR_STOP=1','-d',postgres.database,'-f',migration]);
+  const dump = path.join(temp,'fixture.dump');
+  pg('pg_dump',['-Fc','--no-owner','--no-acl','-d',postgres.database,'-f',dump]);
+  pg('createdb',['reduniv_restored']);
+  pg('pg_restore',['--no-owner','--no-acl','--exit-on-error','-d','reduniv_restored',dump]);
+  postgres.database='reduniv_restored';
+  await startApp(new URL(base).port,files);
+  await page.evaluate(() => localStorage.clear());
+  await login(page,base);
+  const response = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}`);
+  assert(response.ok, 'El recurso publicado no sobrevivió a la restauración.');
+  assert((await response.json()).title === published.title, 'La restauración alteró el título.');
+  const file = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}/file?path=datos-uno.csv`);
+  assert(file.ok && (await file.text()).includes('nombre,valor'), 'Los archivos no son accesibles tras restaurar.');
+  assert(JSON.stringify(tree(files.data))===JSON.stringify(baseline), 'El ensayo alteró los archivos del depósito.');
+  process.stdout.write('Restauración PostgreSQL sintética OK: migración doble, dump/restore, arranque y descarga.\n');
+}
+async function stopApp() {
+  if (app && app.exitCode === null && app.signalCode === null) {
     app.kill('SIGTERM');
     await Promise.race([new Promise(resolve => app.once('exit', resolve)), sleep(5000)]);
-    if (app.exitCode === null) app.kill('SIGKILL');
+    if (app.exitCode === null && app.signalCode === null) {
+      app.kill('SIGKILL');
+      await new Promise(resolve => app.once('exit', resolve));
+    }
   }
+}
+async function cleanup() {
+  if (browser) await browser.close().catch(() => {});
+  await stopApp();
   if (postgres) {
     const stopped = spawnSync(path.join(postgres.bin, 'pg_ctl'), ['-D', postgres.data, '-m', 'immediate', '-w', 'stop'], {encoding:'utf8'});
     assert(stopped.status === 0, 'No se pudo detener el PostgreSQL efímero; revise el directorio temporal.');
@@ -515,6 +563,7 @@ async function main() {
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
     await publicDownloads(base, markdown);
+    await restorePostgresFixture(page,base,files,markdown);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);
     process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered}; nueva versión ${newVersionId}.\n`);
   } catch (error) {
