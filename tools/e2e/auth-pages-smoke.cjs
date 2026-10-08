@@ -102,6 +102,13 @@ const server = http.createServer((request,response) => {
     assert((await page.$eval('#verify-message',el=>el.textContent)).includes('cuenta fue creada'));
 
     assert.equal(await page.$eval('input[name=email]', el=>el.value),'fixture@example.invalid');
+    for (const invalid of ['', 'not-an-email']) {
+      await page.$eval('input[name=email]',(el,value)=>el.value=value,invalid);
+      await page.click('#resend');
+      assert.equal(resends,0,'Reenvío envió un correo inválido.');
+      assert.equal(await page.$eval('input[name=email]',el=>el.validity.valid),false);
+    }
+    await page.$eval('input[name=email]',el=>el.value='fixture@example.invalid');
     await page.click('#resend');
     assert.equal(await page.$eval('#verify-form button',el=>el.disabled),true);
     await page.evaluate(()=>document.querySelector('#resend').click());
@@ -133,7 +140,7 @@ const server = http.createServer((request,response) => {
     assert.equal(passwordChanges,2,'Cambio de contraseña duplicó solicitudes.');
     assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-token')),null);
     assert.deepEqual(errors,[]);
-    console.log('Auth UI OK: token viejo, confirmación, error legible, reenvío sin duplicados y verificación.');
+    console.log('Auth UI OK: acceso, correo válido, reenvío/verificación y cambio de contraseña sin duplicados.');
   } finally {
     if(browser) await browser.close();
     server.closeAllConnections();

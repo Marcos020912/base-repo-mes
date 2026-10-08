@@ -34,9 +34,12 @@ form.addEventListener('submit', async event => {
 });
 resend.addEventListener('click', async () => {
   if (resend.disabled) return;
+  const email = form.elements.email;
+  if (!email.reportValidity()) return;
+  const address = email.value;
   busy(true); notify('Solicitando código…');
   try {
-    await post('/api/v1/auth/resend-verification', {email:form.elements.email.value});
+    await post('/api/v1/auth/resend-verification', {email:address});
     notify('Si el correo existe, se envió un código.', 'success');
   } catch (error) {notify(error.message, 'error');}
   finally {busy(false);}
