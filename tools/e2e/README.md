@@ -147,3 +147,14 @@ preservación ni una prueba de upgrade desde todos los esquemas históricos.
 La restauración exporta además content_information como CSV y ejecuta el
 inventario de rutas --strict contra el árbol temporal: no debe estar vacío ni
 tener URI inválidas, archivos ausentes o rutas fuera de repo.basepath.
+
+## Páginas de acceso aisladas
+
+```bash
+node tools/e2e/auth-pages-smoke.cjs
+```
+
+Servidor HTTP loopback con archivos reales y un rechazo de login controlado.
+Comprueba que login y registro permanecen accesibles con token viejo, que la
+confirmación incorrecta de contraseña no envía solicitud y que un fallo de
+login muestra mensaje legible. No crea cuentas ni prueba correo/verificación.
