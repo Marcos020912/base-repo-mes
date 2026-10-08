@@ -257,7 +257,7 @@ heredados antes de activarla.
 - [x] Ficha pública: archivos individuales, ZIP completo y exportaciones de citas usan el monitor de transferencias.
 - [x] Funciona sin cargar autenticación; la cancelación se informa sin mostrar un error técnico.
 - [x] Comprobación Chrome aislada: descarga anónima y cancelación; auditoría axe: 43 estados, 0 infracciones automáticas.
-- [ ] Validar este flujo con archivos grandes y endpoints públicos reales en staging; el monitor mantiene el archivo en memoria antes de ofrecer su guardado.
+- [ ] Validar este flujo con archivos grandes y endpoints públicos reales en staging; el modo compatible conserva el archivo en memoria; el modo opt-in directo a disco requiere navegador compatible y validación de selección nativa/volumen real.
 - [x] E2E real local Chrome + JAR + H2: contexto sin token descarga CSV, ZIP válido con description.md y datos, y BibTeX; verifica tres transferencias completadas y ausencia de errores JavaScript. La publicación usa DOI sintético, no DataCite.
 - [x] Prueba reproducible del monitor (`node tools/e2e/transfer-smoke.cjs`): stream HTTP lento sin tamaño, cancelación con cierre de conexión, éxito, error y limpieza, sin sesión ni servicios externos. No demuestra rendimiento de archivos masivos ni rollback de subidas.
 - [x] Monitor de subidas: prueba HTTP local de multipart/201, rechazo 400 con mensaje legible y cancelación XHR con cierre de conexión después de que la petición llega al servidor. No valida rollback del almacenamiento.
@@ -296,3 +296,5 @@ heredados antes de activarla.
 - [x] Login valida estructura mínima de respuesta exitosa (token, usuario y rol existente) antes de guardar sesión; prueba Chrome rechaza HTTP200 vacío sin sobrescribir sesión y confirma login válido. No sustituye la validación criptográfica del JWT en backend.
 - [x] Regresión tras los cambios UI de login/cuenta/verificación: JAR reconstruido JDK21; `E2E_POSTGRES=1 E2E_MAIL=1 E2E_POSTGRES_RESTORE=1 node tools/e2e/wizard-smoke.cjs` pasó (SMTP451, multiusuario, asistente, descargas, preservación, revisión externa y restauración). Axe repitió 43 estados con cero infracciones automáticas. No cierra validaciones institucionales, legacy ni WCAG manual.
 - [x] Rechazo de subida noJSON/HTML del proxy usa mensaje legible, no el cuerpo técnico; errores JSON conservan detail/message. Prueba Chrome/HTTP de subida502HTML y400JSON aprobada.
+
+- [x] Monitor ofrece guardado directo a disco opt-in en contexto seguro con File System Access API: escribe chunks con backpressure, cierra tras completar red y aborta en error/cancelación; alternativa Blob permanece. Chrome/HTTP prueba con handle OPFS real y picker simulado: bytes guardados, cancelación conserva archivo anterior, HTTP409 sin alteración y cancelación de selector; axe del panel cero infracciones. No certifica selector nativo, disco personal ni rendimiento masivo.

@@ -50,6 +50,12 @@ const server = http.createServer((request, response) => {
       headless:true, args:['--no-sandbox', '--disable-dev-shm-usage']});
     const page = await browser.newPage();
     const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.evaluateOnNewDocument(() => {
+      window.showSaveFilePicker = async () => {
+        if (window.cancelPicker) throw new DOMException('Cancelled', 'AbortError');
+        return window.selectedHandle;
+      };
+    });
     await page.goto('http://127.0.0.1:' + server.address().port);
     await page.evaluate(() => {
       window.downloadResult = null;
@@ -136,6 +142,41 @@ const server = http.createServer((request, response) => {
       catch (error) { return error.message; }
     });
     assert.equal(external, 'Solo se permiten descargas desde este servidor.');
+    await page.evaluate(async () => {
+      const directory = await navigator.storage.getDirectory();
+      window.selectedHandle = await directory.getFileHandle('stream-fixture.csv', {create:true});
+      document.querySelector('#transfer-disk-mode').checked = true;
+      await transfers.download('/file', 'stream-fixture.csv');
+    });
+    assert.equal(await page.evaluate(async () => (await selectedHandle.getFile()).text()), 'datos');
+    assert.equal(await page.$eval('.transfer-item span', el=>el.textContent), 'Archivo guardado');
+    await page.evaluate(async () => {
+      const writer = await selectedHandle.createWritable();
+      await writer.write('original'); await writer.close();
+      window.diskResult = null;
+      transfers.download('/slow', 'stream-fixture.csv').then(()=>diskResult='success',error=>diskResult=error.name);
+    });
+    await page.waitForFunction(()=>document.querySelector('.transfer-item span').textContent.includes('bytes'));
+    await page.click('.transfer-toggle');
+    await page.click('.transfer-item button');
+    await page.waitForFunction(()=>window.diskResult==='AbortError');
+    assert.equal(await page.evaluate(async () => (await selectedHandle.getFile()).text()), 'original',
+      'Cancelar una escritura no debe sustituir el archivo anterior.');
+    const diskFailure = await page.evaluate(async () => {
+      try {await transfers.download('/problem','stream-fixture.csv'); return null;}
+      catch(error) {return error.message;}
+    });
+    assert.equal(diskFailure,'El archivo cambió. Actualiza la ficha antes de descargar.');
+    assert.equal(await page.evaluate(async () => (await selectedHandle.getFile()).text()), 'original');
+    await page.evaluate(async () => {
+      window.cancelPicker=true;
+      try {await transfers.download('/file','stream-fixture.csv');} catch(error) {window.pickerError=error.name;}
+    });
+    assert.equal(await page.evaluate(()=>window.pickerError),'AbortError');
+    assert.equal(await page.$eval('.transfer-item span',el=>el.textContent),'Descarga cancelada');
+    await page.addScriptTag({path:require.resolve('../a11y/node_modules/axe-core/axe.min.js')});
+    const accessibility=await page.evaluate(async () => (await axe.run('#transfer-panel')).violations);
+    assert.deepEqual(accessibility,[]);
     assert.deepEqual(errors, []);
     console.log('Transferencias OK: stream sin tamaño, cancelación HTTP, éxito, error y limpieza anónimos; subida multipart, rechazo y cancelación HTTP.');
   } finally {

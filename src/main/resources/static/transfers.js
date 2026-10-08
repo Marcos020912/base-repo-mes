@@ -16,7 +16,15 @@ const transfers = (() => {
   const close = document.createElement('button'); close.type = 'button'; close.className = 'link-button transfer-close';
   close.textContent = 'Cerrar'; close.setAttribute('aria-label', 'Cerrar monitor de transferencias');
   const list = document.createElement('ol'); list.className = 'transfer-list';
-  heading.append(title, clear, close); panel.append(heading, list); document.body.append(panel);
+  heading.append(title, clear, close); panel.append(heading);
+  const diskMode = document.createElement('input'); diskMode.type = 'checkbox';
+  diskMode.id = 'transfer-disk-mode';
+  if (typeof window.showSaveFilePicker === 'function' && window.isSecureContext) {
+    const diskLabel = document.createElement('label'); diskLabel.className = 'transfer-disk-option';
+    diskLabel.append(diskMode, ' Guardar descargas directamente al disco (archivos grandes)');
+    panel.append(diskLabel);
+  }
+  panel.append(list); document.body.append(panel);
   (document.querySelector('.page-header .button-row') || document.querySelector('.page-header') || document.body).append(toggle);
 
   function refreshToggle() {
@@ -122,7 +130,14 @@ const transfers = (() => {
     const task = add(label, 'download');
     const controller = new AbortController();
     task.cancel.addEventListener('click', () => controller.abort());
+    let writable;
     try {
+      let fileHandle;
+      if (diskMode.checked) {
+        task.status.textContent = 'Selecciona dónde guardar el archivo…';
+        fileHandle = await window.showSaveFilePicker({suggestedName:filename});
+        controller.signal.throwIfAborted();
+      }
       const response = await fetch(url, {headers:options.headers || headers(), cache:options.cache || 'default', redirect:'error', signal:controller.signal});
       if (!response.ok) {
         let message = options.errorMessage || 'No se pudo descargar el archivo.';
@@ -136,17 +151,32 @@ const transfers = (() => {
         throw new Error(message);
       }
       const total = Number(response.headers.get('Content-Length')) || 0;
+      if (fileHandle) {
+        if (!response.body) throw new Error('El navegador no permite guardar esta descarga por streaming.');
+        writable = await fileHandle.createWritable();
+        controller.signal.throwIfAborted();
+      }
       const chunks = []; let loaded = 0;
       if (response.body) {
         const reader = response.body.getReader();
         while (true) {
           const {done, value} = await reader.read();
           if (done) break;
-          chunks.push(value); loaded += value.byteLength; setProgress(task, loaded, total);
+          controller.signal.throwIfAborted();
+          if (writable) await writable.write(value);
+          else chunks.push(value);
+          loaded += value.byteLength; setProgress(task, loaded, total);
         }
       } else {
         const chunk = await response.arrayBuffer(); chunks.push(chunk); loaded = chunk.byteLength;
         setProgress(task, loaded, total);
+      }
+      controller.signal.throwIfAborted();
+      if (writable) {
+        task.cancel.disabled = true;
+        task.status.textContent = 'Finalizando guardado…';
+        await writable.close(); writable = null;
+        finish(task, 'Archivo guardado'); return;
       }
       const blob = new Blob(chunks, {type:response.headers.get('Content-Type') || 'application/octet-stream'});
       const blobUrl = URL.createObjectURL(blob);
@@ -155,7 +185,11 @@ const transfers = (() => {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
       finish(task, 'Descarga preparada');
     } catch (error) {
-      finish(task, controller.signal.aborted ? 'Descarga cancelada' : 'Error en la descarga', false);
+      if (writable) {
+        try { await writable.abort(); } catch { /* Preserve the original download error. */ }
+      }
+      const cancelled = controller.signal.aborted || error.name === 'AbortError';
+      finish(task, cancelled ? 'Descarga cancelada' : 'Error en la descarga', false);
       throw error;
     }
   }

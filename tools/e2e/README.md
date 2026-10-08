@@ -203,3 +203,7 @@ Login/registro también bloquean envíos mientras están pendientes: la prueba
 invoca requestSubmit de nuevo y exige una sola petición. Un rechazo HTML del
 proxy produce mensaje genérico legible; registro503 recuperable conserva el
 aviso y redirige a verificación con correo y mailPending.
+
+### Guardado directo a disco
+
+El monitor ofrece una opción manual cuando `showSaveFilePicker` está disponible en contexto seguro. No se activa automáticamente. La prueba `transfer-smoke.cjs` sustituye solo el selector y utiliza un handle OPFS real del navegador para comprobar write/close/abort; no prueba el diálogo del sistema ni permisos del disco del usuario. En otros navegadores continúa la descarga mediante Blob en memoria. Validar archivos grandes y selección nativa en staging antes de declarar soporte masivo.
