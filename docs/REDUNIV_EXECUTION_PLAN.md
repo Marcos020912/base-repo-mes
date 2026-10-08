@@ -220,3 +220,9 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [ ] Regresión de navegador específica del historial y migración del resto de la ficha pública/privada. A07 y el objetivo global continúan pendientes.
 - [x] Editores de relaciones, financiación e identidades de autores bilingües; valores científicos, nombres y controles conservados. ORCID declarado sigue distinto de cuenta autenticada y de autoría contrastada.
 - [x] Fixture Chrome `node tools/e2e/record-editors-i18n.cjs`: historial y reintento, modales con valores preservados, payloads de relaciones/financiación, resultados ROR originales, sin nuevas consultas por idioma. Es prueba UI aislada, no prueba de autorización del backend.
+
+### Acceso de revisión temporal bilingüe — avance A07 (2026-10-08)
+- [x] Vista temporal, paginación, checksum de ingreso y mensajes de acceso/descarga en español/inglés; título, autoría, Markdown y nombres originales preservados.
+- [x] Fallos de paginado capturados y lista de archivos limpiada; respuestas anteriores no reemplazan una consulta más reciente.
+- [x] Fixture Chrome `node tools/e2e/review-access-i18n.cjs`: eliminación del token del historial, no persistencia en localStorage, cabecera conservada, fallo/revocación, ausencia de token y cambio de idioma sin consultas adicionales. Es evidencia UI aislada, no sustituye seguridad real del backend.
+- [ ] Internacionalización de fichas principales y demás áreas pendientes; el objetivo global sigue sin cerrar.

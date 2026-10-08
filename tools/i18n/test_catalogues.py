@@ -25,7 +25,7 @@ class CatalogueTest(unittest.TestCase):
     def test_migrated_auth_bindings_reference_known_keys(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
         used=set()
-        for page in ('login','register','verify','account','users','index','public','my-datasets','operations','create'):
+        for page in ('login','register','verify','account','users','index','public','my-datasets','operations','create','review-access'):
             parser=Bindings();parser.feed((STATIC/f'{page}.html').read_text());used.update(parser.keys)
             script=(STATIC/f"{'app' if page=='index' else page}.js").read_text()
             used.update(re.findall(r"uiI18n\.(?:t|error)\('([^']+)'",script))
@@ -35,7 +35,7 @@ class CatalogueTest(unittest.TestCase):
         self.assertTrue(used);self.assertEqual(used-keys,set())
     def test_scientific_ui_literal_keys_exist(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
-        domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users','versions','relations','funding','creators'}
+        domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users','versions','relations','funding','creators','reviewAccess'}
         used=set()
         for script in STATIC.glob('*.js'):
             if script.name=='ui-locales.js':continue

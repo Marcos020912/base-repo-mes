@@ -39,3 +39,5 @@ Asistente: `node tools/e2e/wizard-i18n.cjs` recorre las nueve etapas, alterna id
 
 ### Módulos de ficha (avance)
 `public-versions.js`, `relations.js`, `funding.js` y `creators.js` registran texto propio y mantienen datos originales. Los estados de búsqueda ROR se desregistran antes de montar sugerencias, evitando que un cambio de idioma borre resultados. Validación UI aislada: `node tools/e2e/record-editors-i18n.cjs` (no sustituye pruebas de seguridad del servidor). La ficha principal y otros módulos administrativos siguen pendientes.
+
+`review-access.html/js` incluye español/inglés para acceso temporal; `node tools/e2e/review-access-i18n.cjs` comprueba conservación del contenido y token en memoria, paginado fallido y cambios de idioma sin consultas. No prueba la autorización del backend ni implica que el resto de las fichas esté migrado.
