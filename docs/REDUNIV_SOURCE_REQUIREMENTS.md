@@ -76,7 +76,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | W02 | Etapas: identidad/tipo y autores/organizaciones | Base local: asistente de cuatro pantallas agrupa operaciones; comprobar cobertura de nueve etapas funcionales del informe. |
 | W03 | Búsqueda ORCID/ROR | Parcial: búsqueda ROR y OAuth ORCID; no atribuir identidad mediante búsqueda por nombre sin confirmación. |
 | W04 | Descripción/metodología y archivos/documentación | Base local: asistente y Markdown/ZIP; validar resumen y cobertura requeridos. |
-| W05 | Licencia, acceso, embargo y datos sensibles | Parcial: licencia/acceso/embargo; evaluación explícita de datos sensibles no acreditada. |
+| W05 | Licencia, acceso, embargo y datos sensibles | Implementado local: declaración privada, acceso restringido para datos sensibles y aprobación de curación; E2E aprobado. Política jurídica institucional pendiente. |
 | W06 | Artículos, software, proyectos y financiación | Base local: relaciones/funding en edición; comprobar disponibilidad durante creación. |
 | W07 | Guardado automático y recuperación | Base local: metadatos locales14d y borrador servidor; no prometer persistencia automática de archivos seleccionados. |
 | W08 | Revisión automática: errores, avisos, porcentaje y explicación | Base local: calidad incluye explicación de reutilización por campo y recomendaciones de resumen/cobertura; pendiente aceptación humana y auditoría de todos los mensajes. |
@@ -90,7 +90,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 |---|---|---|
 | A01 | Cola y validación de metadatos/archivos | Base local: Curación/calidad; validación bibliotecaria/formatos real pendiente. |
 | A02 | Control de identificadores, vocabularios y perfiles | Parcial: listas configurables e identidad; administración de perfiles/vocabularios y aprobación no acreditadas. |
-| A03 | Licencias, privacidad y datos sensibles en curación | Parcial: licencia/acceso; flujo de evaluación sensible explícito pendiente. |
+| A03 | Licencias, privacidad y datos sensibles en curación | Implementado local: revisión privada con control concurrente, aprobación obligatoria y revocación al devolver borrador; tests y E2E aprobados. Validación institucional pendiente. |
 | A04 | Usuarios, roles e integraciones DOI/OIDC/correo | Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID. |
 | A05 | Estado almacenamiento/fixity, auditoría/reportes operativos | Parcial: auditorías de integridad; consola y reportes operativos completos pendientes de alcance. |
 | A06 | Metadatos multilingües | Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI. |

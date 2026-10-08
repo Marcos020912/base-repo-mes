@@ -47,6 +47,7 @@ public class ScientificRecordController {
     private ScientificVocabularyService vocabularies;
     @Value("${repo.datacite.enabled:false}")
     private boolean automatedDoiEnabled;
+    @Autowired(required=false) private edu.kit.datamanager.repo.service.ScientificPrivacyService privacy;
 
     public ScientificRecordController(ScientificRecordRepository records, ResourceOwnershipRepository ownership, IDataResourceDao resources, ScientificQualityService quality, ScientificRecordEventRepository events) {
         this.records = records;
@@ -137,6 +138,7 @@ public class ScientificRecordController {
         requireOwner(id);
         ScientificRecord record = records.findById(id).orElseGet(() -> new ScientificRecord(id));
         if (record.getStatus() != PublicationStatus.DRAFT) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso no está en borrador.");
+        if(privacy!=null)privacy.requireSubmissionAllowed(id,record.getAccessLevel());
         var report = quality.inspect(record);
         if (!report.blockers().isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Faltan datos para revisión: " + String.join(", ", report.blockers()));
@@ -196,6 +198,7 @@ public class ScientificRecordController {
     public ScientificRecord returnToDraft(@PathVariable String id) {
         ScientificRecord record = current(id);
         if (record.getStatus() != PublicationStatus.IN_REVIEW) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso no está en revisión.");
+        if(privacy!=null)privacy.clearReview(id);
         record.setStatus(PublicationStatus.DRAFT);
         ScientificRecord saved = records.save(record);
         audit(id, "RETURNED_TO_DRAFT", null);
@@ -210,6 +213,7 @@ public class ScientificRecordController {
                 "Use la publicación DataCite del flujo editorial; la confirmación manual está desactivada.");
         ScientificRecord record = current(id);
         if (record.getStatus() != PublicationStatus.IN_REVIEW) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso debe pasar por revisión.");
+        if(privacy!=null)privacy.requirePublicationAllowed(id,record.getAccessLevel());
         if (!approval.doiRegisteredExternally()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El DOI debe estar registrado antes de publicar; esta aplicación aún no lo registra automáticamente.");
         if (record.getVersionDoi() == null || record.getLicenseId() == null || record.getVersionLabel() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "DOI de versión, licencia y versión son obligatorios.");

@@ -255,6 +255,7 @@ async function deposit(page, base, files, mode) {
   await page.type('input[name=licenseId]', 'CC-BY-4.0');
   await page.type('input[name=institution]', 'RedUniv');
   await page.type('textarea[name=methodology]', 'Metodología de prueba local.');
+  await page.select('select[name=privacyClassification]','NONE');
   await page.type('textarea[name=summary]','Resumen estructurado de prueba.');
   await page.type('input[name=geographicCoverage]','Cuba');
   await page.evaluate(()=>{document.querySelector('[name=temporalStart]').value='2025-01-01';document.querySelector('[name=temporalEnd]').value='2025-12-31';});
@@ -550,6 +551,36 @@ async function publicDownloads(base, resource) {
     process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción, BibTeX y CSV directo a disco (OPFS).\n');
   } finally { await context.close(); }
 }
+async function privacyFlow(page,base,draft) {
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  await page.goto(base+'/resource.html?id='+draft.id,{waitUntil:'load'});
+  await page.waitForSelector('#edit-privacy:not([hidden])');
+  await page.click('#edit-privacy');await page.select('#privacy-form select','PERSONAL');
+  await page.type('#privacy-form textarea','PRIVATE_ASSESSMENT_SENTINEL protection measures');
+  const declaration=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/privacy'));
+  await page.click('#privacy-form [type=submit]');assert((await declaration).ok(),'Modal de declaración rechazado.');
+  const policy=await (await fetch(base+'/api/v1/scientific/privacy-policy',{headers})).json();assert(typeof policy.required==='boolean','Política de privacidad inválida.');
+  const science=await (await fetch(base+'/api/v1/scientific/'+draft.id,{headers})).json();
+  const restricted=await fetch(base+'/api/v1/scientific/'+draft.id,{method:'PUT',headers,body:JSON.stringify({...science,accessLevel:'RESTRICTED',versionDoi:`10.99999/privacy-${Date.now()}`})});
+  assert(restricted.ok,'No se pudo restringir el depósito de prueba.');
+  assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/submit',{method:'POST',headers})).ok,'No se pudo enviar evaluación a curación.');
+  assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/publish',{method:'POST',headers,body:'{"doiRegisteredExternally":true}'})).status===409,'Publicó datos sensibles sin aprobación.');
+  if(verifiedAccount)assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/privacy',{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===404,'Usuario ajeno leyó notas privadas.');
+  await page.goto(base+'/reviews.html',{waitUntil:'load'});
+  await page.waitForFunction(id=>[...document.querySelectorAll('.review-card')].some(card=>card.querySelector('h2').textContent===id),{},draft.id);
+  await page.evaluate(id=>{const card=[...document.querySelectorAll('.review-card')].find(c=>c.querySelector('h2').textContent===id);[...card.querySelectorAll('button')].find(b=>b.textContent==='Revisar metadatos y archivos').click();},draft.id);
+  await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='Revisar privacidad'));
+  await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Revisar privacidad').click());
+  await page.select('#privacy-review-form select','APPROVED');await page.type('#privacy-review-form textarea','PRIVATE_REVIEW_SENTINEL checked access.');
+  const approval=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/privacy/review'));
+  await page.click('#privacy-review-form [type=submit]');assert((await approval).ok(),'Modal de revisión de privacidad rechazado.');
+  assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/publish',{method:'POST',headers,body:'{"doiRegisteredExternally":true}'})).ok,'No publicó después de aprobación privada y restricción.');
+  const publicMetadata=await fetch(base+'/api/v1/public/resources/'+draft.id);assert(publicMetadata.ok,'Metadatos restringidos no consultables.');
+  const body=await publicMetadata.text();assert(!body.includes('PRIVATE_ASSESSMENT_SENTINEL')&&!body.includes('PRIVATE_REVIEW_SENTINEL')&&!body.includes('assessmentNote'),'Notas privadas filtradas en ficha pública.');
+  assert(!(await fetch(base+'/api/v1/public/resources/'+draft.id+'/file?path=datos-uno.csv')).ok,'Archivo sensible descargable anónimamente.');
+  process.stdout.write('Privacidad OK: declaración/revisión modal, aprobación obligatoria, notas privadas y archivos restringidos.\n');
+}
 async function collectionsFlow(page, base, published, draft) {
   const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
@@ -838,6 +869,7 @@ async function main() {
     } finally { await reviewerContext.close(); }
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
+    await privacyFlow(page,base,zipped);
     await publicDownloads(base, markdown);
     await collectionsFlow(page, base, markdown, packaged);
     await verifyMultiuserAccess(page,base,markdown,newVersionId);

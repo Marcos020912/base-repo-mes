@@ -218,4 +218,16 @@ CREATE TABLE IF NOT EXISTS scientific_record_translations (
     PRIMARY KEY(resource_id,language)
 );
 
+CREATE TABLE IF NOT EXISTS scientific_privacy_assessments (
+    resource_id varchar(255) PRIMARY KEY,
+    revision bigint NOT NULL DEFAULT 0,
+    classification varchar(20) NOT NULL,
+    assessment_note varchar(2000),
+    review_state varchar(20) NOT NULL,
+    updated_at timestamptz,
+    reviewed_at timestamptz,
+    reviewed_by varchar(80),
+    review_note varchar(1000)
+);
+
 COMMIT;

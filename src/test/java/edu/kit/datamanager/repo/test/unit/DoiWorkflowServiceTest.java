@@ -259,4 +259,14 @@ public class DoiWorkflowServiceTest {
         workflow.publish("r1","curator");assertEquals(PublicationStatus.PUBLISHED,science.getStatus());
         verify(datacite,times(2)).updateMetadata(eq(previous.getVersionDoi()),anyMap());
     }
+    @Test public void privacyRejectionStopsDataCiteBeforeAnyRemoteReservation() {
+        science.setStatus(PublicationStatus.IN_REVIEW);
+        var privacy=mock(edu.kit.datamanager.repo.service.ScientificPrivacyService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(workflow,"privacy",privacy);
+        doThrow(new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Needs privacy approval"))
+            .when(privacy).requirePublicationAllowed(eq("r1"),anyString());
+        assertThrows(ResponseStatusException.class,()->workflow.publish("r1","curator"));
+        verify(datacite,never()).lookup(anyString());verify(datacite,never()).reserveDraft(anyString());
+        assertEquals(PublicationStatus.IN_REVIEW,science.getStatus());
+    }
 }

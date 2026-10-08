@@ -46,6 +46,7 @@ public class DoiWorkflowService {
     private final ScientificAffiliationRepository affiliations;
     private final TransactionTemplate transactions;
     private final String publicBaseUrl;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private ScientificPrivacyService privacy;
 
     public DoiWorkflowService(DataCiteService datacite, DataCiteMetadataMapper mapper,
             DoiRegistrationRepository registrations, DoiSyncEventRepository syncEvents,
@@ -112,6 +113,7 @@ public class DoiWorkflowService {
         if (science.getStatus() == PublicationStatus.PUBLISHED) return science;
         if (science.getStatus() != PublicationStatus.IN_REVIEW)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso debe pasar por revisión.");
+        if(privacy!=null)privacy.requirePublicationAllowed(resourceId,science.getAccessLevel());
         var report = transactions.execute(status -> quality.inspect(science(resourceId)));
         if (!report.blockers().isEmpty())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Faltan datos para publicar: " + String.join(", ", report.blockers()));

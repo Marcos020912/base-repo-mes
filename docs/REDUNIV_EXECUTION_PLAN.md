@@ -42,7 +42,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **W02 — Etapas: identidad/tipo y autores/organizaciones**. Base local: asistente de cuatro pantallas agrupa operaciones; comprobar cobertura de nueve etapas funcionales del informe.
 - [ ] **W03 — Búsqueda ORCID/ROR**. Parcial: búsqueda ROR y OAuth ORCID; no atribuir identidad mediante búsqueda por nombre sin confirmación.
 - [ ] **W04 — Descripción/metodología y archivos/documentación**. Base local: asistente y Markdown/ZIP; validar resumen y cobertura requeridos.
-- [ ] **W05 — Licencia, acceso, embargo y datos sensibles**. Parcial: licencia/acceso/embargo; evaluación explícita de datos sensibles no acreditada.
+- [x] **W05 — Licencia, acceso, embargo y datos sensibles**. Implementado local: declaración privada del autor, control de revisión y restricción de datos personales/confidenciales; no permite sustituir restricción con embargo. Pruebas unitarias y E2E de formularios/publicación aprobadas. Política jurídica institucional pendiente.
 - [ ] **W06 — Artículos, software, proyectos y financiación**. Base local: relaciones/funding en edición; comprobar disponibilidad durante creación.
 - [ ] **W07 — Guardado automático y recuperación**. Base local: metadatos locales14d y borrador servidor; no prometer persistencia automática de archivos seleccionados.
 - [ ] **W08 — Revisión automática: errores, avisos, porcentaje y explicación**. Base local: calidad incluye explicación de reutilización por campo y recomendaciones de resumen/cobertura; pendiente aceptación humana y auditoría de todos los mensajes.
@@ -51,7 +51,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **W11 — Reserva DOI, embargo y acceso privado a revisores**. Base local: DOI Draft/enlaces temporales; pruebas DataCite/HAProxy pendientes.
 - [ ] **A01 — Cola y validación de metadatos/archivos**. Base local: Curación/calidad; validación bibliotecaria/formatos real pendiente.
 - [ ] **A02 — Control de identificadores, vocabularios y perfiles**. Parcial: listas configurables e identidad; administración de perfiles/vocabularios y aprobación no acreditadas.
-- [ ] **A03 — Licencias, privacidad y datos sensibles en curación**. Parcial: licencia/acceso; flujo de evaluación sensible explícito pendiente.
+- [x] **A03 — Licencias, privacidad y datos sensibles en curación**. Implementado local: decisión de curación con notas privadas y revisión concurrente; bloquea publicación sensible sin aprobación, revoca al devolver a borrador. E2E aprobado; no sustituye aprobación jurídica institucional.
 - [ ] **A04 — Usuarios, roles e integraciones DOI/OIDC/correo**. Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID.
 - [ ] **A05 — Estado almacenamiento/fixity, auditoría/reportes operativos**. Parcial: auditorías de integridad; consola y reportes operativos completos pendientes de alcance.
 - [x] **A06 — Metadatos multilingües**. Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI.
@@ -105,3 +105,10 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - F08/A06: editor creación/edición/autoguardado/vista previa, ficha pública y mapper DataCite; cobertura temporal y BCP47 validados. JPA recarga/eliminación de traducciones probada.
 - E2E PG18+SMTP+Chrome+restauración aprobado: campos/traducciones conservados, fechas invertidas rechazadas, tres modos de subida. Axe49estados0; no cierra WCAG manual.
 - Regresión completa de metadatos:45 suites475 pruebas Java sin fallos/errores/omitidas; commit local del bloque, sin merge/push/despliegue.
+
+### Evaluación privada y curación
+- Declaración del autor en DRAFT; revisión CURATOR/ADMIN en IN_REVIEW; notas fuera de exportaciones públicas y autoguardado local.
+- Configuración opcional `repo.privacy.require-assessment` reutilizable por deploy; restricciones sensibles siempre activas.
+- Siete pruebas nuevas de servicio/guardas y E2E real de modales, permisos y publicación restringida; axe51 estados sin infracciones automáticas.
+- Reglas y límites documentados en `docs/PRIVACY_WORKFLOW.md`.
+- Regresión privacidad:46 suites482 pruebas,0 fallos/errores/omitidas; E2E PG18/SMTP/Chrome/restauración completo aprobado (migración doble, tablas idénticas, esquema validado y descarga).

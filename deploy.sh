@@ -43,7 +43,7 @@ boolean_value(){
 }
 remove_managed_properties(){
   local tmp keys
-  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,spring.mail.properties.mail.smtp.connectiontimeout,spring.mail.properties.mail.smtp.timeout,spring.mail.properties.mail.smtp.writetimeout,repo.mail.from,repo.fixity.enabled,repo.fixity.alert-to,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url,repo.scientific.orcid.enabled,repo.scientific.orcid.environment,repo.scientific.orcid.client-id,repo.scientific.orcid.client-secret,repo.scientific.orcid.redirect-uri'
+  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,spring.mail.properties.mail.smtp.connectiontimeout,spring.mail.properties.mail.smtp.timeout,spring.mail.properties.mail.smtp.writetimeout,repo.mail.from,repo.fixity.enabled,repo.fixity.alert-to,repo.privacy.require-assessment,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url,repo.scientific.orcid.enabled,repo.scientific.orcid.environment,repo.scientific.orcid.client-id,repo.scientific.orcid.client-secret,repo.scientific.orcid.redirect-uri'
   tmp="$(mktemp "$CONF.XXXXXX")"
   awk -v keys="$keys" '
     BEGIN { count=split(keys, items, ","); for (i=1; i<=count; i++) managed[items[i]]=1 }
@@ -184,6 +184,7 @@ if [[ "${REUSE_CONFIGURATION,,}" == "s" || "${REUSE_CONFIGURATION,,}" == "si" ||
   MAIL_STARTTLS="$(boolean_value "$MAIL_STARTTLS")"
   FIXITY_ENABLED="$(boolean_value "$(property_value 'repo.fixity.enabled')")"
   FIXITY_ENABLED=${FIXITY_ENABLED:-false}
+  PRIVACY_REQUIRED="$(boolean_value "$(property_value 'repo.privacy.require-assessment')")"; PRIVACY_REQUIRED=${PRIVACY_REQUIRED:-false}
   FIXITY_ALERT_TO="$(property_value 'repo.fixity.alert-to')"
   ES_URL=${ES_URL:-http://localhost:9200}; APP_PRIVATE_HOST=${APP_PRIVATE_HOST:-$(hostname -I | awk '{print $1}')}; HAPROXY_FRONTEND_PORT=${HAPROXY_FRONTEND_PORT:-443}
   if [[ -z "$DB_PASSWORD" || -z "$MAIL_PASSWORD" ]]; then
@@ -225,6 +226,8 @@ else
   ask FIXITY_ALERT_TO "Correo para alertas de integridad (vacío = conservar; - = desactivar)" "$(property_value 'repo.fixity.alert-to')"
   [[ "$FIXITY_ALERT_TO" == '-' ]] && FIXITY_ALERT_TO=""
   [[ -z "$FIXITY_ALERT_TO" || "$FIXITY_ALERT_TO" =~ ^[^[:space:]@]+@[^[:space:]@]+$ ]] || { echo "Correo de alertas no válido." >&2; exit 1; }
+  ask PRIVACY_REQUIRED "¿Exigir evaluación de privacidad antes de enviar a revisión? (s/N)" "$(property_value 'repo.privacy.require-assessment')"; PRIVACY_REQUIRED="$(boolean_value "${PRIVACY_REQUIRED:-false}")"
+  [[ "$PRIVACY_REQUIRED" == true || "$PRIVACY_REQUIRED" == false ]] || { echo "Responda s o n para la política de privacidad." >&2; exit 1; }
   ask DATACITE_ENABLED "¿Configurar integración DOI con DataCite? (s/N)" "$(property_value 'repo.datacite.enabled')"; DATACITE_ENABLED="$(boolean_value "${DATACITE_ENABLED:-false}")"
   DATACITE_API_URL="$(property_value 'repo.datacite.api-url')"; DATACITE_REPOSITORY_ID="$(property_value 'repo.datacite.repository-id')"; DATACITE_PREFIX="$(property_value 'repo.datacite.prefix')"; DATACITE_PASSWORD="$(property_value 'repo.datacite.password')"
   if [[ "$DATACITE_ENABLED" == true ]]; then
@@ -336,6 +339,7 @@ spring.mail.properties.mail.smtp.writetimeout: 10000
 repo.mail.from: $MAIL_USER
 repo.fixity.enabled: $FIXITY_ENABLED
 repo.fixity.alert-to: $FIXITY_ALERT_TO
+repo.privacy.require-assessment: $PRIVACY_REQUIRED
 repo.allowed-origin-pattern: https://$APP_DOMAIN
 repo.public-domain: $APP_DOMAIN
 repo.deploy.db-name: $DB_NAME

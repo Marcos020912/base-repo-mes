@@ -24,11 +24,15 @@ async function preview(id, container, page = 0) {
       request(`/api/v1/scientific/review/${encodeURIComponent(id)}/files?page=${page}`),
       request(`/api/v1/scientific/${encodeURIComponent(id)}/quality`)
     ]);
+    const privacy=await request(`/api/v1/scientific/${encodeURIComponent(id)}/privacy`);
     container.replaceChildren();
     const heading = document.createElement('h3'); heading.textContent = metadata.title;
     const byline = document.createElement('p'); byline.textContent = `${metadata.authors.join(', ') || 'Autoría no informada'} · ${metadata.publisher || 'Institución no informada'} · ${metadata.year || 'Año no informado'}`;
     const blockers = quality.blockers || [];
     const validation = document.createElement('p'); validation.textContent = `Calidad: ${quality.completionPercent} %. ${blockers.length ? `Faltan: ${blockers.join(', ')}` : 'Requisitos automáticos completos.'}`;
+    const privacyInfo=document.createElement('p');privacyInfo.textContent=privacy.classification?`Privacidad: ${privacy.classification} · ${privacy.reviewState}. ${privacy.assessmentNote||''}`:'Privacidad aún no evaluada por el autor.';
+    const privacyActions=document.createElement('div');privacyActions.append(privacyInfo);
+    if(privacy.classification)privacyActions.append(action('Revisar privacidad','secondary',()=>scientificPrivacy.openReview(id,privacy)));
     const descriptionHeading = document.createElement('h4'); descriptionHeading.textContent = 'description.md (vista segura de texto)';
     const description = document.createElement('pre'); description.className = 'review-description'; description.textContent = metadata.markdown;
     const filesHeading = document.createElement('h4'); filesHeading.textContent = 'Archivos para revisar';
@@ -103,7 +107,7 @@ async function preview(id, container, page = 0) {
         shareResult.append(input, copy); await showLinks();
       } catch (error) { toast.error(error.message); }
     }), action('Ver enlaces', 'secondary', async () => { try { await showLinks(); } catch (error) { toast.error(error.message); } }));
-    container.append(heading, byline, validation, descriptionHeading, description, filesHeading, files, pagination,
+    container.append(heading, byline, validation, privacyActions, descriptionHeading, description, filesHeading, files, pagination,
       packageButton, historyButton, historyView, shareHeading, shareNote, shareActions, shareResult, linksView);
   } catch (error) { container.textContent = ''; toast.error(error.message); }
 }

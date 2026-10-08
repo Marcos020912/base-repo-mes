@@ -26,7 +26,7 @@ const packageMode = () => field('uploadMode').value === 'package';
 const errorBox = $('#wizard-message');
 const translationEditor=metadataTranslations.mount($('#metadata-translations'),field('translations'));
 const autosaveKey = `reduniv-deposit-v1:${user?.username || 'anonymous'}:${basedOnId || 'new'}`;
-const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications'];
+const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications','privacyClassification'];
 let autosaveEnabled = false;
 let autosaveTimer;
 function storedDraft() {
@@ -65,6 +65,7 @@ function restoreDraft() {
       for (const item of draft.funding.slice(0, 20)) addFunding(item);
     }
     if (draft.uploadMode === 'package') form.querySelector('[name="uploadMode"][value="package"]').checked = true;
+    field('privacyClassification').dispatchEvent(new Event('change'));
     updateUploadMode();
     $('#autosave-status').textContent = 'Se recuperaron tus metadatos. Selecciona de nuevo el ZIP o los archivos antes de guardar.';
     $('#discard-autosave').hidden = false;
@@ -178,6 +179,7 @@ function validateStep(index) {
     if (creators().some(author => !author.givenName)) return invalid('Indica el nombre de cada autor.', $('.creator-given'));
   }
   if (index === 1) {
+    if(['PERSONAL','CONFIDENTIAL'].includes(value('privacyClassification')) && value('accessLevel')!=='RESTRICTED')return invalid('Los datos personales/confidenciales necesitan acceso restringido.',field('accessLevel'));
     if (value('accessLevel') === 'EMBARGOED' && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value('embargoUntil')) || Number.isNaN(Date.parse(value('embargoUntil')))))
       return invalid('Indica el fin del embargo en formato UTC ISO 8601.', field('embargoUntil'));
     if (value('orcid') && !/^(?:https:\/\/orcid\.org\/)?\d{4}-\d{4}-\d{4}-[\dX]{4}$/.test(value('orcid')))
@@ -241,6 +243,7 @@ async function renderPreview() {
   if (value('ror')) identity.append(node('p', `ROR: ${value('ror')}`));
   for (const item of fundingEntries()) identity.append(node('p', `Financiación: ${item.funderName}${item.awardTitle ? ` · ${item.awardTitle}` : ''}${item.awardNumber ? ` (${item.awardNumber})` : ''}`));
   if (basedOnId) identity.append(node('p', `Nueva versión de ${basedOnId}.`));
+  if(value('privacyClassification'))identity.append(node('p',`Privacidad declarada: ${value('privacyClassification')} · la nota se conserva únicamente en evaluación privada.`));
   if(value('summary'))identity.append(node('p',`Resumen: ${value('summary')}`));
   if(value('geographicCoverage'))identity.append(node('p',`Cobertura geográfica: ${value('geographicCoverage')}`));
   if(value('temporalStart')||value('temporalEnd'))identity.append(node('p',`Cobertura temporal: ${value('temporalStart')||'Sin inicio'} / ${value('temporalEnd')||'Sin fin'}`));
@@ -311,6 +314,7 @@ async function save(submit) {
     }
     report('Guardando ficha científica…');
     await api(`/api/v1/scientific/${encodeURIComponent(createdId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sciencePayload(), conceptualDoi: inheritedConceptualDoi }) });
+    await scientificPrivacy.saveWizard(createdId);
     if (fundingEntries().length) {
       report('Guardando financiación…');
       await api(`/api/v1/scientific/${encodeURIComponent(createdId)}/funding`, { method: 'PUT',

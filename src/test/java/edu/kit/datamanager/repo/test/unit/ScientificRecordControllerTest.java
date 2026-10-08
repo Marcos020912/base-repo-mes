@@ -143,4 +143,18 @@ public class ScientificRecordControllerTest {
         assertThrows(ResponseStatusException.class,()->controller.update("r1",extended("changed",null,null,null,null)));
         verify(records,never()).save(any());
     }
+    @Test public void privacyGuardsSubmissionPublicationAndRevokesOnReturn() {
+        var privacy=mock(edu.kit.datamanager.repo.service.ScientificPrivacyService.class);
+        ReflectionTestUtils.setField(controller,"privacy",privacy);
+        var record=new ScientificRecord("r1");record.setStatus(PublicationStatus.IN_REVIEW);
+        when(records.findById("r1")).thenReturn(Optional.of(record));
+        doThrow(new ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Privacy approval missing"))
+            .when(privacy).requirePublicationAllowed("r1","OPEN");
+        assertThrows(ResponseStatusException.class,()->controller.publish("r1",new ScientificRecordController.PublicationApproval(true)));
+        controller.returnToDraft("r1");verify(privacy).clearReview("r1");
+        doThrow(new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,"Assessment missing"))
+            .when(privacy).requireSubmissionAllowed("r1","OPEN");
+        assertThrows(ResponseStatusException.class,()->controller.submit("r1"));
+        assertEquals(PublicationStatus.DRAFT,record.getStatus());
+    }
 }
