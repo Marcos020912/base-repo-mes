@@ -114,7 +114,7 @@ async function startApp(port, files) {
   fs.writeFileSync(config, [
     `server.port=${port}`, 'server.address=127.0.0.1',
     ...await databaseProperties(),
-    'spring.jpa.hibernate.ddl-auto=update',
+    `spring.jpa.hibernate.ddl-auto=${postgres?.restored ? 'validate' : 'update'}`,
     `repo.basepath=${pathToFileUrl(files.data)}`,
     'repo.auth.enabled=true',
     `repo.auth.jwtSecret=${crypto.randomBytes(48).toString('hex')}`,
@@ -423,11 +423,25 @@ async function restorePostgresFixture(page, base, files, published) {
   const baseline = tree(files.data);
   const migration = path.join(root,'docs/migrations/2026-09-scientific-records.sql');
   for (let i=0;i<2;i++) pg('psql',['-X','-v','ON_ERROR_STOP=1','-d',postgres.database,'-f',migration]);
+  function dataFingerprints(database) {
+    const tables = pg('psql',['-X','-At','-d',database,'-c',
+      "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename"]).stdout.trim().split('\n').filter(Boolean);
+    const result = {};
+    for (const table of tables) {
+      const quoted = '"' + table.replaceAll('"','""') + '"';
+      const query = `SELECT count(*),md5(coalesce(string_agg(row_to_json(t)::text, E'\\n' ORDER BY row_to_json(t)::text),'')) FROM public.${quoted} t`;
+      result[table] = pg('psql',['-X','-At','-d',database,'-c',query]).stdout.trim();
+    }
+    return result;
+  }
+  const originalData = dataFingerprints(postgres.database);
   const dump = path.join(temp,'fixture.dump');
   pg('pg_dump',['-Fc','--no-owner','--no-acl','-d',postgres.database,'-f',dump]);
   pg('createdb',['reduniv_restored']);
   pg('pg_restore',['--no-owner','--no-acl','--exit-on-error','-d','reduniv_restored',dump]);
-  postgres.database='reduniv_restored';
+  assert(JSON.stringify(dataFingerprints('reduniv_restored')) === JSON.stringify(originalData),
+    'La restauración alteró filas o perdió tablas del fixture.');
+  postgres.database='reduniv_restored'; postgres.restored=true;
   await startApp(new URL(base).port,files);
   await page.evaluate(() => localStorage.clear());
   await login(page,base);
@@ -437,7 +451,7 @@ async function restorePostgresFixture(page, base, files, published) {
   const file = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}/file?path=datos-uno.csv`);
   assert(file.ok && (await file.text()).includes('nombre,valor'), 'Los archivos no son accesibles tras restaurar.');
   assert(JSON.stringify(tree(files.data))===JSON.stringify(baseline), 'El ensayo alteró los archivos del depósito.');
-  process.stdout.write('Restauración PostgreSQL sintética OK: migración doble, dump/restore, arranque y descarga.\n');
+  process.stdout.write('Restauración PostgreSQL sintética OK: migración doble, datos idénticos, esquema validado y descarga.\n');
 }
 async function stopApp() {
   if (app && app.exitCode === null && app.signalCode === null) {

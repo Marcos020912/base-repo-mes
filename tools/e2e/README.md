@@ -135,3 +135,10 @@ sin cambios. No modifica ni importa bases existentes.
 El fixture empieza con el esquema actual generado por Hibernate; no representa
 todas las variantes de esquemas antiguos ni sustituye el ensayo de staging.
 El reinicio renueva la clave JWT efímera y exige volver a iniciar sesión.
+
+En el segundo arranque se usa ddl-auto=validate: Hibernate no puede completar
+ni corregir el esquema restaurado para ocultar incompatibilidades. Antes de
+arrancarlo se compara por cada tabla del esquema public el recuento de filas y
+una huella MD5 del JSON de filas ordenado, entre origen migrado y restauración.
+Esta huella es un control del fixture, no un mecanismo criptográfico de
+preservación ni una prueba de upgrade desde todos los esquemas históricos.
