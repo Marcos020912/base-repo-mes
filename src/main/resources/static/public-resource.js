@@ -150,8 +150,8 @@ async function load() {
       const previous = document.createElement('a'); previous.href = `/datasets/${encodeURIComponent(data.previousResourceId)}`;
       previous.textContent = 'Ver versión anterior'; document.querySelector('#version-links').append(previous);
     }
-    if (data.newerVersionId) {
-      const warning = document.createElement('p'); warning.className = 'version-warning';
+    if (data.newerVersionId && !document.querySelector('#family-version-warning')) {
+      const warning = document.createElement('p'); warning.className = 'version-warning legacy-version-warning';
       warning.textContent = 'Está consultando una versión anterior. ';
       const newer = document.createElement('a'); newer.href = `/datasets/${encodeURIComponent(data.newerVersionId)}`;
       newer.textContent = 'Ver la versión posterior'; warning.append(newer);

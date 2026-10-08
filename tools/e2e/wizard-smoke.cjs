@@ -478,6 +478,21 @@ async function deriveNewVersion(page, base, files, previous) {
     'La nueva versión no conservó el DOI conceptual del conjunto.');
   return id;
 }
+async function publicVersionHistory(base,published,nextId,token) {
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  assert((await fetch(base+'/api/v1/public/resources/'+nextId+'/versions')).status===404,'Historial expone borrador.');
+  const before=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions')).json();assert(before.total===1&&!JSON.stringify(before).includes(nextId),'Familia pública expone sucesora en borrador.');
+  const next=await (await fetch(base+'/api/v1/scientific/'+nextId,{headers})).json();
+  assert((await fetch(base+'/api/v1/scientific/'+nextId,{method:'PUT',headers,body:JSON.stringify({...next,versionDoi:`10.99999/version-history-${Date.now()}`})})).ok,'No se pudo preparar sucesora sintética.');
+  assert((await fetch(base+'/api/v1/scientific/'+nextId+'/submit',{method:'POST',headers})).ok,'No se pudo enviar sucesora sintética.');
+  assert((await fetch(base+'/api/v1/scientific/'+nextId+'/publish',{method:'POST',headers,body:'{"doiRegisteredExternally":true}'})).ok,'No se pudo publicar sucesora sintética.');
+  let history=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions?size=1')).json();assert(history.latestPublishedId===nextId&&history.newerPublicationAvailable,'No informa publicación más reciente en la familia.');assert(history.total===2&&history.pages===2&&history.items.length===1&&history.items[0].id===nextId,'Historial paginado no incluye nueva versión.');
+  const beforeWithdrawalContext=await browser.createBrowserContext();try{const visitor=await beforeWithdrawalContext.newPage();await visitor.goto(base+'/datasets/'+published.id,{waitUntil:'load'});await visitor.waitForSelector('#family-version-warning a');assert(await visitor.$eval('#family-version-warning a',n=>n.href).then(href=>href.endsWith('/datasets/'+nextId)),'Aviso no apunta a última publicación de familia.');}finally{await beforeWithdrawalContext.close();}
+  assert((await fetch(base+'/api/v1/scientific/'+nextId+'/withdraw',{method:'POST',headers,body:JSON.stringify({reason:'Retirada sintética para prueba de historial'})})).ok,'No se pudo retirar sucesora sintética.');
+  history=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions')).json();assert(history.items.some(v=>v.id===nextId&&v.status==='WITHDRAWN')&&history.items.some(v=>v.id===published.id&&v.current),'Retirada desapareció de familia pública.');
+  const context=await browser.createBrowserContext();try{const visitor=await context.newPage();await visitor.goto(base+'/datasets/'+published.id,{waitUntil:'load'});await visitor.waitForFunction(()=>document.querySelectorAll('#versions-list li').length===2);assert(await visitor.$eval('#versions-list',n=>n.textContent.includes('Retirada (ficha permanente)')),'Ficha no muestra versión retirada.');assert(await visitor.$eval('#versions-list [aria-current=page]',n=>n.href.endsWith('/datasets/'+new URL(location.href).pathname.split('/').pop())),'Ficha no identifica versión exacta.');}finally{await context.close();}
+  process.stdout.write('Versiones OK: borradores ocultos, publicación, familia paginada y retirada retenida en ficha pública.\n');
+}
 async function publicDownloads(base, resource) {
   const metricsResponse=await fetch(base+'/api/v1/public/metrics');
   assert(metricsResponse.ok,'Métricas públicas no accesibles.');
@@ -900,6 +915,7 @@ async function main() {
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
     await privacyFlow(page,base,zipped);
+    await publicVersionHistory(base,markdown,newVersionId,await page.evaluate(()=>localStorage.getItem('base-repo-token')));
     await publicDownloads(base, markdown);
     await collectionsFlow(page, base, markdown, packaged);
     await verifyMultiuserAccess(page,base,markdown,newVersionId);

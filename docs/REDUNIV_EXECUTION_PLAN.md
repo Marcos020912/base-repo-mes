@@ -18,7 +18,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **F03 — Licencia y condiciones de acceso obligatorias**. Base local: checklist de calidad/acceso; probar ausencia de licencia, embargo y restricción en todos los flujos.
 - [ ] **F04 — Copiar cita y elegir APA/Vancouver/Chicago/IEEE**. Base local: bloque de cita/exportaciones; validación bibliotecaria pendiente.
 - [ ] **F05 — Exportar BibTeX, RIS y CSL-JSON para versión exacta**. Base local: servicio de cita; verificar round-trip/validez y como máximo dos acciones (§11).
-- [ ] **F06 — Aviso de versión antigua, DOI conceptual y de versión**. Base local: sucesora/DOI; verificar historial completo, no solo enlace anterior/siguiente.
+- [x] **F06 — Aviso de versión antigua, DOI conceptual y de versión**. Implementado local: historial paginado de familia explícita y aviso de publicación más reciente por fecha, preserva retiradas y oculta borradores; DOI conceptual/de versión conservados. Tests/E2E/restore aprobados. DataCite real pendiente.
 - [x] **F07 — Fecha de publicación y última actualización visibles**. Implementado local: publishedAt y lastUpdate públicos visibles; E2E Chrome/PostgreSQL verificó última actualización.
 - [x] **F08 — Resumen, método, cobertura y palabras clave**. Implementado local: resumen estructurado, fechas de cobertura validadas y región textual en creación/edición/ficha pública/DataCite. E2E PostgreSQL/restauración y pruebas de validación aprobados.
 - [ ] **F09 — Archivos: formato, tamaño, checksum y acceso**. Base local: lista de archivos/huellas/monitor; selector nativo y volumen real pendientes.
@@ -135,3 +135,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Campos producción/origen, procesamiento y herramientas/versiones en creación/edición/autoguardado/preview/sucesora/ficha pública y metadatos exportados.
 - Declaración contextual en RO-Crate/PROV y Methods DataCite; no genera evidencia de ejecución inexistente. `docs/SCIENTIFIC_PROVENANCE.md`.
 - Regresión48 suites490pruebas0fallos/errores/omitidas; axe53estados0; E2E PostgreSQL/SMTP/Chrome/restauración validó declaración, paquete/manifiestos y persistencia.
+
+### Familia pública de versiones
+- Tres tests: padres/hijas/hermanas, ciclo, paginación, retiradas, borradores/huérfanos excluidos y ausencia de agrupación por coincidencia DOI. No inventa anterioridad con fechas ausentes/empatadas.
+- E2E PG18/SMTP/Chrome/restauración: borrador no visible, publicación sintética de sucesora, aviso con enlace correcto, retirada conservada en familia pública y ficha permanente.
+- Regresión49suites493pruebas0fallos/errores/omitidas; JAR y axe53estados0. `docs/PUBLIC_VERSION_HISTORY.md`.

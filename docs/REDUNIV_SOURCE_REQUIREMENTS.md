@@ -42,7 +42,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | F03 | Licencia y condiciones de acceso obligatorias | Base local: checklist de calidad/acceso; probar ausencia de licencia, embargo y restricción en todos los flujos. |
 | F04 | Copiar cita y elegir APA/Vancouver/Chicago/IEEE | Base local: bloque de cita/exportaciones; validación bibliotecaria pendiente. |
 | F05 | Exportar BibTeX, RIS y CSL-JSON para versión exacta | Base local: servicio de cita; verificar round-trip/validez y como máximo dos acciones (§11). |
-| F06 | Aviso de versión antigua, DOI conceptual y de versión | Base local: sucesora/DOI; verificar historial completo, no solo enlace anterior/siguiente. |
+| F06 | Aviso de versión antigua, DOI conceptual y de versión | Implementado local: familia pública paginada de padres/hijas/hermanas, retiradas retenidas y borradores ocultos; aviso de publicación posterior por fecha sin adivinar fechas desconocidas. Tests/E2E/restore aprobados; DataCite real pendiente. |
 | F07 | Fecha de publicación y última actualización visibles | Implementado local: publishedAt y lastUpdate públicos visibles; E2E Chrome/PostgreSQL verificó última actualización. |
 | F08 | Resumen, método, cobertura y palabras clave | Implementado local: resumen estructurado, fechas de cobertura validadas y región textual en creación/edición/ficha pública/DataCite. E2E PostgreSQL/restauración y pruebas de validación aprobados. |
 | F09 | Archivos: formato, tamaño, checksum y acceso | Base local: lista de archivos/huellas/monitor; selector nativo y volumen real pendientes. |
