@@ -60,3 +60,8 @@ comprueba progreso indeterminado sin Content-Length, cancelación de una descarg
 en curso y cierre real de la conexión HTTP, éxito con progreso completo, error
 HTTP y limpieza del historial. Verifica que el acceso anónimo no envía
 Authorization. No valida cargas de archivos grandes ni rollback de subidas.
+
+También prueba la subida multipart con respuesta 201, un rechazo 400 con
+mensaje JSON y la cancelación XHR de una petición que ya llegó al servidor.
+El servidor de prueba consume el cuerpo y retiene la respuesta para permitir
+cancelar una petición activa: no simula almacenamiento ni garantiza rollback.

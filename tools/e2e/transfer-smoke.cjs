@@ -7,6 +7,9 @@ const assert = require('node:assert/strict');
 const puppeteer = require('../a11y/node_modules/puppeteer-core');
 const script = fs.readFileSync(path.resolve(__dirname, '../../src/main/resources/static/transfers.js'));
 let closed = false;
+let uploadClosed = false;
+let uploadStarted = false;
+let uploaded = 0;
 let unauthorizedHeader = false;
 const server = http.createServer((request, response) => {
   unauthorizedHeader ||= Boolean(request.headers.authorization);
@@ -15,6 +18,14 @@ const server = http.createServer((request, response) => {
     response.end('<header class="page-header"></header><script src="/transfers.js"></script>');
   } else if (request.url === '/transfers.js') {
     response.setHeader('Content-Type', 'application/javascript'); response.end(script);
+  } else if (request.url === '/upload') {
+    request.on('data', chunk => uploaded += chunk.length);
+    request.on('end', () => { response.writeHead(201); response.end('{}'); });
+  } else if (request.url === '/upload-error') {
+    request.resume(); response.writeHead(400, {'Content-Type':'application/json'});
+    response.end(JSON.stringify({detail:'Archivo incompatible con el tipo de dataset.'}));
+  } else if (request.url === '/upload-slow') {
+    uploadStarted = true; request.resume(); response.on('close', () => uploadClosed = true);
   } else if (request.url === '/slow') {
     response.setHeader('Content-Type', 'application/octet-stream');
     const timer = setInterval(() => response.write(Buffer.alloc(4096)), 50);
@@ -61,8 +72,31 @@ const server = http.createServer((request, response) => {
     assert.equal(unauthorizedHeader, false, 'La página pública envió Authorization.');
     await page.click('.transfer-heading button');
     assert.equal(await page.$$eval('.transfer-item', items => items.length), 0);
+    await page.evaluate(() => transfers.upload('/upload', new File(['nombre,valor\nuno,1\n'], 'datos.csv')));
+    assert(uploaded > 18, 'No se recibió el cuerpo multipart de la subida.');
+    assert.equal(await page.$eval('.transfer-item span', el => el.textContent), 'Subida completada');
+    const uploadFailure = await page.evaluate(async () => {
+      try { await transfers.upload('/upload-error', new File(['x'], 'wrong.exe')); return null; }
+      catch (error) { return error.message; }
+    });
+    assert.equal(uploadFailure, 'Archivo incompatible con el tipo de dataset.');
+    assert.equal(await page.$eval('.transfer-item span', el => el.textContent), 'Error en la subida');
+    await page.evaluate(() => {
+      window.uploadResult = null;
+      transfers.upload('/upload-slow', new File([new Uint8Array(8 * 1024 * 1024)], 'slow.csv'))
+        .then(() => window.uploadResult = 'success', error => window.uploadResult = error.message);
+    });
+    await page.waitForFunction(() => document.querySelector('.transfer-item strong').textContent.includes('slow.csv'));
+    for (let i=0; i<40 && !uploadStarted; i++) await new Promise(resolve => setTimeout(resolve, 50));
+    assert(uploadStarted, 'La subida no llegó al servidor antes de probar cancelación.');
+    await page.click('.transfer-item button');
+    await page.waitForFunction(() => window.uploadResult === 'Subida cancelada.');
+    for (let i=0; i<20 && !uploadClosed; i++) await new Promise(resolve => setTimeout(resolve, 50));
+    assert(uploadClosed, 'Cancelar subida no cerró la conexión HTTP.');
+    assert.equal(await page.$eval('.transfer-item span', el => el.textContent), 'Subida cancelada');
+    assert.equal(await page.$eval('.transfer-item button', el => el.hidden), true);
     assert.deepEqual(errors, []);
-    console.log('Transferencias OK: stream sin tamaño, cancelación HTTP, éxito, error y limpieza anónimos.');
+    console.log('Transferencias OK: stream sin tamaño, cancelación HTTP, éxito, error y limpieza anónimos; subida multipart, rechazo y cancelación HTTP.');
   } finally {
     if (browser) await browser.close();
     server.closeAllConnections();
