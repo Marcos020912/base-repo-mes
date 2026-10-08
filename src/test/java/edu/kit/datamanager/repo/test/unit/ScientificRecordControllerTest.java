@@ -107,4 +107,40 @@ public class ScientificRecordControllerTest {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("other", null));
         assertThrows(ResponseStatusException.class, () -> controller.history("r1"));
     }
+    private ScientificRecordController.UpdateRequest extended(String summary,String start,String end,String geography,
+            java.util.Map<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata> translations) {
+        return new ScientificRecordController.UpdateRequest("1.0",null,null,"CC-BY-4.0","OPEN",null,"es",null,null,
+            null,"Universidad",null,null,"Método",summary,start,end,geography,translations);
+    }
+    @Test public void structuredMetadataAndTranslationsAreValidatedAndCanonicalized() {
+        var input=extended(" Resumen ","2025-01-01","2025-12-31"," Cuba ",java.util.Map.of("en-us",
+            new edu.kit.datamanager.repo.domain.LocalizedScientificMetadata(" Translated title "," Summary ")));
+        var saved=controller.update("r1",input);
+        assertEquals("Resumen",saved.getSummary());assertEquals("Cuba",saved.getGeographicCoverage());
+        assertEquals(java.time.LocalDate.of(2025,1,1),saved.getTemporalStart());
+        assertEquals("Translated title",saved.getTranslations().get("en-US").getTitle());
+    }
+    @Test public void invalidCoverageAndDuplicateOrEmptyTranslationsAreRejected() {
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",extended("x","2025-12-31","2025-01-01",null,null)));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",extended("x","not-date",null,null,null)));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",extended("x",null,null,null,java.util.Map.of("invalid_language",new edu.kit.datamanager.repo.domain.LocalizedScientificMetadata("x",null)))));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",extended("x",null,null,null,java.util.Map.of("en",new edu.kit.datamanager.repo.domain.LocalizedScientificMetadata(null,null)))));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",extended("x",null,null,null,java.util.Map.of("en-US",new edu.kit.datamanager.repo.domain.LocalizedScientificMetadata("x",null),"en-us",new edu.kit.datamanager.repo.domain.LocalizedScientificMetadata("y",null)))));
+    }
+    @Test public void omittedNewFieldsPreserveStoredValuesAndExplicitBlankClears() {
+        var record=controller.update("r1",extended("Resumen","2025-01-01",null,"Cuba",java.util.Map.of("en",new edu.kit.datamanager.repo.domain.LocalizedScientificMetadata("Title",null))));
+        when(records.findById("r1")).thenReturn(Optional.of(record));
+        controller.update("r1",extended(null,null,null,null,null));
+        assertEquals("Resumen",record.getSummary());assertEquals(1,record.getTranslations().size());
+        controller.update("r1",extended("","","","",java.util.Map.of()));
+        assertNull(record.getSummary());assertNull(record.getTemporalStart());assertTrue(record.getTranslations().isEmpty());
+    }
+    @Test public void structuredFieldsCannotBeChangedAfterPublicationOrByOtherAuthor() {
+        var record=new ScientificRecord("r1");record.setStatus(PublicationStatus.PUBLISHED);
+        when(records.findById("r1")).thenReturn(Optional.of(record));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",extended("changed",null,null,null,null)));
+        record.setStatus(PublicationStatus.DRAFT);SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("other",null));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",extended("changed",null,null,null,null)));
+        verify(records,never()).save(any());
+    }
 }

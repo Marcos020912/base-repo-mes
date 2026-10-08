@@ -255,6 +255,19 @@ async function deposit(page, base, files, mode) {
   await page.type('input[name=licenseId]', 'CC-BY-4.0');
   await page.type('input[name=institution]', 'RedUniv');
   await page.type('textarea[name=methodology]', 'Metodología de prueba local.');
+  await page.type('textarea[name=summary]','Resumen estructurado de prueba.');
+  await page.type('input[name=geographicCoverage]','Cuba');
+  await page.evaluate(()=>{document.querySelector('[name=temporalStart]').value='2025-01-01';document.querySelector('[name=temporalEnd]').value='2025-12-31';});
+  await page.click('#metadata-translations > button');
+  await page.type('.translation-row input','en');
+  await page.type('.translation-row label:nth-of-type(2) input','Translated scientific title');
+  await page.type('.translation-row textarea','Structured translated summary.');
+  if(mode==='md') {
+    await page.evaluate(()=>document.querySelector('[name=temporalEnd]').value='2024-12-31');
+    await page.click('#wizard-next');
+    assert(await page.$eval('.wizard-panel[data-step="1"]',element=>!element.hidden),'El asistente aceptó un rango temporal invertido.');
+    await page.evaluate(()=>document.querySelector('[name=temporalEnd]').value='2025-12-31');
+  }
   await page.click('#wizard-next');
   await page.waitForSelector('.wizard-panel[data-step="2"]:not([hidden])');
   if (mode === 'package') {
@@ -284,6 +297,8 @@ async function deposit(page, base, files, mode) {
   const listing = await page.$eval('#download-list', element => element.textContent);
   if (mode !== 'md') {
     assert(listing.includes('datos-dos.csv'), 'Falta el segundo archivo del dataset.');
+    await page.waitForSelector('#markdown-rendered img');
+    await page.$eval('#markdown-rendered img',image=>image.scrollIntoView({block:'center'}));
     await page.waitForFunction(() => document.querySelector('#markdown-rendered img')?.naturalWidth > 0,
       {timeout:15000});
     if (mode === 'package') await page.waitForFunction(() => document.querySelector('#markdown-rendered')?.textContent.includes('Paquete completo'),
@@ -299,6 +314,8 @@ async function deposit(page, base, files, mode) {
       {headers:{Authorization:`Bearer ${token}`}});
     return response.ok ? (await response.json()).status : `HTTP ${response.status}`;
   });
+  const structured=await page.evaluate(async()=>await (await fetch('/api/v1/scientific/'+new URLSearchParams(location.search).get('id'),{headers:auth.headers()})).json());
+  assert(structured.summary==='Resumen estructurado de prueba.' && structured.temporalStart==='2025-01-01' && structured.geographicCoverage==='Cuba' && structured.translations.en.title==='Translated scientific title','El depósito no persistió metadatos estructurados/traducciones.');
   assert(status === 'DRAFT', `El depósito no quedó como borrador: ${status}`);
   if (mode === 'md') {
     await page.click('.download-file[data-path="datos-uno.csv"]');
@@ -483,6 +500,7 @@ async function publicDownloads(base, resource) {
     await page.waitForSelector('#files .file-row a');
     assert(await page.evaluate(() => localStorage.getItem('base-repo-token')) === null,
       'La prueba pública heredó una sesión autenticada.');
+    assert(await page.evaluate(()=>document.querySelector('#landing').textContent.includes('Translated scientific title') && document.querySelector('#identity').textContent.includes('Cuba') && document.querySelector('#identity').textContent.includes('Resumen estructurado')), 'Ficha pública sin resumen/cobertura/traducción.');
     assert(await page.evaluate(()=>document.querySelector('#identity').textContent.includes('Última actualización')), 'Ficha sin última actualización.');
     await page.evaluate(()=>{
       const original=URL.createObjectURL;window.originalCreateObjectURL=original;
@@ -688,7 +706,8 @@ async function restorePostgresFixture(page, base, files, published) {
     'El nuevo login no sustituyó la sesión inválida después del reinicio.');
   const response = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}`);
   assert(response.ok, 'El recurso publicado no sobrevivió a la restauración.');
-  assert((await response.json()).title === published.title, 'La restauración alteró el título.');
+  const restored=await response.json();
+  assert(restored.title===published.title && restored.translations.en.title==='Translated scientific title' && restored.temporalStart==='2025-01-01','La restauración alteró título/traducciones/cobertura.');
   const file = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}/file?path=datos-uno.csv`);
   assert(file.ok && (await file.text()).includes('nombre,valor'), 'Los archivos no son accesibles tras restaurar.');
   assert(JSON.stringify(tree(files.data))===JSON.stringify(baseline), 'El ensayo alteró los archivos del depósito.');

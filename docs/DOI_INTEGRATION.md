@@ -111,3 +111,13 @@ base local es la fuente de estas relaciones: cambios manuales externos necesitan
 conciliación previa. Si falla la sincronización, la nueva versión permanece en
 revisión y la publicación puede reintentarse, aunque DataCite ya haya hecho
 Findable alguno de los DOI. No se promete una transacción distribuida.
+
+### Resumen, cobertura y traducciones
+
+Los títulos traducidos declarados se exportan como `titles` con `lang` y
+`titleType=TranslatedTitle`. Resúmenes se exportan como `descriptions` Abstract,
+y la metodología como Methods; las traducciones conservan su idioma. La cobertura
+geográfica textual usa `geoLocations.geoLocationPlace`; las fechas declaradas
+usan `dates` Collected y `dateInformation` distingue rango o extremo conocido.
+No se infieren coordenadas ni traducciones automáticamente.
+Referencia: [mapeo oficial XML/JSON de DataCite](https://support.datacite.org/docs/datacite-xml-to-json-mapping).

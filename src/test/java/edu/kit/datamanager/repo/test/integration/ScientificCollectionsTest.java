@@ -93,4 +93,15 @@ public class ScientificCollectionsTest {
         assertEquals(initial.publishedCollections()+1,snapshot.publishedCollections());
         assertNotNull(snapshot.generatedAt());assertEquals(3,snapshot.definitions().size());
     }
+    @Autowired private jakarta.persistence.EntityManager entityManager;
+    @Test public void translationsAndCoverageSurviveJpaReloadAndCanBeCleared() {
+        String id=dataset(PublicationStatus.DRAFT);var record=records.findById(id).orElseThrow();
+        record.setSummary("Resumen");record.setTemporalStart(java.time.LocalDate.of(2025,1,1));record.setGeographicCoverage("Cuba");
+        record.getTranslations().put("en",new LocalizedScientificMetadata("English title","English summary"));
+        records.saveAndFlush(record);entityManager.clear();
+        var loaded=records.findById(id).orElseThrow();assertEquals("Resumen",loaded.getSummary());
+        assertEquals("Cuba",loaded.getGeographicCoverage());assertEquals("English title",loaded.getTranslations().get("en").getTitle());
+        loaded.getTranslations().clear();records.saveAndFlush(loaded);entityManager.clear();
+        assertTrue(records.findById(id).orElseThrow().getTranslations().isEmpty());
+    }
 }

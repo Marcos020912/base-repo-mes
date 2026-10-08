@@ -74,7 +74,25 @@ public class DataCiteMetadataMapper {
 
         Map<String, Object> attributes = new LinkedHashMap<>();
         attributes.put("creators", creators);
-        attributes.put("titles", List.of(Map.of("title", title)));
+        List<Map<String,String>> titles=new ArrayList<>();
+        titles.add(Map.of("title",title));
+        science.getTranslations().forEach((language,value)->{
+            if(hasText(value.getTitle()))titles.add(Map.of("title",value.getTitle(),"lang",language,"titleType","TranslatedTitle"));
+        });
+        attributes.put("titles",titles);
+        List<Map<String,String>> descriptions=new ArrayList<>();
+        if(hasText(science.getSummary()))descriptions.add(Map.of("description",science.getSummary(),"descriptionType","Abstract"));
+        if(hasText(science.getMethodology()))descriptions.add(Map.of("description",science.getMethodology(),"descriptionType","Methods"));
+        science.getTranslations().forEach((language,value)->{
+            if(hasText(value.getSummary()))descriptions.add(Map.of("description",value.getSummary(),"descriptionType","Abstract","lang",language));
+        });
+        if(!descriptions.isEmpty())attributes.put("descriptions",descriptions);
+        if(hasText(science.getGeographicCoverage()))attributes.put("geoLocations",List.of(Map.of("geoLocationPlace",science.getGeographicCoverage())));
+        if(science.getTemporalStart()!=null || science.getTemporalEnd()!=null) {
+            String period=science.getTemporalStart()!=null && science.getTemporalEnd()!=null?science.getTemporalStart()+"/"+science.getTemporalEnd():
+                (science.getTemporalStart()!=null?science.getTemporalStart():science.getTemporalEnd()).toString();
+            attributes.put("dates",List.of(Map.of("date",period,"dateType","Collected","dateInformation",science.getTemporalStart()==null?"Fin de cobertura temporal declarado":science.getTemporalEnd()==null?"Inicio de cobertura temporal declarado":"Cobertura temporal declarada por el depositante")));
+        }
         attributes.put("publisher", publisher);
         attributes.put("publicationYear", Integer.parseInt(year));
         attributes.put("types", Map.of("resourceTypeGeneral", type(resource)));

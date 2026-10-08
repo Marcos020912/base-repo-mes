@@ -112,7 +112,8 @@ public class PublicScientificResourceController {
                 science.getKeywords(), science.getRelatedPublications(), science.getMethodology(), science.getPublishedAt(), resource.getLastUpdate(), markdown,
                 science.getPreviousResourceId(), newerVersionId, science.getAccessLevel(), science.getEmbargoUntil(),
                 relations.findByResourceIdOrderByIdAsc(id), authorIdentities,
-                funding.findByResourceIdOrderByIdAsc(id)));
+                funding.findByResourceIdOrderByIdAsc(id), science.getSummary(), science.getTemporalStart(), science.getTemporalEnd(),
+                science.getGeographicCoverage(), science.getTranslations()));
     }
 
     @GetMapping("/{id}/files")
@@ -172,7 +173,8 @@ public class PublicScientificResourceController {
                                String relatedPublications, String methodology, java.time.Instant publishedAt, java.time.Instant lastUpdate, String markdown,
                                String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil,
                                List<ScientificRelation> relations, List<AuthorIdentity> authorIdentities,
-                               List<ScientificFunding> funding) {}
+                               List<ScientificFunding> funding, String summary, java.time.LocalDate temporalStart, java.time.LocalDate temporalEnd,
+                               String geographicCoverage, Map<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata> translations) {}
     public record AuthorIdentity(String givenName, String familyName, String orcid, String institution,
                                  String ror, List<AuthorAffiliation> affiliations, boolean orcidAuthenticated) {}
     public record AuthorAffiliation(String institution, String ror) {}

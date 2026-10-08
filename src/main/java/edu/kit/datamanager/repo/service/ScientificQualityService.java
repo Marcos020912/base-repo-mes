@@ -46,12 +46,34 @@ public class ScientificQualityService {
         checks.add(new QualityCheck("doi", "DOI registrado para esta versión", hasText(science.getVersionDoi()), false));
         checks.add(new QualityCheck("orcid", "ORCID de autoría", hasText(science.getOrcid()) || identities.stream().anyMatch(item -> hasText(item.getOrcid())), false));
         checks.add(new QualityCheck("ror", "ROR institucional", hasText(science.getRor()) || identities.stream().anyMatch(item -> hasText(item.getRor())), false));
+        checks.add(new QualityCheck("summary","Resumen científico",hasText(science.getSummary()),false));
+        checks.add(new QualityCheck("coverage","Cobertura temporal/geográfica",science.getTemporalStart()!=null || science.getTemporalEnd()!=null || hasText(science.getGeographicCoverage()),false));
         long completed = checks.stream().filter(QualityCheck::complete).count();
         return new QualityReport((int) (100 * completed / checks.size()),
                 checks.stream().filter(item -> item.required() && !item.complete()).map(QualityCheck::label).toList(), checks);
     }
 
     private static boolean hasText(String value) { return value != null && !value.isBlank(); }
-    public record QualityCheck(String code, String label, boolean complete, boolean required) {}
+    public record QualityCheck(String code, String label, boolean complete, boolean required) {
+        @com.fasterxml.jackson.annotation.JsonProperty("explanation")
+        public String explanation() {
+            return switch(code) {
+                case "title" -> "Permite identificar y encontrar el depósito.";
+                case "authors" -> "Atribuye el trabajo a quienes produjeron los datos.";
+                case "version" -> "Distingue exactamente el contenido que se reutiliza o cita.";
+                case "license" -> "Explica los permisos de reutilización.";
+                case "institution" -> "Identifica la organización responsable del depósito.";
+                case "methodology" -> "Permite evaluar cómo se produjeron y procesaron los datos.";
+                case "description" -> "Ofrece documentación legible para interpretar el contenido.";
+                case "files" -> "Aporta el contenido del depósito, no solo sus metadatos.";
+                case "doi" -> "Ofrece un identificador persistente para citar la versión publicada.";
+                case "orcid" -> "Desambigua autores; un ORCID declarado no prueba identidad.";
+                case "ror" -> "Desambigua instituciones mediante un identificador persistente.";
+                case "summary" -> "Describe qué contienen los datos y para qué pueden reutilizarse.";
+                case "coverage" -> "Delimita el periodo y lugar que representan los datos; puede no aplicar.";
+                default -> "Ayuda a comprender y reutilizar el depósito.";
+            };
+        }
+    }
     public record QualityReport(int completionPercent, List<String> blockers, List<QualityCheck> checks) {}
 }

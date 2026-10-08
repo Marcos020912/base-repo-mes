@@ -115,6 +115,17 @@ public class ScientificRecordController {
         record.setRor(ror);
         record.setRelatedPublications(clean(input.relatedPublications(), 2000));
         record.setMethodology(clean(input.methodology(), 2000));
+        if(input.summary()!=null)record.setSummary(clean(input.summary(),5000));
+        if(input.geographicCoverage()!=null)record.setGeographicCoverage(clean(input.geographicCoverage(),1000));
+        var start=input.temporalStart()==null?record.getTemporalStart():coverageDate(input.temporalStart());
+        var end=input.temporalEnd()==null?record.getTemporalEnd():coverageDate(input.temporalEnd());
+        if(start!=null && end!=null && start.isAfter(end))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"El inicio de cobertura no puede ser posterior al fin.");
+        record.setTemporalStart(start);record.setTemporalEnd(end);
+        if(input.translations()!=null) {
+            var validated=validateTranslations(input.translations());
+            record.getTranslations().clear();record.getTranslations().putAll(validated);
+        }
         ScientificRecord saved = records.save(record);
         audit(id, "METADATA_UPDATED", null);
         return saved;
@@ -264,10 +275,40 @@ public class ScientificRecordController {
         return doi;
     }
 
+    private static java.time.LocalDate coverageDate(String value) {
+        if(value.isBlank())return null;
+        try {return java.time.LocalDate.parse(value);}
+        catch(java.time.format.DateTimeParseException failure) {throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Cobertura temporal no válida; use AAAA-MM-DD.");}
+    }
+    private static Map<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata> validateTranslations(
+            Map<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata> input) {
+        if(input.size()>10)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Máximo diez traducciones por versión.");
+        var result=new java.util.LinkedHashMap<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata>();
+        input.forEach((language,translation)->{
+            if(language==null || !language.matches("[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}") || translation==null)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Idioma o traducción no válido.");
+            String tag=java.util.Locale.forLanguageTag(language).toLanguageTag();
+            if("und".equals(tag) || result.containsKey(tag))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Idioma duplicado o no válido.");
+            String title=clean(translation.getTitle(),500),summary=clean(translation.getSummary(),5000);
+            if(title==null && summary==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Cada traducción debe incluir título o resumen.");
+            result.put(tag,new edu.kit.datamanager.repo.domain.LocalizedScientificMetadata(title,summary));
+        });
+        return result;
+    }
+
     public record UpdateRequest(String versionLabel, String versionDoi, String conceptualDoi, String licenseId,
                                 String accessLevel, String embargoUntil, String language, String discipline, String keywords,
                                 String orcid, String institution, String ror, String relatedPublications,
-                                String methodology) {}
+                                String methodology,String summary,String temporalStart,String temporalEnd,String geographicCoverage,
+                                Map<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata> translations) {
+        /** Preserve the source-level contract used by existing callers; omitted additions keep their values. */
+        public UpdateRequest(String versionLabel,String versionDoi,String conceptualDoi,String licenseId,
+                String accessLevel,String embargoUntil,String language,String discipline,String keywords,
+                String orcid,String institution,String ror,String relatedPublications,String methodology) {
+            this(versionLabel,versionDoi,conceptualDoi,licenseId,accessLevel,embargoUntil,language,discipline,keywords,
+                orcid,institution,ror,relatedPublications,methodology,null,null,null,null,null);
+        }
+    }
     public record PublicationApproval(boolean doiRegisteredExternally) {}
     public record WithdrawalRequest(String reason) {}
 }

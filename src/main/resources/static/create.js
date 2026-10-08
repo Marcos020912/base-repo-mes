@@ -24,8 +24,9 @@ const value = name => field(name).value.trim();
 const files = () => Array.from($('#dataset-files').files);
 const packageMode = () => field('uploadMode').value === 'package';
 const errorBox = $('#wizard-message');
+const translationEditor=metadataTranslations.mount($('#metadata-translations'),field('translations'));
 const autosaveKey = `reduniv-deposit-v1:${user?.username || 'anonymous'}:${basedOnId || 'new'}`;
-const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','accessLevel','embargoUntil','relatedPublications'];
+const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications'];
 let autosaveEnabled = false;
 let autosaveTimer;
 function storedDraft() {
@@ -54,6 +55,7 @@ function restoreDraft() {
     for (const [name, saved] of Object.entries(draft.values || {})) {
       if (autosaveFields.includes(name) && typeof saved === 'string') field(name).value = saved;
     }
+    translationEditor.set(JSON.parse(value('translations')||'{}'));
     if (Array.isArray(draft.creators) && draft.creators.length) {
       $('#creator-list').replaceChildren();
       for (const author of draft.creators) addCreator(author.givenName || '', author.familyName || '');
@@ -166,8 +168,9 @@ function invalid(message, input) {
   return false;
 }
 function validateStep(index) {
+  field('temporalEnd').setCustomValidity(value('temporalStart') && value('temporalEnd') && value('temporalStart')>value('temporalEnd')?'El fin de cobertura no puede ser anterior al inicio.':'');
   const panel = document.querySelector(`.wizard-panel[data-step="${index}"]`);
-  for (const input of panel.querySelectorAll('input[required],textarea[required],select[required]')) {
+  for (const input of panel.querySelectorAll('input:not([type=hidden]),textarea,select')) {
     if (!input.checkValidity()) { input.reportValidity(); return invalid('Completa los campos obligatorios de este paso.', input); }
   }
   if (index === 0) {
@@ -238,6 +241,10 @@ async function renderPreview() {
   if (value('ror')) identity.append(node('p', `ROR: ${value('ror')}`));
   for (const item of fundingEntries()) identity.append(node('p', `Financiación: ${item.funderName}${item.awardTitle ? ` · ${item.awardTitle}` : ''}${item.awardNumber ? ` (${item.awardNumber})` : ''}`));
   if (basedOnId) identity.append(node('p', `Nueva versión de ${basedOnId}.`));
+  if(value('summary'))identity.append(node('p',`Resumen: ${value('summary')}`));
+  if(value('geographicCoverage'))identity.append(node('p',`Cobertura geográfica: ${value('geographicCoverage')}`));
+  if(value('temporalStart')||value('temporalEnd'))identity.append(node('p',`Cobertura temporal: ${value('temporalStart')||'Sin inicio'} / ${value('temporalEnd')||'Sin fin'}`));
+  for(const [lang,item] of Object.entries(translationEditor.get()))identity.append(node('p',`${lang}: ${item.title||''} · ${item.summary||''}`));
   target.append(identity);
   const citationPreview=document.createElement('section');citationPreview.className='wizard-preview-section';
   citationPreview.append(node('h3','Vista previa de cita (borrador)'));
@@ -278,7 +285,8 @@ async function upload(path, file) {
   await transfers.upload(path, file);
 }
 function sciencePayload() {
-  return Object.fromEntries(['versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','accessLevel','embargoUntil','relatedPublications'].map(name => [name, value(name)]));
+  const payload=Object.fromEntries(['versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications'].map(name => [name, value(name)]));
+  payload.translations=translationEditor.get();return payload;
 }
 async function save(submit) {
   if (busy || createdId) return;
@@ -379,6 +387,8 @@ if (basedOnId) Promise.all([
   field('type').value = base.resourceType?.typeGeneral || 'OTHER';
   $('#creator-list').replaceChildren(); for (const author of base.creators || []) addCreator(author.givenName || '', author.familyName || '');
   if (!$('#creator-list').childElementCount) addCreator();
+  for (const name of ['summary','temporalStart','temporalEnd','geographicCoverage'])field(name).value=previous[name]||'';
+  translationEditor.set(previous.translations||{});
   for (const item of previousFunding) addFunding(item);
   applyPolicy();
   restoreDraft();

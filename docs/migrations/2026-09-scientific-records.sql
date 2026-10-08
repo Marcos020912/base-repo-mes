@@ -206,4 +206,16 @@ CREATE TABLE IF NOT EXISTS scientific_collection_members (
 );
 CREATE INDEX IF NOT EXISTS idx_collection_members_collection ON scientific_collection_members(collection_id);
 
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS summary varchar(5000);
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS temporal_start date;
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS temporal_end date;
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS geographic_coverage varchar(1000);
+CREATE TABLE IF NOT EXISTS scientific_record_translations (
+    resource_id varchar(255) NOT NULL REFERENCES scientific_records(resource_id),
+    language varchar(35) NOT NULL,
+    localized_title varchar(500),
+    localized_summary varchar(5000),
+    PRIMARY KEY(resource_id,language)
+);
+
 COMMIT;

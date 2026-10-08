@@ -56,6 +56,16 @@ public class ScientificRecord {
     private String relatedPublications;
     @Column(length = 2000)
     private String methodology;
+    @Column(length = 5000)
+    private String summary;
+    private java.time.LocalDate temporalStart;
+    private java.time.LocalDate temporalEnd;
+    @Column(length = 1000)
+    private String geographicCoverage;
+    @jakarta.persistence.ElementCollection(fetch = jakarta.persistence.FetchType.EAGER)
+    @jakarta.persistence.CollectionTable(name="scientific_record_translations",joinColumns=@jakarta.persistence.JoinColumn(name="resource_id"))
+    @jakarta.persistence.MapKeyColumn(name="language",length=35)
+    private java.util.Map<String,LocalizedScientificMetadata> translations = new java.util.LinkedHashMap<>();
     private Instant submittedAt;
     private Instant publishedAt;
     private Instant withdrawnAt;

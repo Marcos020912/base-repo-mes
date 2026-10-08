@@ -137,6 +137,9 @@ async function load() {
     if (!data.authorIdentities?.some(item => item.orcid)) field('ORCID', data.orcid);
     if (!data.authorIdentities?.some(item => item.ror)) field('ROR', data.ror);
     field('Idioma', data.language); field('Disciplina', data.discipline); field('Palabras clave', data.keywords);
+    field('Resumen',data.summary);field('Cobertura geográfica',data.geographicCoverage);
+    if(data.temporalStart||data.temporalEnd)field('Cobertura temporal',`${data.temporalStart||'Sin inicio'} / ${data.temporalEnd||'Sin fin'}`);
+    renderTranslations(data.translations);
     field('Métodos', data.methodology); field('Publicaciones relacionadas', data.relatedPublications);
     field('Última actualización', data.lastUpdate ? new Date(data.lastUpdate).toLocaleString('es') : null);
     field('Publicado', data.publishedAt ? new Date(data.publishedAt).toLocaleDateString('es') : null);
@@ -186,3 +189,14 @@ document.querySelector('#export-metadata').addEventListener('click',()=>{
   const link=document.createElement('a');link.href=url;link.download=`metadata-${detail.id}.json`;link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='Exportación de metadatos públicos preparada; no incluye archivos ni datos privados.';
 });
+
+function renderTranslations(values) {
+  const entries=Object.entries(values||{});if(!entries.length)return;
+  const section=node('section','','panel');section.append(node('h2','Título y resumen en otros idiomas'));
+  const label=node('label','Idioma de los metadatos traducidos');const select=document.createElement('select');
+  for(const [language] of entries){const option=node('option',language);option.value=language;select.append(option);}
+  label.append(select);const translated=document.createElement('div');translated.setAttribute('aria-live','polite');
+  function show(){const value=values[select.value];translated.replaceChildren();translated.lang=select.value;
+    if(value.title)translated.append(node('h3',value.title));if(value.summary)translated.append(node('p',value.summary));}
+  select.onchange=show;section.append(label,translated);document.querySelector('#landing').append(section);show();
+}

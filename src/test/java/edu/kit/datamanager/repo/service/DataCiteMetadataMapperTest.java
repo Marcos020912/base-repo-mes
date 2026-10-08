@@ -167,4 +167,24 @@ public class DataCiteMetadataMapperTest {
         assertEquals("Instituto B", affiliations.get(1).get("name"));
         assertFalse(second.containsKey("affiliation"));
     }
+    @Test public void mapsStructuredSummaryCoverageAndDeclaredTranslations() {
+        DataResource resource=mock(DataResource.class);Title title=mock(Title.class);Agent author=mock(Agent.class);
+        when(title.getValue()).thenReturn("Título");when(author.getGivenName()).thenReturn("Ana");
+        when(resource.getTitles()).thenReturn(Set.of(title));when(resource.getCreators()).thenReturn(Set.of(author));
+        when(resource.getPublisher()).thenReturn("RedUniv");when(resource.getPublicationYear()).thenReturn("2026");
+        var science=new ScientificRecord("r1");science.setSummary("Resumen");science.setMethodology("Método");
+        science.setGeographicCoverage("Cuba");science.setTemporalStart(java.time.LocalDate.of(2025,1,1));science.setTemporalEnd(java.time.LocalDate.of(2025,12,31));
+        science.getTranslations().put("en",new edu.kit.datamanager.repo.domain.LocalizedScientificMetadata("Translated title","Abstract"));
+        var mapped=new DataCiteMetadataMapper().version(resource,science,URI.create("https://example.org/datasets/r1"));
+        var titles=(java.util.List<java.util.Map<String,String>>)mapped.get("titles");
+        assertTrue(titles.stream().anyMatch(item->"en".equals(item.get("lang")) && "TranslatedTitle".equals(item.get("titleType"))));
+        var descriptions=(java.util.List<java.util.Map<String,String>>)mapped.get("descriptions");
+        assertEquals(3,descriptions.size());
+        assertTrue(descriptions.stream().anyMatch(item->"Abstract".equals(item.get("descriptionType")) && "en".equals(item.get("lang"))));
+        assertEquals(java.util.List.of(java.util.Map.of("geoLocationPlace","Cuba")),mapped.get("geoLocations"));
+        var dates=(java.util.List<java.util.Map<String,String>>)mapped.get("dates");assertEquals("2025-01-01/2025-12-31",dates.get(0).get("date"));
+        science.setTemporalEnd(null);mapped=new DataCiteMetadataMapper().version(resource,science,URI.create("https://example.org/datasets/r1"));
+        dates=(java.util.List<java.util.Map<String,String>>)mapped.get("dates");assertEquals("2025-01-01",dates.get(0).get("date"));
+        assertTrue(dates.get(0).get("dateInformation").contains("Inicio"));
+    }
 }

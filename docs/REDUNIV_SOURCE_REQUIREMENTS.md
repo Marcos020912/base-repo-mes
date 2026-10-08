@@ -44,7 +44,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | F05 | Exportar BibTeX, RIS y CSL-JSON para versión exacta | Base local: servicio de cita; verificar round-trip/validez y como máximo dos acciones (§11). |
 | F06 | Aviso de versión antigua, DOI conceptual y de versión | Base local: sucesora/DOI; verificar historial completo, no solo enlace anterior/siguiente. |
 | F07 | Fecha de publicación y última actualización visibles | Implementado local: publishedAt y lastUpdate públicos visibles; E2E Chrome/PostgreSQL verificó última actualización. |
-| F08 | Resumen, método, cobertura y palabras clave | Parcial: Markdown/metodología/palabras clave existentes; cobertura temporal/geográfica y resumen estructurados no acreditados. |
+| F08 | Resumen, método, cobertura y palabras clave | Implementado local: resumen estructurado, fechas de cobertura validadas y región textual en creación/edición/ficha pública/DataCite. E2E PostgreSQL/restauración y pruebas de validación aprobados. |
 | F09 | Archivos: formato, tamaño, checksum y acceso | Base local: lista de archivos/huellas/monitor; selector nativo y volumen real pendientes. |
 | F10 | Procedencia: producción y procesamiento de datos | Parcial: eventos de archivos/PROV no equivalen a procedencia científica completa del procesamiento. |
 | F11 | Artículos, software, proyectos, financiación y datasets relacionados | Base local: relaciones tipadas y funding; comprobar visibilidad y representación máquina de todas las categorías. |
@@ -79,7 +79,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | W05 | Licencia, acceso, embargo y datos sensibles | Parcial: licencia/acceso/embargo; evaluación explícita de datos sensibles no acreditada. |
 | W06 | Artículos, software, proyectos y financiación | Base local: relaciones/funding en edición; comprobar disponibilidad durante creación. |
 | W07 | Guardado automático y recuperación | Base local: metadatos locales14d y borrador servidor; no prometer persistencia automática de archivos seleccionados. |
-| W08 | Revisión automática: errores, avisos, porcentaje y explicación | Base local: calidad; comprobar explicación de por qué cada campo ayuda a reutilizar. |
+| W08 | Revisión automática: errores, avisos, porcentaje y explicación | Base local: calidad incluye explicación de reutilización por campo y recomendaciones de resumen/cobertura; pendiente aceptación humana y auditoría de todos los mensajes. |
 | W09 | Vista previa de landing y cita antes de enviar | Parcial: ficha real previa disponible y cita provisional sin DOI inventado añadida al asistente; ZIP muestra manifiesto seleccionado y exige revisión real después de guardarlo. Auditar vista previa integral y estilo bibliotecario. |
 | W10 | Envío a curación/publicación según política | Base local: flujo revisión/publicación; depende de política institucional. |
 | W11 | Reserva DOI, embargo y acceso privado a revisores | Base local: DOI Draft/enlaces temporales; pruebas DataCite/HAProxy pendientes. |
@@ -93,7 +93,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | A03 | Licencias, privacidad y datos sensibles en curación | Parcial: licencia/acceso; flujo de evaluación sensible explícito pendiente. |
 | A04 | Usuarios, roles e integraciones DOI/OIDC/correo | Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID. |
 | A05 | Estado almacenamiento/fixity, auditoría/reportes operativos | Parcial: auditorías de integridad; consola y reportes operativos completos pendientes de alcance. |
-| A06 | Metadatos multilingües | Pendiente: `ScientificRecord.language` es un idioma declarado, no traducciones de título/resumen/metadatos. |
+| A06 | Metadatos multilingües | Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI. |
 | A07 | Internacionalización sin textos incrustados en JS | Pendiente: strings españoles siguen en scripts; acordar idiomas, separar catálogos y traducir estados dinámicos. |
 | A08 | Paquetes OAIS SIP/AIP/DIP | Parcial: BagIt/paquete curatorial/ZIP público; perfiles institucionales completos no acreditados. |
 | A09 | RO-Crate y W3C PROV | Base local: exportaciones; cobertura de procesamiento y validación externa pendientes. |
