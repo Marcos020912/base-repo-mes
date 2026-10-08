@@ -85,6 +85,8 @@ public final class RoCrateMetadataBuilder {
             case "preservation/provenance.json" -> "Eventos de procedencia registrados por el repositorio.";
             case "preservation/prov.jsonld" -> "Proyección W3C PROV-O de los eventos de archivos registrados.";
             case "preservation/manifest-sha256.txt" -> "Huellas SHA-256 registradas al ingreso; no describen necesariamente el contenido actual.";
+            case "bagit.txt" -> "Declaración BagIt 1.0 del paquete curatorial.";
+            case "manifest-sha256.txt" -> "Huellas SHA-256 actuales del contenido del paquete BagIt.";
             default -> "Archivo incluido en el paquete de preservación: " + path;
         };
     }

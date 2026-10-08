@@ -57,6 +57,14 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       actividades de carga/eliminación, entidades, agentes, ubicación, tiempo
       y SHA-256. Conserva `provenance.json` interno y no inventa una carga
       para archivos heredados sin evento de origen.
+- [x] El ZIP curatorial adopta además el formato de transferencia BagIt 1.0:
+      `data/`, `bagit.txt`, `manifest-sha256.txt` de los bytes actuales y
+      `tagmanifest-sha256.txt` de metadatos/RO-Crate. La huella histórica
+      `preservation/manifest-sha256.txt` permanece distinta. BagIt no implica
+      por sí solo conformidad con los perfiles institucionales OAIS. La prueba
+      comprueba todas las rutas y huellas del ZIP real; `bagit-python` 1.9.0
+      valida el artefacto con nombre simple, pero no decodifica `%25` de un
+      nombre con `%` como exige RFC 8493 (issue #157 del proyecto).
 - [x] Relaciones científicas tipadas DOI/URL con semántica DataCite,
       editables solo por el autor mientras el depósito sea borrador,
       visibles en la ficha pública y enviadas al DOI de versión.

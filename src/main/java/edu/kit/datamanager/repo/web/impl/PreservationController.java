@@ -10,6 +10,7 @@ import edu.kit.datamanager.repo.repository.FileFixityStateRepository;
 import edu.kit.datamanager.repo.repository.FileProvenanceEventRepository;
 import edu.kit.datamanager.repo.repository.FixityAuditRunRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.service.BagItManifestBuilder;
 import edu.kit.datamanager.repo.service.PreservationAuditService;
 import edu.kit.datamanager.repo.service.RoCrateMetadataBuilder;
 import edu.kit.datamanager.repo.service.W3cProvExporter;
@@ -117,6 +118,8 @@ public class PreservationController {
         response.setHeader("Content-Disposition", "attachment; filename=preservation-" + id.replaceAll("[^A-Za-z0-9_-]", "_") + ".zip");
         try (ZipOutputStream zip = new ZipOutputStream(response.getOutputStream())) {
             List<RoCrateMetadataBuilder.PackagedFile> packaged = new ArrayList<>();
+            // BagIt requires a payload directory even for a draft with no files.
+            zip.putNextEntry(new ZipEntry("data/")); zip.closeEntry();
             byte[] metadata = mapper.writeValueAsBytes(Map.of(
                     "resourceId", id, "record", record, "title", resource.getTitles().stream().findFirst()
                             .map(title -> title.getValue()).orElse("")));
@@ -147,8 +150,17 @@ public class PreservationController {
             byte[] baselineManifest = manifest.toString().getBytes(StandardCharsets.UTF_8);
             write(zip, "preservation/manifest-sha256.txt", baselineManifest);
             packaged.add(packagedBytes("preservation/manifest-sha256.txt", "text/plain", baselineManifest));
-            write(zip, "ro-crate-metadata.json", mapper.writeValueAsBytes(
-                    RoCrateMetadataBuilder.build(id, record, resource, packaged, Instant.now())));
+            byte[] declaration = BagItManifestBuilder.declaration();
+            write(zip, "bagit.txt", declaration);
+            packaged.add(packagedBytes("bagit.txt", "text/plain", declaration));
+            byte[] payloadManifest = BagItManifestBuilder.payloadManifest(packaged);
+            write(zip, "manifest-sha256.txt", payloadManifest);
+            packaged.add(packagedBytes("manifest-sha256.txt", "text/plain", payloadManifest));
+            byte[] crate = mapper.writeValueAsBytes(
+                    RoCrateMetadataBuilder.build(id, record, resource, packaged, Instant.now()));
+            write(zip, "ro-crate-metadata.json", crate);
+            packaged.add(packagedBytes("ro-crate-metadata.json", "application/ld+json", crate));
+            write(zip, "tagmanifest-sha256.txt", BagItManifestBuilder.tagManifest(packaged));
         }
     }
 

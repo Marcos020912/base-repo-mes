@@ -54,15 +54,27 @@ public class PreservationControllerTest {
             Files.createDirectories(artifact.getParent());
             Files.write(artifact, response.getContentAsByteArray());
             var entries = new java.util.HashMap<String, String>();
+            var entryBytes = new java.util.HashMap<String, byte[]>();
             try (var zip = new ZipInputStream(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
                 java.util.zip.ZipEntry entry;
-                while ((entry = zip.getNextEntry()) != null) entries.put(entry.getName(), new String(zip.readAllBytes()));
+                while ((entry = zip.getNextEntry()) != null) {
+                    byte[] bytes = zip.readAllBytes();
+                    entryBytes.put(entry.getName(), bytes);
+                    entries.put(entry.getName(), new String(bytes, java.nio.charset.StandardCharsets.UTF_8));
+                }
             }
             assertEquals("abc", entries.get("data/sample data%.txt"));
             assertTrue(entries.get("preservation/manifest-sha256.txt").contains("0".repeat(64)));
             assertTrue(entries.containsKey("preservation/metadata.json"));
             assertTrue(entries.containsKey("preservation/provenance.json"));
             assertTrue(entries.containsKey("preservation/prov.jsonld"));
+            assertEquals("BagIt-Version: 1.0\nTag-File-Character-Encoding: UTF-8\n", entries.get("bagit.txt"));
+            assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  data/sample data%25.txt\n",
+                    entries.get("manifest-sha256.txt"));
+            assertTrue(entries.get("tagmanifest-sha256.txt").contains("  ro-crate-metadata.json\n"));
+            assertTrue(entries.get("tagmanifest-sha256.txt").contains("  manifest-sha256.txt\n"));
+            assertBagManifest(entryBytes, "manifest-sha256.txt", true);
+            assertBagManifest(entryBytes, "tagmanifest-sha256.txt", false);
             var prov = new ObjectMapper().readTree(entries.get("preservation/prov.jsonld"));
             assertEquals("http://www.w3.org/ns/prov#", prov.path("@context").path("prov").asText());
             assertTrue(prov.path("@graph").isArray());
@@ -86,6 +98,33 @@ public class PreservationControllerTest {
                 found = true;
             }
             assertTrue("RO-Crate must describe archived bytes, not the admission baseline", found);
+            // A second artifact without '%' is useful for validators that still ignore RFC 8493
+            // percent-decoding in manifest paths (e.g. bagit-python 1.9.0).
+            info.setRelativePath("plain-data.txt");
+            var plainResponse = new MockHttpServletResponse();
+            controller.downloadPackage("r1", plainResponse);
+            Files.write(artifact.resolveSibling("preservation-bagit-plain.zip"), plainResponse.getContentAsByteArray());
         } finally { Files.deleteIfExists(file); }
+    }
+
+    private static void assertBagManifest(Map<String, byte[]> entries, String manifest, boolean payload) throws Exception {
+        var listed = new java.util.HashSet<String>();
+        for (String line : new String(entries.get(manifest), java.nio.charset.StandardCharsets.UTF_8).split("\n")) {
+            if (line.isEmpty()) continue;
+            String[] fields = line.split("  ", 2);
+            assertEquals("BagIt line must contain digest and path", 2, fields.length);
+            String path = fields[1].replace("%25", "%").replace("%0D", "\r").replace("%0A", "\n");
+            assertTrue("Duplicate BagIt path: " + path, listed.add(path));
+            byte[] bytes = entries.get(path);
+            assertNotNull("Missing BagIt path: " + path, bytes);
+            String actual = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
+            assertEquals("Wrong current checksum: " + path, fields[0], actual);
+        }
+        var expected = new java.util.HashSet<String>();
+        for (String path : entries.keySet()) {
+            if (payload ? path.startsWith("data/") && !path.equals("data/")
+                    : !path.startsWith("data/") && !path.equals("tagmanifest-sha256.txt")) expected.add(path);
+        }
+        assertEquals("Manifest does not cover every " + (payload ? "payload" : "tag") + " file", expected, listed);
     }
 }

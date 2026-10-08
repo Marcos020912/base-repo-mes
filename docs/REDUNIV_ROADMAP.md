@@ -42,7 +42,9 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   de dataset y archivos. Su `sha256` describe los bytes empaquetados en ese
   momento; el manifiesto de ingreso se mantiene separado para no confundir la
   huella histórica con la actual. Incluye una proyección W3C PROV-O de las
-  cargas/eliminaciones registradas, sin inferir historial ausente. Falta
+  cargas/eliminaciones registradas, sin inferir historial ausente. El ZIP
+  contiene una estructura BagIt 1.0 con manifiestos actuales separados de
+  las huellas históricas. Falta
   validación externa del paquete, cobertura de cargas legadas y perfiles OAIS.
 - Historial editorial persistente de cambios de ficha, envío, devolución, publicación, retirada y derivación, visible para autor y curación; los DOI públicos se presentan como enlaces resolubles.
 - Integración DataCite opt-in con reserva Draft conceptual/versión, estado e
@@ -92,7 +94,7 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID, RO-Crate, PROV-O y marcadores básicos de accesibilidad pasan. La suite completa pasó con 436 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`, con procesos de prueba reiniciados cada cinco clases para evitar falta de memoria local); el JAR también compila sin red. El RO-Crate generado sigue pasando los requisitos obligatorios de `roc-validator`. Esto no sustituye las pruebas funcionales, de accesibilidad, de seguridad ni la aprobación para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID, RO-Crate, PROV-O, BagIt y marcadores básicos de accesibilidad pasan. La suite completa pasó con 437 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`, con procesos de prueba reiniciados cada cinco clases para evitar falta de memoria local); el JAR también compila sin red. El RO-Crate generado sigue pasando los requisitos obligatorios de `roc-validator`; un artefacto BagIt con nombre simple fue validado por `bagit-python` 1.9.0. Esto no sustituye las pruebas funcionales, de accesibilidad, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
 [`REDUNIV_IMPLEMENTATION_CHECKLIST.md`](REDUNIV_IMPLEMENTATION_CHECKLIST.md).
