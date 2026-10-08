@@ -275,3 +275,7 @@ heredados antes de activarla.
 - Axe: 43 estados, 0 infracciones automáticas.
 - Esta evidencia no cierra los pendientes institucionales, staging, archivos masivos ni WCAG manual enumerados arriba.
 - Comandos reproducibles en `tools/e2e/README.md`; `-Dprofile=minimal test` solo ejecuta la suite documental.
+
+### E2E PostgreSQL aislado — 2026-10-08
+- [x] `E2E_POSTGRES=1 node tools/e2e/wizard-smoke.cjs` pasó en PostgreSQL 18 efímero: asistente, ZIP, recuperación, versiones, Curación/preservación, acceso externo/revocación y descargas públicas.
+- Clúster nuevo loopback/SCRAM con credenciales aleatorias; sin tocar bases existentes. Esquema Hibernate nuevo: los pendientes de migración/restauración con staging real y HAProxy no se consideran cerrados.

@@ -103,3 +103,20 @@ npm run audit --prefix tools/a11y
 **Importante:** `-Dprofile=minimal test` ejecuta solo la suite documental.
 No lo utilice como evidencia de la suite Java completa. El perfil minimal
 sí sirve para construir el JAR usado por el smoke test.
+
+## Mismo flujo con PostgreSQL real efímero
+
+```bash
+E2E_POSTGRES=1 node tools/e2e/wizard-smoke.cjs
+# Otra versión local:
+E2E_POSTGRES=1 PG_BIN=/usr/lib/postgresql/16/bin node tools/e2e/wizard-smoke.cjs
+```
+
+Sin sudo. Por defecto usa binarios PostgreSQL 18. Crea un clúster nuevo bajo
+/tmp, escucha exclusivamente en 127.0.0.1 con puerto libre, usa SCRAM y una
+contraseña aleatoria, y crea su propia base reduniv_e2e. Al terminar detiene
+el clúster y elimina los temporales. Nunca usa el PostgreSQL instalado como
+servicio ni las bases existentes. Ejecuta todos los escenarios del mismo smoke.
+El modo sin E2E_POSTGRES sigue usando H2.
+Esto comprueba flujo funcional PostgreSQL con esquema generado por Hibernate:
+**no** prueba migración/retroceso, restauración de staging ni HAProxy real.

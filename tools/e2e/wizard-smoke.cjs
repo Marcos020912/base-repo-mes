@@ -17,6 +17,7 @@ const username = 'e2e-admin';
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'reduniv-wizard-'));
 let app;
 let browser;
+let postgres;
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -77,14 +78,39 @@ function setupFiles() {
     descriptionHtmlZip:crafted('descripcion-html.zip','description-html'),
     fullTraversalZip:crafted('deposito-ruta-invalida.zip','package-traversal')};
 }
+async function databaseProperties() {
+  if (process.env.E2E_POSTGRES !== '1') return [
+    'spring.datasource.driver-class-name=org.h2.Driver',
+    'spring.datasource.url=jdbc:h2:mem:reduniv_wizard_smoke;DB_CLOSE_DELAY=-1;MODE=LEGACY;NON_KEYWORDS=VALUE',
+    'spring.datasource.username=sa', 'spring.datasource.password=sa'
+  ];
+  assert(process.getuid() !== 0, 'Ejecute PostgreSQL efímero sin sudo.');
+  const bin = process.env.PG_BIN || '/usr/lib/postgresql/18/bin';
+  const data = path.join(temp, 'pgdata');
+  const secret = crypto.randomBytes(24).toString('hex');
+  const pwfile = path.join(temp, 'pg-password');
+  fs.writeFileSync(pwfile, secret + '\n', {mode:0o600});
+  const initialized = spawnSync(path.join(bin, 'initdb'),
+    ['-D', data, '-U', 'e2e_admin', '-A', 'scram-sha-256', '--pwfile', pwfile, '--no-instructions'], {encoding:'utf8'});
+  assert(initialized.status === 0, `initdb efímero falló: ${initialized.stderr}`);
+  const port = await freePort();
+  const started = spawnSync(path.join(bin, 'pg_ctl'), ['-D', data, '-l', path.join(temp, 'postgres.log'),
+    '-o', `-h 127.0.0.1 -p ${port} -k ${temp}`, '-w', 'start'], {encoding:'utf8'});
+  postgres = {bin, data};
+  assert(started.status === 0, `PostgreSQL efímero no inició: ${started.stderr}`);
+  const created = spawnSync(path.join(bin, 'createdb'), ['-h', '127.0.0.1', '-p', String(port), '-U', 'e2e_admin', 'reduniv_e2e'],
+    {encoding:'utf8', env:{...process.env, PGPASSWORD:secret}});
+  assert(created.status === 0, `No se pudo crear base efímera: ${created.stderr}`);
+  return ['spring.datasource.driver-class-name=org.postgresql.Driver',
+    `spring.datasource.url=jdbc:postgresql://127.0.0.1:${port}/reduniv_e2e`,
+    'spring.datasource.username=e2e_admin', `spring.datasource.password=${secret}`];
+}
 async function startApp(port, files) {
   assert(fs.existsSync(jar), 'Falta build/libs/base-repo.jar; compile antes de iniciar el smoke test.');
   const config = path.join(temp, 'application.properties');
   fs.writeFileSync(config, [
     `server.port=${port}`, 'server.address=127.0.0.1',
-    'spring.datasource.driver-class-name=org.h2.Driver',
-    'spring.datasource.url=jdbc:h2:mem:reduniv_wizard_smoke;DB_CLOSE_DELAY=-1;MODE=LEGACY;NON_KEYWORDS=VALUE',
-    'spring.datasource.username=sa', 'spring.datasource.password=sa',
+    ...await databaseProperties(),
     'spring.jpa.hibernate.ddl-auto=update',
     `repo.basepath=${pathToFileUrl(files.data)}`,
     'repo.auth.enabled=true',
@@ -296,7 +322,7 @@ async function deriveNewVersion(page, base, files, previous) {
     licenseId:'CC-BY-4.0', institution:'RedUniv', methodology:'Metodología de prueba local.', accessLevel:'OPEN'
   });
   await request('POST', `/api/v1/scientific/${previous.id}/submit`);
-  // Synthetic DOI approval is confined to the throwaway H2 instance.
+  // Synthetic DOI approval is confined to the throwaway local database.
   await request('POST', `/api/v1/scientific/${previous.id}/publish`, {doiRegisteredExternally:true});
   await page.goto(`${base}/resource.html?id=${encodeURIComponent(previous.id)}`, {waitUntil:'load'});
   await page.waitForSelector('#new-version:not([hidden])');
@@ -377,6 +403,10 @@ async function cleanup() {
     app.kill('SIGTERM');
     await Promise.race([new Promise(resolve => app.once('exit', resolve)), sleep(5000)]);
     if (app.exitCode === null) app.kill('SIGKILL');
+  }
+  if (postgres) {
+    const stopped = spawnSync(path.join(postgres.bin, 'pg_ctl'), ['-D', postgres.data, '-m', 'immediate', '-w', 'stop'], {encoding:'utf8'});
+    assert(stopped.status === 0, 'No se pudo detener el PostgreSQL efímero; revise el directorio temporal.');
   }
   fs.rmSync(temp, {recursive:true, force:true});
 }
