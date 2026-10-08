@@ -24,6 +24,9 @@ Por último, publica una **versión sintética en H2** con un DOI ficticio de
 prueba, abre «Crear nueva versión» y comprueba que el nuevo borrador enlaza la
 anterior, conserva el DOI conceptual y no hereda archivos sin consentimiento.
 Esto no llama a DataCite ni valida un DOI institucional.
+La descarga individual comprueba el monitor real (estado terminado y progreso
+100 %) y audita su panel con axe. La interrupción de subida comprueba también
+que el monitor muestre el error de red.
 Los ZIP adversariales generados con Python 3 comprueban rechazo de rutas con
 `..`, entradas duplicadas y archivos HTML dentro de la descripción, además de
 las extensiones no admitidas del dataset. Todas esas pruebas verifican que el

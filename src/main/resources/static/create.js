@@ -269,8 +269,7 @@ async function api(path, options = {}) {
   return body;
 }
 async function upload(path, file) {
-  const body = new FormData(); body.append('file', file);
-  await api(path, { method: 'POST', body });
+  await transfers.upload(path, file);
 }
 function sciencePayload() {
   return Object.fromEntries(['versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','accessLevel','embargoUntil','relatedPublications'].map(name => [name, value(name)]));

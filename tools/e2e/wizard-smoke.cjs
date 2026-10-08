@@ -153,7 +153,8 @@ async function deposit(page, base, files, mode) {
       'El asistente promete enviar el ZIP sin mostrar su contenido real.');
     await page.click('#save-submit');
   } else await page.click('#save-draft');
-  await page.waitForFunction(() => location.pathname.endsWith('/resource.html'), {timeout:30000});
+  await page.waitForFunction(() => location.pathname.endsWith('/resource.html'), {timeout:30000})
+    .catch(async () => { throw new Error(`No redirigió después de guardar: ${await page.$eval('#wizard-message', element => element.textContent)}; transferencias: ${await page.evaluate(() => document.querySelector('.transfer-list')?.textContent || 'monitor ausente')}`); });
   await page.waitForFunction(() => document.querySelector('#resource-title')?.textContent !== 'Cargando…', {timeout:15000});
   await page.waitForFunction(() => document.querySelector('#download-list')?.textContent.includes('datos-uno.csv'), {timeout:15000});
   assert((await page.$eval('#resource-title', element => element.textContent)) === title,
@@ -177,6 +178,17 @@ async function deposit(page, base, files, mode) {
     return response.ok ? (await response.json()).status : `HTTP ${response.status}`;
   });
   assert(status === 'DRAFT', `El depósito no quedó como borrador: ${status}`);
+  if (mode === 'md') {
+    await page.click('.download-file[data-path="datos-uno.csv"]');
+    await page.waitForFunction(() => document.querySelector('.transfer-list')?.textContent.includes('Descarga preparada'));
+    await page.click('.transfer-toggle');
+    assert(await page.$eval('#transfer-panel', element => !element.hidden), 'No se abrió el monitor de descargas.');
+    assert(await page.$eval('.transfer-item progress', element => element.value) === 100, 'La descarga no terminó en el monitor.');
+    await page.evaluate(require('../a11y/node_modules/axe-core').source);
+    const violations = await page.evaluate(async () => (await axe.run('#transfer-panel')).violations.map(item => item.id));
+    assert(violations.length === 0, `Accesibilidad del monitor: ${violations.join(', ')}`);
+    await page.click('.transfer-toggle');
+  }
   if (mode === 'package') {
     await page.waitForSelector('#submit-science:not([hidden])');
     await page.click('#submit-science');
@@ -239,6 +251,8 @@ async function recoverInterruptedUpload(page, base, files) {
     await page.click('#save-submit');
     await page.waitForSelector('#wizard-message a[href^="resource.html?id="]', {timeout:30000});
     assert(new URL(page.url()).pathname.endsWith('/create.html'), 'El depósito se envió pese al fallo de subida.');
+    assert((await page.$eval('.transfer-list', element => element.textContent)).includes('Error de red'),
+      'El monitor no informó la subida interrumpida.');
   } finally {
     page.off('request', interrupt);
     await page.setRequestInterception(false);

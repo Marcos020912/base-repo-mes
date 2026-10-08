@@ -6,6 +6,14 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 
 ## Implementado en la rama
 
+- [x] Monitor de transferencias en el asistente y ficha autenticada: progreso
+      de subida con XHR, lectura de descarga por streaming, tamaño indeterminado
+      cuando no existe Content-Length, cancelación y limpieza de finalizadas.
+      El historial es por pestaña/página; «Descarga preparada» no certifica la
+      escritura en disco. Cancelar la conexión no revierte bytes ya aceptados
+      por el servidor. E2E verifica descarga completada, fallo de subida y axe
+      del panel real sin infracciones.
+
 - [x] Identidad visual, portada científica, ficha con metadatos reales y DOI solo cuando existe.
 - [x] Catálogo público separado de borradores, paginación, búsqueda y filtros en servidor.
 - [x] Facetas agregadas de tipo, autoría, año, acceso, licencia, disciplina,

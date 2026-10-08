@@ -8,6 +8,11 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 
 ## Primer incremento en esta rama
 
+- Monitor de subidas/descargas en el asistente y ficha autenticada, con progreso
+  real de red y cancelación. Es un historial efímero por página; no declara que
+  el navegador haya guardado la descarga en disco ni revierte una carga ya
+  aceptada por el backend.
+
 - Identidad «Datos RedUniv», portada de catálogo con búsqueda prominente y
   filtros de categoría y autor visibles.
 - Tarjetas con autoría y DOI solo si existe un DOI válido; los faltantes se
