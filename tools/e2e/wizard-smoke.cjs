@@ -450,18 +450,37 @@ async function main() {
         body:JSON.stringify({hours:1})
       });
       if (!response.ok) throw new Error('No se pudo crear enlace local de revisión.');
-      return (await response.json()).relativeUrl;
+      return await response.json();
     }, packaged.id);
     const reviewerContext = await browser.createBrowserContext();
     try {
       const reviewer = await reviewerContext.newPage();
-      await reviewer.goto(new URL(reviewerLink, base).href, {waitUntil:'load'});
+      await reviewer.goto(new URL(reviewerLink.relativeUrl, base).href, {waitUntil:'load'});
       await reviewer.waitForSelector('#review-files button');
       assert(new URL(reviewer.url()).hash === '', 'El token permaneció en la URL del revisor.');
       assert(await reviewer.evaluate(() => localStorage.getItem('base-repo-token')) === null, 'Revisor heredó autenticación.');
+      const privateResponse = reviewer.waitForResponse(response => response.url().includes('/api/v1/reviewer/file?'));
       await reviewer.click('#review-files button');
+      const privateFile = await privateResponse;
+      assert(privateFile.ok(), 'El archivo privado fue rechazado antes de revocar.');
+      assert((privateFile.headers()['cache-control'] || '').includes('no-store'), 'El archivo privado admite caché.');
       await reviewer.waitForFunction(() => document.querySelector('.transfer-list')?.textContent.includes('Descarga preparada'));
-      process.stdout.write('Revisor externo local OK: enlace temporal sin sesión y descarga monitorizada.\n');
+      const revoked = await page.evaluate(async ({id,linkId}) => {
+        const response = await fetch(`/api/v1/scientific/${encodeURIComponent(id)}/review-links/${linkId}`, {
+          method:'DELETE', headers:{Authorization:`Bearer ${localStorage.getItem('base-repo-token')}`}
+        });
+        return response.status;
+      }, {id:packaged.id,linkId:reviewerLink.id});
+      assert(revoked === 204, 'No se pudo revocar el enlace privado.');
+      const deniedResponse = reviewer.waitForResponse(response => response.url().includes('/api/v1/reviewer/file?'));
+      await reviewer.click('#review-files button');
+      const denied = await deniedResponse;
+      assert(!denied.ok(), 'El enlace revocado todavía permite descargar.');
+      assert((denied.headers()['cache-control'] || '').includes('no-store'), 'La respuesta de enlace revocado admite caché.');
+      await reviewer.waitForFunction(() => document.querySelector('.transfer-item span')?.textContent === 'Error en la descarga');
+      assert(await reviewer.$eval('#review-status', node => node.textContent) === 'No se pudo descargar el archivo.',
+        'El rechazo del enlace no se informó al revisor.');
+      process.stdout.write('Revisor externo local OK: enlace temporal, no-store, descarga y revocación efectiva.\n');
     } finally { await reviewerContext.close(); }
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);

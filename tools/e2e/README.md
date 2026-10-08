@@ -82,3 +82,7 @@ Se crea un enlace temporal de revisión en el backend efímero y se abre en un
 contexto sin sesión: verifica retirada del token del fragmento de URL y descarga
 con monitor. El monitor conserva no-store, rechaza destinos de otro origen y
 no sigue redirecciones; no se prueba el HAProxy institucional.
+El escenario de revisión comprueba no-store tanto en el archivo servido como
+en el rechazo posterior. Revoca el enlace desde la sesión curatorial y vuelve
+a descargar desde la página del revisor ya abierta: debe ser denegado y mostrar
+error. Las copias descargadas antes de revocar no se pueden retirar.
