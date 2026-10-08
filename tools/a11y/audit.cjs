@@ -57,14 +57,18 @@ async function main() {
         await page.evaluate(axe.source);
         failures += await audit(page, name); states++;
         const variants = await page.evaluate(() => Array.from(document.querySelectorAll('dialog[id],section[data-step]'))
-          .map(element => ({id:element.id || element.dataset.step, type:element.tagName})));
+          .map(element => ({id:element.id || element.dataset.step, type:element.tagName, hidden:element.hidden})));
         for (const variant of variants) {
           if (variant.type === 'DIALOG') await page.evaluate(id => document.getElementById(id).showModal(), variant.id);
           else await page.evaluate(id => { document.querySelector(`section[data-step="${id}"]`).hidden = false; }, variant.id);
           failures += await audit(page, `${name}#${variant.id}`); states++;
           if (variant.type === 'DIALOG') await page.evaluate(id => document.getElementById(id).close(), variant.id);
-          else await page.evaluate(id => { document.querySelector(`section[data-step="${id}"]`).hidden = true; }, variant.id);
+          else await page.evaluate(({id,hidden}) => { document.querySelector(`section[data-step="${id}"]`).hidden = hidden; }, variant);
         }
+        await page.setViewport({width:320, height:700});
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+        if (overflow) { console.error(`${name}@320: desbordamiento horizontal de la página`); failures++; }
+        failures += await audit(page, `${name}@320`); states++;
       } finally { await page.close(); }
     }
   } finally { await browser.close(); server.close(); }

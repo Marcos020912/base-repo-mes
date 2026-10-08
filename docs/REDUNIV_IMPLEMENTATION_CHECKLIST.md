@@ -106,6 +106,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       marca en revisión privada; ahora 26 estados sin infracciones automáticas.
       Se eliminó el `autofocus` que saltaba el primer enlace en login/registro;
       el auditor comprueba primer Tab y activación con Enter en las 13 páginas.
+      Una segunda pasada a 320 px detectó y corrigió desbordamiento horizontal
+      de Curación; total 39 estados sin infracciones automáticas.
       La revisión manual y de contenido real permanece pendiente.
 - [x] Limitación distribuida de intentos de inicio de sesión, registro,
       verificación, reenvío y cambio de contraseña mediante PostgreSQL:
