@@ -109,7 +109,7 @@ body { margin:0; background:var(--soft); color:var(--ink); font-family:Inter,ui-
 /* Guided deposit creation and the final author review */
 .wizard-main{max-width:1050px}
 .wizard-progress{margin-bottom:20px}
-.wizard-progress ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.wizard-progress ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .wizard-progress li{min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted);font-size:13px;font-weight:750}
 .wizard-progress li.active{background:#e5f0ff;border-color:#84b4e6;color:#003a78}
 .wizard-panel{min-width:0}

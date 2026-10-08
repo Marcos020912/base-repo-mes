@@ -39,11 +39,11 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **C08 — Políticas, ayuda y guía de citación**. Parcial: nueva `help.html` ofrece guía y condiciones técnicas; políticas institucionales formales aún no aprobadas.
 - [ ] **C09 — Métricas públicas con definiciones transparentes**. Parcial: inventario público real de versiones PUBLISHED, política OPEN y colecciones públicas con definiciones/fecha; JPA y E2E aprobados. Uso/descargas y metodología COUNTER/DataCite aún pendientes.
 - [x] **W01 — Mis depósitos y tareas de metadatos pendientes**. Implementado local: cola del autor paginada con estado, checklist, explicaciones y siguiente acción; excluye publicados/retirados/huérfanos y datos ajenos. Tres tests y E2E multiusuario/UI aprobados. Rendimiento institucional pendiente.
-- [ ] **W02 — Etapas: identidad/tipo y autores/organizaciones**. Base local: asistente de cuatro pantallas agrupa operaciones; comprobar cobertura de nueve etapas funcionales del informe.
+- [x] **W02 — Etapas: identidad/tipo y autores/organizaciones**. Nueve etapas; E2E Markdown/ZIP/paquete, recuperación y versión; axe 66 estados sin infracciones automáticas. Ver WIZARD_WORKFLOW.md.
 - [ ] **W03 — Búsqueda ORCID/ROR**. Parcial: búsqueda ROR y OAuth ORCID; no atribuir identidad mediante búsqueda por nombre sin confirmación.
 - [ ] **W04 — Descripción/metodología y archivos/documentación**. Base local: asistente y Markdown/ZIP; validar resumen y cobertura requeridos.
 - [x] **W05 — Licencia, acceso, embargo y datos sensibles**. Implementado local: declaración privada del autor, control de revisión y restricción de datos personales/confidenciales; no permite sustituir restricción con embargo. Pruebas unitarias y E2E de formularios/publicación aprobadas. Política jurídica institucional pendiente.
-- [ ] **W06 — Artículos, software, proyectos y financiación**. Base local: relaciones/funding en edición; comprobar disponibilidad durante creación.
+- [x] **W06 — Artículos, software, proyectos y financiación**. Creación con relaciones tipadas/financiación, vista previa y recuperación; E2E persistencia y rechazo de HTTP, axe dinámico aprobado.
 - [ ] **W07 — Guardado automático y recuperación**. Base local: metadatos locales14d y borrador servidor; no prometer persistencia automática de archivos seleccionados.
 - [ ] **W08 — Revisión automática: errores, avisos, porcentaje y explicación**. Base local: calidad incluye explicación de reutilización por campo y recomendaciones de resumen/cobertura; pendiente aceptación humana y auditoría de todos los mensajes.
 - [ ] **W09 — Vista previa de landing y cita antes de enviar**. Parcial: ficha real previa disponible y cita provisional sin DOI inventado añadida al asistente; ZIP muestra manifiesto seleccionado y exige revisión real después de guardarlo. Auditar vista previa integral y estilo bibliotecario.
@@ -156,3 +156,11 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - E2EPG18SMTPChrome/restauración completo aprobado: permisos, modales, revisión409, reglas bloquean envío, desactivación preserva copia, autoría no reemplazada y reglas conservadas después de restore/migración doble/schema validate.
 - Regresión52suites503pruebas0fallos/errores/omitidas; después18pruebas dirigidas aprobadas, incluyendo nuevo guard de publicación manual e independencia de la copia al derivar. Axe61estados0; no certifica revisión manual.
 - `docs/METADATA_PROFILES.md`. No impone un perfil institucional obligatorio ni acredita aprobación organizativa.
+
+### Asistente de nueve etapas y relaciones durante creación
+
+- W02/W06: etapas separadas, precomprobación local claramente identificada, vista previa completa antes del cierre y confirmación explícita para enviar.
+- Relaciones tipadas DOI/HTTPS se guardan con el endpoint existente de autor/DRAFT; vista previa segura, recuperación de metadatos y preselección de nueva versión.
+- E2E PostgreSQL/SMTP/Chrome/restauración aprobado: tres modos, subida interrumpida, nueva versión, ningún POST sin confirmar, rechazo de URL HTTP y persistencia SOFTWARE; axe del formulario dinámico sin infracciones.
+- Regresión Java 21: 52 suites, 504 pruebas, cero fallos/errores/omitidas. Axe estático: 66 estados, cero infracciones automáticas. No acredita revisión WCAG manual ni certificación institucional.
+- Guard de accesibilidad verifica id y tabindex en la misma etiqueta main sin depender del orden de atributos HTML.

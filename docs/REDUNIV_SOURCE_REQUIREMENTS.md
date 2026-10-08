@@ -73,11 +73,11 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | ID | Requisito | Estado / evidencia / siguiente acción |
 |---|---|---|
 | W01 | Mis depósitos y tareas de metadatos pendientes | Implementado local: cola consolidada del autor paginada con estado, checklist, pendientes y siguiente acción; tres tests y E2E multiusuario/UI aprobados. Rendimiento institucional pendiente. |
-| W02 | Etapas: identidad/tipo y autores/organizaciones | Base local: asistente de cuatro pantallas agrupa operaciones; comprobar cobertura de nueve etapas funcionales del informe. |
+| W02 | Etapas: identidad/tipo y autores/organizaciones | Implementado local: nueve etapas separadas con autoría/identidad, navegación accesible, precomprobación explícitamente local y confirmación final. E2E de los tres modos y recuperación/restauración aprobado; véase WIZARD_WORKFLOW.md. |
 | W03 | Búsqueda ORCID/ROR | Parcial: búsqueda ROR y OAuth ORCID; no atribuir identidad mediante búsqueda por nombre sin confirmación. |
 | W04 | Descripción/metodología y archivos/documentación | Base local: asistente y Markdown/ZIP; validar resumen y cobertura requeridos. |
 | W05 | Licencia, acceso, embargo y datos sensibles | Implementado local: declaración privada, acceso restringido para datos sensibles y aprobación de curación; E2E aprobado. Política jurídica institucional pendiente. |
-| W06 | Artículos, software, proyectos y financiación | Base local: relaciones/funding en edición; comprobar disponibilidad durante creación. |
+| W06 | Artículos, software, proyectos y financiación | Implementado local: etapa de creación con relaciones DataCite tipadas para artículos/software/datasets/proyectos, DOI o HTTPS, financiación y publicaciones; vista previa y recuperación local. E2E comprueba rechazo de HTTP, persistencia de SOFTWARE y formulario dinámico sin infracciones axe. |
 | W07 | Guardado automático y recuperación | Base local: metadatos locales14d y borrador servidor; no prometer persistencia automática de archivos seleccionados. |
 | W08 | Revisión automática: errores, avisos, porcentaje y explicación | Base local: calidad incluye explicación de reutilización por campo y recomendaciones de resumen/cobertura; pendiente aceptación humana y auditoría de todos los mensajes. |
 | W09 | Vista previa de landing y cita antes de enviar | Parcial: ficha real previa disponible y cita provisional sin DOI inventado añadida al asistente; ZIP muestra manifiesto seleccionado y exige revisión real después de guardarlo. Auditar vista previa integral y estilo bibliotecario. |

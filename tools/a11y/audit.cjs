@@ -103,7 +103,7 @@ async function main() {
         if (name === 'create.html') {
           await page.evaluate(() => {
             document.querySelector('section[data-step="0"]').hidden = true;
-            document.querySelector('section[data-step="2"]').hidden = false;
+            document.querySelector('section[data-step="3"]').hidden = false;
             document.querySelector('#separate-upload').hidden = true;
             document.querySelector('#package-upload').hidden = false;
             document.querySelector('[name="uploadMode"][value="package"]').checked = true;
@@ -118,7 +118,7 @@ async function main() {
           failures += await audit(page, 'create.html#package@320'); states++;
           await page.setViewport({width:1280, height:800});
           await page.evaluate(() => {
-            document.querySelector('section[data-step="2"]').hidden = true;
+            document.querySelector('section[data-step="3"]').hidden = true;
             document.querySelector('section[data-step="0"]').hidden = false;
           });
         }

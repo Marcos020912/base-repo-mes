@@ -7,6 +7,7 @@ const net = require('node:net');
 const crypto = require('node:crypto');
 const {spawn, spawnSync} = require('node:child_process');
 const puppeteer = require('../a11y/node_modules/puppeteer-core');
+const axe=require('../a11y/node_modules/axe-core');
 const {validate:validateOpenApi}=require('../contract/openapi-check.cjs');
 
 const root = path.resolve(__dirname, '../..');
@@ -251,19 +252,44 @@ async function login(page, base) {
   await page.click('#login-form button[type=submit]');
   await page.waitForFunction(() => location.pathname.endsWith('/index.html'), {timeout:15000});
 }
+async function wizardNext(page,index){
+  await page.click('#wizard-next');
+  await page.waitForSelector(`.wizard-panel[data-step="${index}"]:not([hidden])`,{visible:true});
+}
+async function wizardPreviewAndConfirm(page,withRelation=false){
+  await wizardNext(page,5);
+  if(withRelation){
+    await page.$$eval('.wizard-panel[data-step="5"] button',buttons=>buttons.find(button=>button.textContent.includes('Añadir artículo')).click());
+    await page.select('[data-relation-field=kind]','SOFTWARE');await page.select('[data-relation-field=identifierType]','URL');
+    await page.type('[data-relation-field=identifier]','http://example.org/software');await page.click('#wizard-next');
+    assert(await page.$eval('.wizard-panel[data-step="5"]',panel=>!panel.hidden),'Aceptó URL no HTTPS.');
+    await page.$eval('[data-relation-field=identifier]',input=>input.value='https://example.org/software');await page.type('[data-relation-field=title]','Software de prueba');
+    await page.waitForFunction(()=>Object.keys(localStorage).some(key=>key.startsWith('reduniv-deposit-v1:')&&JSON.parse(localStorage.getItem(key)).relations?.some(item=>item.kind==='SOFTWARE'&&item.identifier==='https://example.org/software')));
+    await page.evaluate(axe.source);const accessibility=await page.evaluate(async()=>axe.run('#creation-relations',{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
+    assert(accessibility.violations.length===0,'Formulario de relaciones con infracciones axe: '+accessibility.violations.map(item=>item.id).join(','));
+  }
+  await wizardNext(page,6);
+  assert(await page.$eval('#wizard-quality',node=>node.textContent.includes('comprobaciones locales')),'Falta precomprobación explicada.');
+  await wizardNext(page,7);await page.waitForFunction(()=>!document.querySelector('#wizard-next').disabled);
+  await wizardNext(page,8);
+  assert(await page.$$eval('.wizard-progress li',items=>items.length===9),'El asistente no tiene nueve etapas.');
+  let writes=0;const observe=request=>{if(request.method()==='POST'&&new URL(request.url()).pathname==='/api/v1/dataresources/')writes++;};
+  page.on('request',observe);await page.click('#save-submit');
+  await page.waitForFunction(()=>document.querySelector('[name=reviewConfirmed]')===document.activeElement);
+  assert(writes===0,'Se creó un recurso sin confirmar la revisión final.');page.off('request',observe);
+  await page.click('[name=reviewConfirmed]');
+}
 async function deposit(page, base, files, mode) {
   const title = `Depósito E2E ${mode} ${Date.now()}`;
   await page.goto(base + '/create.html', {waitUntil:'load'});
   await page.waitForSelector('.creator-given');
   await page.type('input[name=title]', title);
+  await wizardNext(page,1);
   await page.type('.creator-given', 'Ada');
   await page.type('.creator-family', 'Ejemplo');
-  await page.click('#wizard-next');
-  await page.waitForSelector('.wizard-panel[data-step="1"]:not([hidden])');
-  await page.type('input[name=licenseId]', 'CC-BY-4.0');
   await page.type('input[name=institution]', 'RedUniv');
+  await wizardNext(page,2);
   await page.type('textarea[name=methodology]', 'Metodología de prueba local.');
-  await page.select('select[name=privacyClassification]','NONE');
   await page.type('textarea[name=productionDescription]','Producción científica declarada por sensores.');
   await page.type('textarea[name=processingDescription]','Limpieza científica declarada de valores ausentes.');
   await page.type('textarea[name=processingTools]','Python 3.12; script público v1.');
@@ -277,11 +303,10 @@ async function deposit(page, base, files, mode) {
   if(mode==='md') {
     await page.evaluate(()=>document.querySelector('[name=temporalEnd]').value='2024-12-31');
     await page.click('#wizard-next');
-    assert(await page.$eval('.wizard-panel[data-step="1"]',element=>!element.hidden),'El asistente aceptó un rango temporal invertido.');
+    assert(await page.$eval('.wizard-panel[data-step="2"]',element=>!element.hidden),'El asistente aceptó un rango temporal invertido.');
     await page.evaluate(()=>document.querySelector('[name=temporalEnd]').value='2025-12-31');
   }
-  await page.click('#wizard-next');
-  await page.waitForSelector('.wizard-panel[data-step="2"]:not([hidden])');
+  await wizardNext(page,3);
   if (mode === 'package') {
     await page.click('[name="uploadMode"][value="package"]');
     await (await page.$('#package-file')).uploadFile(files.fullZip);
@@ -289,8 +314,10 @@ async function deposit(page, base, files, mode) {
     await (await page.$('#description-file')).uploadFile(mode === 'zip' ? files.zip : files.description);
     await (await page.$('#dataset-files')).uploadFile(...(mode === 'zip' ? [files.csv1, files.csv2] : [files.csv1]));
   }
-  await page.click('#wizard-next');
-  await page.waitForSelector('.wizard-panel[data-step="3"]:not([hidden])');
+  await wizardNext(page,4);
+  await page.type('input[name=licenseId]', 'CC-BY-4.0');
+  await page.select('select[name=privacyClassification]','NONE');
+  await wizardPreviewAndConfirm(page,mode==='md');
   await page.waitForFunction(() => !document.querySelector('#save-draft').disabled, {timeout:10000});
   const preview = await page.$eval('#preview-content', element => element.textContent);
   assert(preview.includes('Vista previa de cita (borrador)') && preview.includes('Cita provisional') && preview.includes(title), 'Asistente sin cita de borrador previa o sin título.');
@@ -306,6 +333,10 @@ async function deposit(page, base, files, mode) {
   await page.waitForFunction(() => document.querySelector('#download-list')?.textContent.includes('datos-uno.csv'), {timeout:15000});
   assert((await page.$eval('#resource-title', element => element.textContent)) === title,
     'El borrador creado no muestra el título esperado.');
+  if(mode==='md'){
+    const related=await page.evaluate(async()=>fetch(`/api/v1/scientific/${new URLSearchParams(location.search).get('id')}/relations`,{headers:auth.headers()}).then(response=>response.json()));
+    assert(related.some(item=>item.kind==='SOFTWARE'&&item.identifier==='https://example.org/software'),'No persistió relación tipada de creación.');
+  }
   const listing = await page.$eval('#download-list', element => element.textContent);
   if (mode !== 'md') {
     assert(listing.includes('datos-dos.csv'), 'Falta el segundo archivo del dataset.');
@@ -384,17 +415,16 @@ async function recoverInterruptedUpload(page, base, files) {
   await page.goto(base + '/create.html', {waitUntil:'load'});
   await page.waitForSelector('.creator-given');
   await page.type('input[name=title]', title);
+  await wizardNext(page,1);
   await page.type('.creator-given', 'Eva');
-  await page.click('#wizard-next');
-  await page.waitForSelector('.wizard-panel[data-step="1"]:not([hidden])');
-  await page.type('input[name=licenseId]', 'CC-BY-4.0');
   await page.type('input[name=institution]', 'RedUniv');
+  await wizardNext(page,2);
   await page.type('textarea[name=methodology]', 'Prueba de recuperación.');
-  await page.click('#wizard-next');
-  await page.waitForSelector('.wizard-panel[data-step="2"]:not([hidden])');
+  await wizardNext(page,3);
   await (await page.$('#description-file')).uploadFile(files.description);
   await (await page.$('#dataset-files')).uploadFile(files.csv1);
-  await page.click('#wizard-next');
+  await wizardNext(page,4);await page.type('input[name=licenseId]','CC-BY-4.0');await page.select('select[name=privacyClassification]','NONE');
+  await wizardPreviewAndConfirm(page);
   await page.waitForFunction(() => !document.querySelector('#save-submit').disabled);
   const interrupt = request => request.url().includes('/attachments?') ? request.abort('failed') : request.continue();
   await page.setRequestInterception(true);
@@ -457,17 +487,14 @@ async function deriveNewVersion(page, base, files, previous) {
     {}, previous.id);
   await page.waitForFunction(title => document.querySelector('input[name=title]')?.value === title,
     {}, previous.title);
-  await page.click('#wizard-next');
-  await page.waitForSelector('.wizard-panel[data-step="1"]:not([hidden])');
   await page.$eval('input[name=versionLabel]', input => {input.value='2.0';input.dispatchEvent(new Event('input',{bubbles:true}));});
-  await page.type('input[name=licenseId]', 'CC-BY-4.0');
-  await page.type('input[name=institution]', 'RedUniv');
+  await wizardNext(page,1);await page.type('input[name=institution]','RedUniv');await wizardNext(page,2);
   await page.type('textarea[name=methodology]', 'Segunda versión de prueba.');
-  await page.click('#wizard-next');
-  await page.waitForSelector('.wizard-panel[data-step="2"]:not([hidden])');
+  await wizardNext(page,3);
   await (await page.$('#description-file')).uploadFile(files.description);
   await (await page.$('#dataset-files')).uploadFile(files.csv2);
-  await page.click('#wizard-next');
+  await wizardNext(page,4);await page.type('input[name=licenseId]','CC-BY-4.0');await page.select('select[name=privacyClassification]','NONE');
+  await wizardPreviewAndConfirm(page);
   await page.waitForFunction(() => !document.querySelector('#save-draft').disabled);
   assert((await page.$eval('#preview-content', node => node.textContent)).includes(`Nueva versión de ${previous.id}`),
     'La vista previa no muestra el vínculo con la versión anterior.');
@@ -608,7 +635,7 @@ async function metadataProfilesFlow(page,base,draft) {
   const retained=await (await fetch(base+'/api/v1/scientific/'+draft.id,{headers})).json();assert(retained.metadataProfileRequiredFields.includes('processingTools'),'Desactivar perfil alteró reglas del dataset.');assert(!(await (await fetch(root,{headers})).json()).some(value=>value.id==='test-profile'),'Perfil inactivo sigue disponible.');
   const inactive=(await (await fetch(root+'/administration',{headers})).json()).find(value=>value.id==='test-profile');assert((await fetch(root+'/administration/test-profile/active',{method:'POST',headers,body:JSON.stringify({revision:inactive.revision,active:true})})).ok,'No reactivó perfil.');
   await page.goto(base+'/create.html',{waitUntil:'load'});await page.waitForFunction(()=>[...document.querySelector('#dataset-profile-select').options].some(option=>option.value==='test-profile'));
-  await page.evaluate(()=>{document.querySelector('[data-step="0"]').hidden=true;document.querySelector('[data-step="1"]').hidden=false;document.querySelector('[name=licenseId]').value='Licencia del autor';});
+  await page.evaluate(()=>{document.querySelector('[data-step="0"]').hidden=false;document.querySelector('[name=licenseId]').value='Licencia del autor';});
   await page.select('#dataset-profile-select','test-profile');await page.click('#apply-dataset-profile');await page.waitForSelector('#dataset-profile-confirm[open]',{visible:true});await page.click('#dataset-profile-confirm footer .primary');
   assert(await page.$eval('[name=licenseId]',input=>input.value)==='Licencia del autor','Perfil reemplazó licencia declarada.');assert(await page.$eval('[name=language]',input=>input.value)==='es','Perfil no completó idioma vacío.');
   assert(await page.evaluate(()=>!metadataProfileWidget.validate()),'Asistente no detecta herramienta faltante del perfil.');

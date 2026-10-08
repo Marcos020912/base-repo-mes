@@ -27,6 +27,7 @@ const errorBox = $('#wizard-message');
 const translationEditor=metadataTranslations.mount($('#metadata-translations'),field('translations'));
 const autosaveKey = `reduniv-deposit-v1:${user?.username || 'anonymous'}:${basedOnId || 'new'}`;
 const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','productionDescription','processingDescription','processingTools','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications','privacyClassification','profileSnapshot'];
+let previewReady=false;
 let autosaveEnabled = false;
 let autosaveTimer;
 function storedDraft() {
@@ -39,7 +40,7 @@ function persistDraft() {
   if (!autosaveEnabled || createdId) return;
   const values = Object.fromEntries(autosaveFields.map(name => [name, value(name)]));
   try {
-    localStorage.setItem(autosaveKey, JSON.stringify({ values, creators: creators(), funding: fundingEntries(), uploadMode: packageMode() ? 'package' : 'separate', step, updatedAt: Date.now() }));
+    localStorage.setItem(autosaveKey, JSON.stringify({ values, creators: creators(), funding: fundingEntries(), relations: relationEntries(), uploadMode: packageMode() ? 'package' : 'separate', step, updatedAt: Date.now() }));
     $('#autosave-status').textContent = 'Metadatos guardados en este navegador. Los archivos deben seleccionarse de nuevo tras recargar.';
     $('#discard-autosave').hidden = false;
   } catch { $('#autosave-status').textContent = 'No se pudieron guardar los metadatos en este navegador.'; }
@@ -60,6 +61,7 @@ function restoreDraft() {
       $('#creator-list').replaceChildren();
       for (const author of draft.creators) addCreator(author.givenName || '', author.familyName || '');
     }
+    if(Array.isArray(draft.relations)){relationRows.replaceChildren();draft.relations.slice(0,30).forEach(addRelation);}
     if (Array.isArray(draft.funding)) {
       $('#funding-list').replaceChildren();
       for (const item of draft.funding.slice(0, 20)) addFunding(item);
@@ -107,6 +109,35 @@ function addFunding(item = {}) {
   remove.textContent = 'Quitar'; remove.onclick = () => { row.remove(); scheduleAutosave(); };
   row.append(remove); $('#funding-list').append(row);
 }
+// Relaciones tipadas: selección explícita, sin inferir DOI ni descargar enlaces externos.
+const relationKinds=['ARTICLE','SOFTWARE','DATASET','PROJECT','OTHER'];
+const relationTypes=['IsCitedBy','Cites','IsSupplementTo','IsSupplementedBy','IsReferencedBy','References','IsDocumentedBy','Documents','IsDerivedFrom','IsSourceOf','IsPartOf','HasPart'];
+const relationRows=document.createElement('div');relationRows.id='creation-relations';relationRows.className='related-editor';
+const relationAdd=document.createElement('button');relationAdd.type='button';relationAdd.className='secondary';relationAdd.textContent='+ Añadir artículo, software o proyecto';
+const relationHeading=document.createElement('h3');relationHeading.textContent='Relaciones científicas tipadas';
+const relationPanel=document.querySelector('.wizard-panel[data-step="5"] .wizard-fields');relationPanel.append(relationHeading,relationRows,relationAdd);
+function addRelation(data={}){
+  if(relationRows.childElementCount>=30)return;
+  const row=document.createElement('div');row.className='related-editor-row';
+  for(const [name,label,choices,max] of [['kind','Tipo de recurso',relationKinds],['identifierType','Tipo de identificador',['DOI','URL']],['relationType','Relación DataCite',relationTypes],['identifier','DOI o URL HTTPS',null,500],['title','Título',null,255]]){
+    const wrapper=document.createElement('label');wrapper.textContent=label;const input=document.createElement(choices?'select':'input');input.dataset.relationField=name;
+    if(choices)input.required=true;
+    if(choices)for(const choice of choices){const option=document.createElement('option');option.value=choice;option.textContent=choice;input.append(option);}
+    else{input.maxLength=max;input.required=name==='identifier';}
+    input.value=typeof data[name]==='string'?data[name]:choices?.[0]||'';wrapper.append(input);row.append(wrapper);
+  }
+  const remove=document.createElement('button');remove.type='button';remove.className='danger-outline';remove.textContent='Quitar relación';remove.onclick=()=>{row.remove();scheduleAutosave();};row.append(remove);relationRows.append(row);
+}
+relationAdd.onclick=()=>{addRelation();scheduleAutosave();};
+function relationEntries(){return [...relationRows.children].map(row=>Object.fromEntries([...row.querySelectorAll('[data-relation-field]')].map(input=>[input.dataset.relationField,input.value.trim()])));}
+function validRelations(){
+  const seen=new Set();for(const row of relationRows.children){
+    const values=Object.fromEntries([...row.querySelectorAll('[data-relation-field]')].map(input=>[input.dataset.relationField,input.value.trim()]));let identifier=values.identifier;
+    if(values.identifierType==='DOI'){identifier=identifier.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i,'');if(!/^10\.\d{4,9}\/\S+$/i.test(identifier))return invalid('DOI relacionado no válido.',row.querySelector('[data-relation-field=identifier]'));}
+    else{try{const uri=new URL(identifier);if(uri.protocol!=='https:'||uri.username||uri.password)throw Error();}catch{return invalid('La URL relacionada debe ser HTTPS válida.',row.querySelector('[data-relation-field=identifier]'));}}
+    const key=values.identifierType+':'+identifier.toLowerCase()+':'+values.relationType;if(seen.has(key))return invalid('Relación duplicada.',row.querySelector('[data-relation-field=identifier]'));seen.add(key);
+  }return true;
+}
 function fundingEntries() {
   return [...document.querySelectorAll('.funding-row')].map(row => Object.fromEntries(
     [...row.querySelectorAll('[name]')].map(input => [input.name.replace(/^funding-/, ''), input.value.trim()])));
@@ -136,6 +167,22 @@ function updateFileCount() {
   const selected = files();
   $('#file-count').textContent = selected.length ? `${selected.length} archivo(s), ${selected.reduce((total, file) => total + file.size, 0).toLocaleString('es')} bytes en total.` : 'Aún no hay archivos seleccionados.';
 }
+function renderLocalQuality(){
+  const checks=[
+    ['Título',Boolean(value('title').trim()),'Identifica el depósito.'],
+    ['Autoría',creators().length>0&&creators().every(author=>author.givenName),'Atribuye la producción; un nombre no verifica identidad.'],
+    ['Versión',Boolean(value('versionLabel').trim()),'Distingue el contenido que se citará.'],
+    ['Licencia',Boolean(value('licenseId').trim()),'Declara condiciones de reutilización; la curación debe revisarlas.'],
+    ['Institución',Boolean(value('institution').trim()),'Indica responsabilidad institucional.'],
+    ['Metodología',Boolean(value('methodology').trim()),'Explica producción y reutilización.'],
+    ['Documentación seleccionada',Boolean(packageMode()?$('#package-file').files[0]:$('#description-file').files[0]),'Se comprobará description.md en el servidor al guardar.'],
+    ['Contenido seleccionado',Boolean(packageMode()?$('#package-file').files[0]:files().length),'Tipos, rutas y archivos internos de ZIP se validarán en el servidor.']
+  ];
+  for(const item of metadataProfileWidget.missing())checks.push(['Perfil: '+item.label,false,'Requisito adicional de la revisión de perfil elegida.']);
+  const container=$('#wizard-quality');container.replaceChildren(node('p',`${checks.filter(check=>check[1]).length} de ${checks.length} comprobaciones locales completas. No equivale a aprobación ni a integridad verificada.`));
+  const list=document.createElement('ul');for(const [label,complete,why]of checks){const entry=node('li',`${complete?'✓ Selección presente':'✕ Falta completar'}: ${label}. ${why}`);list.append(entry);}container.append(list);
+  if(needsPostUploadPreview())container.append(node('p','El ZIP no queda aprobado por esta precomprobación. Al guardarlo deberá revisar la descripción y los archivos realmente extraídos antes de enviar a curación.'));
+}
 function needsPostUploadPreview() {
   return packageMode() || $('#description-file').files[0]?.name.toLowerCase().endsWith('.zip') || files().some(file => file.name.toLowerCase().endsWith('.zip'));
 }
@@ -151,16 +198,20 @@ function showStep(next) {
     if (index === step) item.setAttribute('aria-current', 'step'); else item.removeAttribute('aria-current');
   });
   $('#wizard-back').hidden = step === 0;
-  $('#wizard-next').hidden = step === 3;
-  $('#save-draft').hidden = step !== 3;
-  $('#save-submit').hidden = step !== 3;
+  $('#wizard-next').hidden = step === 8;
+  $('#wizard-next').disabled=false;
+  $('#save-draft').hidden = step !== 8;
+  $('#save-submit').hidden = step !== 8;
   report('');
-  if (step === 3) {
-    $('#save-draft').disabled = true; $('#save-submit').disabled = true;
-    renderPreview().then(() => { if (generation === previewGeneration && step === 3 && !busy && !createdId) { $('#save-draft').disabled = false; $('#save-submit').disabled = false; } })
+  if(step===6)renderLocalQuality();
+  if (step === 7) {
+    previewReady=false;$('#wizard-next').disabled=true;
+    renderPreview().then(() => { if (generation === previewGeneration && step === 7 && !busy && !createdId) { previewReady=true;$('#wizard-next').disabled=false; } })
       .catch(error => report(`No se pudo generar la vista previa: ${error.message}`, 'error'));
   }
-  document.querySelector('.wizard-progress').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if(step===8){$('#save-draft').disabled=busy;$('#save-submit').disabled=busy||!previewReady;}
+  document.querySelector('.wizard-progress').scrollIntoView({ behavior: 'instant', block: 'start' });
+  const heading=document.querySelector(`.wizard-panel[data-step="${step}"] h2`);heading.tabIndex=-1;heading.focus({preventScroll:true});
   scheduleAutosave();
 }
 function invalid(message, input) {
@@ -169,6 +220,7 @@ function invalid(message, input) {
   return false;
 }
 function validateStep(index) {
+  if(index===5&&!validRelations())return false;
   field('temporalEnd').setCustomValidity(value('temporalStart') && value('temporalEnd') && value('temporalStart')>value('temporalEnd')?'El fin de cobertura no puede ser anterior al inicio.':'');
   const panel = document.querySelector(`.wizard-panel[data-step="${index}"]`);
   for (const input of panel.querySelectorAll('input:not([type=hidden]),textarea,select')) {
@@ -176,24 +228,22 @@ function validateStep(index) {
   }
   if (index === 0) {
     if (!/^\d{4}$/.test(value('year'))) return invalid('El año debe tener cuatro cifras.', field('year'));
-    if (creators().some(author => !author.givenName)) return invalid('Indica el nombre de cada autor.', $('.creator-given'));
   }
   if (index === 1) {
-    if(!metadataProfileWidget.validate())return false;
-    if(['PERSONAL','CONFIDENTIAL'].includes(value('privacyClassification')) && value('accessLevel')!=='RESTRICTED')return invalid('Los datos personales/confidenciales necesitan acceso restringido.',field('accessLevel'));
-    if (value('accessLevel') === 'EMBARGOED' && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value('embargoUntil')) || Number.isNaN(Date.parse(value('embargoUntil')))))
-      return invalid('Indica el fin del embargo en formato UTC ISO 8601.', field('embargoUntil'));
+    if (creators().some(author => !author.givenName)) return invalid('Indica el nombre de cada autor.', $('.creator-given'));
     if (value('orcid') && !/^(?:https:\/\/orcid\.org\/)?\d{4}-\d{4}-\d{4}-[\dX]{4}$/.test(value('orcid')))
       return invalid('El ORCID no tiene un formato válido.', field('orcid'));
     if (value('ror') && !/^(?:https:\/\/ror\.org\/)?0[0-9a-hjkmnp-tv-z]{6}[0-9]{2}$/.test(value('ror')))
       return invalid('El ROR no tiene un formato válido.', field('ror'));
+  }
+  if(index===5){
     for (const row of document.querySelectorAll('.funding-row')) {
       const funderRor = row.querySelector('[name="funding-funderRor"]');
       if (funderRor.value.trim() && !/^(?:https:\/\/ror\.org\/)?0[0-9a-hjkmnp-tv-z]{6}[0-9]{2}$/.test(funderRor.value.trim()))
         return invalid('El ROR del financiador no tiene un formato válido.', funderRor);
     }
   }
-  if (index === 2) {
+  if (index === 3) {
     if (packageMode()) {
       const archive = $('#package-file').files[0];
       if (!archive || !archive.size) return invalid('Selecciona un ZIP completo del depósito.', $('#package-file'));
@@ -217,6 +267,13 @@ function validateStep(index) {
         return invalid(`El tipo ${value('type')} no admite «${file.name}».`, $('#dataset-files'));
     }
   }
+  if(index===4){
+    if(['PERSONAL','CONFIDENTIAL'].includes(value('privacyClassification'))&&value('accessLevel')!=='RESTRICTED')return invalid('Los datos personales/confidenciales necesitan acceso restringido.',field('accessLevel'));
+    if(value('accessLevel')==='EMBARGOED'&&(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value('embargoUntil'))||Number.isNaN(Date.parse(value('embargoUntil')))))return invalid('Indica el fin del embargo en formato UTC ISO 8601.',field('embargoUntil'));
+  }
+  if(index===6){const missing=metadataProfileWidget.missing();if(missing.length){const input=field(missing[0].code);if(!input)return invalid('El perfil guardado contiene reglas no reconocidas; vuelva a seleccionar un perfil aprobado.');showStep(Number(input.closest('.wizard-panel').dataset.step));return invalid('El perfil requiere: '+missing[0].label,input);}}
+  if(index===7&&!previewReady)return invalid('Espere a que se complete la vista previa o vuelva a generarla.');
+  if(index===8&&!field('reviewConfirmed').checked)return invalid('Confirme que revisó la ficha, la cita y los archivos.',field('reviewConfirmed'));
   return true;
 }
 function node(tag, text, className) {
@@ -258,6 +315,7 @@ async function renderPreview() {
   const draftCitation=`${authorText} (${value('year') || 's. f.'}). ${value('title')} (versión ${value('versionLabel') || 'pendiente'}) [${value('type')}]. ${value('publisher') || 'Editorial pendiente'}.`;
   citationPreview.append(node('p',draftCitation),node('p','Cita provisional: este depósito todavía no está publicado. El DOI resoluble y la landing permanente se incorporan después de la aprobación; no cite esta vista previa como una publicación.','muted'));
   target.append(citationPreview);
+  if(relationEntries().length){const section=node("section","","wizard-preview-section");section.append(node("h3","Recursos relacionados"));for(const item of relationEntries())section.append(node("p",`${item.kind} · ${item.relationType}: ${item.title || item.identifier} (${item.identifier})`));target.append(section);}
   const description = document.createElement('section'); description.className = 'wizard-preview-section';
   description.append(node('h3', 'Descripción del proyecto'));
   if (packageMode()) {
@@ -298,7 +356,8 @@ async function save(submit) {
   if (busy || createdId) return;
   const reviewAfterUpload = submit && needsPostUploadPreview();
   if (!basedOnVerified) { report('La versión anterior debe ser publicada y tuya antes de crear una sucesora.', 'error'); return; }
-  for (const index of [0,1,2]) {
+  if(submit&&!validateStep(8))return;
+  for (const index of [0,1,2,3,4,5,6]) {
     if (!validateStep(index)) { showStep(index); validateStep(index); return; }
   }
   busy = true; $('#wizard-back').disabled = true; $('#save-draft').disabled = true; $('#save-submit').disabled = true;
@@ -319,6 +378,7 @@ async function save(submit) {
     const savedScience=await api(`/api/v1/scientific/${encodeURIComponent(createdId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sciencePayload(), conceptualDoi: inheritedConceptualDoi }) });
     await metadataProfileWidget.save(createdId,savedScience.revision);
     await scientificPrivacy.saveWizard(createdId);
+    if(relationEntries().length)await api(`/api/v1/scientific/${encodeURIComponent(createdId)}/relations`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(relationEntries())});
     if (fundingEntries().length) {
       report('Guardando financiación…');
       await api(`/api/v1/scientific/${encodeURIComponent(createdId)}/funding`, { method: 'PUT',
@@ -354,7 +414,7 @@ async function save(submit) {
 form.addEventListener('submit', event => {
   event.preventDefault();
   if (busy) return;
-  if (step < 3) { if (validateStep(step)) showStep(step + 1); }
+  if (step < 8) { if (validateStep(step)) showStep(step + 1); }
   else if (!$('#save-draft').disabled) save(false);
 });
 $('#add-creator').addEventListener('click', () => addCreator());
@@ -373,6 +433,7 @@ $('#dataset-files').addEventListener('change', updateFileCount);
 $('#description-file').addEventListener('change', updateSubmissionButton);
 $('#package-file').addEventListener('change', updateFileCount);
 form.querySelectorAll('[name="uploadMode"]').forEach(input => input.addEventListener('change', updateUploadMode));
+$('#retry-preview').addEventListener('click',()=>showStep(7));
 $('#wizard-back').addEventListener('click', () => showStep(step - 1));
 $('#wizard-next').addEventListener('click', () => { if (validateStep(step)) showStep(step + 1); });
 $('#save-draft').addEventListener('click', () => save(false));
@@ -384,8 +445,9 @@ if (basedOnId) Promise.all([
   api(`/api/v1/dataresources/${encodeURIComponent(basedOnId)}`),
   api(`/api/v1/scientific/${encodeURIComponent(basedOnId)}`),
   api('/api/v1/my-dataresources'),
-  api(`/api/v1/scientific/${encodeURIComponent(basedOnId)}/funding`)
-]).then(([base, previous, mine, previousFunding]) => {
+  api(`/api/v1/scientific/${encodeURIComponent(basedOnId)}/funding`),
+  api(`/api/v1/scientific/${encodeURIComponent(basedOnId)}/relations`)
+]).then(([base, previous, mine, previousFunding, previousRelations]) => {
   if (previous.status !== 'PUBLISHED' || !mine.some(item => item.id === basedOnId))
     throw new Error('Solo puedes derivar una versión de un depósito propio y publicado.');
   basedOnVerified = true;
@@ -398,6 +460,7 @@ if (basedOnId) Promise.all([
   for (const name of ['productionDescription','processingDescription','processingTools','summary','temporalStart','temporalEnd','geographicCoverage'])field(name).value=previous[name]||'';
   translationEditor.set(previous.translations||{});
   for (const item of previousFunding) addFunding(item);
+  for(const item of previousRelations)addRelation(item);
   applyPolicy();
   metadataProfileWidget.inherit(previous);
   restoreDraft();metadataProfileWidget.refresh();

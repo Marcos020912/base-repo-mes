@@ -2,6 +2,7 @@ package edu.kit.datamanager.repo.test.unit;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -18,7 +19,8 @@ public class AccessibilityMarkupTest {
                 html = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
             }
             assertTrue(page + " has no skip link", html.contains("href=\"#main-content\""));
-            assertTrue(page + " has no focusable main", html.contains("<main id=\"main-content\" tabindex=\"-1\""));
+            assertTrue(page + " has no focusable main", Pattern.compile("<main\\b[^>]*>").matcher(html).results()
+                    .anyMatch(tag -> tag.group().contains("id=\"main-content\"") && tag.group().contains("tabindex=\"-1\"")));
             assertTrue(page + " has no language", html.contains("<html lang=\"es\""));
         }
     }
