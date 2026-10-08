@@ -461,6 +461,13 @@ async function publicDownloads(base, resource) {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
+    await page.evaluateOnNewDocument(() => {
+      window.showSaveFilePicker = async options => {
+        const directory = await navigator.storage.getDirectory();
+        window.directDownloadHandle = await directory.getFileHandle(options.suggestedName, {create:true});
+        return window.directDownloadHandle;
+      };
+    });
     await page.goto(`${base}/public-resource.html?id=${encodeURIComponent(resource.id)}`, {waitUntil:'load'});
     await page.waitForSelector('#files .file-row a');
     assert(await page.evaluate(() => localStorage.getItem('base-repo-token')) === null,
@@ -488,8 +495,17 @@ async function publicDownloads(base, resource) {
     const citation = await citationResponse;
     assert(citation.ok() && (await citation.text()).includes('@'), 'Exportación pública BibTeX inválida.');
     await page.waitForFunction(() => [...document.querySelectorAll('.transfer-item span')].filter(node => node.textContent === 'Descarga preparada').length === 3);
+    await page.click('.transfer-toggle');
+    await page.click('#transfer-disk-mode');
+    await page.click('.transfer-close');
+    await page.click('#files .file-row a');
+    await page.waitForFunction(()=>document.querySelector('.transfer-item span')?.textContent==='Archivo guardado' && document.querySelector('#status')?.textContent==='Archivo guardado.', {timeout:5000}).catch(async error => {throw new Error(error.message+': '+await page.evaluate(()=>JSON.stringify({status:document.querySelector('#status')?.textContent,monitor:document.querySelector('.transfer-list')?.textContent,disk:document.querySelector('#transfer-disk-mode')?.checked})));});
+    const savedCsv = await page.evaluate(async () => (await directDownloadHandle.getFile()).text());
+    assert(savedCsv === await file.text(),'El guardado directo no conserva los bytes del CSV público.');
+    assert(await page.evaluate(()=>localStorage.getItem('base-repo-token'))===null,
+      'El guardado directo público requirió sesión.');
     assert(errors.length === 0, `Errores JavaScript públicos: ${errors.join('; ')}`);
-    process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción y BibTeX.\n');
+    process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción, BibTeX y CSV directo a disco (OPFS).\n');
   } finally { await context.close(); }
 }
 async function verifyMultiuserAccess(page, base, published, otherDraft) {

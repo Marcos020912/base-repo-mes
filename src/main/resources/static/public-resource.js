@@ -163,7 +163,10 @@ document.querySelector('#export').addEventListener('click', () => {
   downloadPublic(`/api/v1/scientific/${encodeURIComponent(id)}/citation?format=${encodeURIComponent(format)}`, `citation.${extension}`);
 });
 async function downloadPublic(url, filename) {
-  try { await transfers.download(url, filename); status.textContent = 'Descarga preparada.'; }
+  try {
+    const result = await transfers.download(url, filename);
+    status.textContent = result.savedToDisk ? 'Archivo guardado.' : 'Descarga preparada.';
+  }
   catch (error) { status.textContent = error.name === 'AbortError' ? 'Descarga cancelada.' : error.message; }
 }
 load();

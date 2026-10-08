@@ -176,14 +176,14 @@ const transfers = (() => {
         task.cancel.disabled = true;
         task.status.textContent = 'Finalizando guardado…';
         await writable.close(); writable = null;
-        finish(task, 'Archivo guardado'); return;
+        finish(task, 'Archivo guardado'); return {savedToDisk:true};
       }
       const blob = new Blob(chunks, {type:response.headers.get('Content-Type') || 'application/octet-stream'});
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a'); link.href = blobUrl; link.download = filename;
       document.body.append(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-      finish(task, 'Descarga preparada');
+      finish(task, 'Descarga preparada'); return {savedToDisk:false};
     } catch (error) {
       const cancelled = controller.signal.aborted || error.name === 'AbortError';
       // A local write failure must stop the HTTP stream too; classify it before aborting.
