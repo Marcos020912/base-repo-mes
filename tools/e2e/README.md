@@ -48,3 +48,15 @@ descargas públicas del depósito publicado de prueba: valida el contenido CSV,
 la integridad del ZIP y la inclusión de description.md/datos, y la exportación
 BibTeX. Comprueba los estados finales del monitor, no el guardado en disco del
 usuario. Sigue pendiente validar archivos grandes y despliegue real.
+
+## Monitor de transferencias aislado
+
+```bash
+node tools/e2e/transfer-smoke.cjs
+```
+
+No necesita el JAR. Arranca un servidor HTTP de prueba en loopback y Chrome:
+comprueba progreso indeterminado sin Content-Length, cancelación de una descarga
+en curso y cierre real de la conexión HTTP, éxito con progreso completo, error
+HTTP y limpieza del historial. Verifica que el acceso anónimo no envía
+Authorization. No valida cargas de archivos grandes ni rollback de subidas.

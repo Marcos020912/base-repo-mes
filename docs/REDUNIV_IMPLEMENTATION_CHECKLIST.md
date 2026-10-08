@@ -258,3 +258,4 @@ heredados antes de activarla.
 - [x] Comprobación Chrome aislada: descarga anónima y cancelación; auditoría axe: 43 estados, 0 infracciones automáticas.
 - [ ] Validar este flujo con archivos grandes y endpoints públicos reales en staging; el monitor mantiene el archivo en memoria antes de ofrecer su guardado.
 - [x] E2E real local Chrome + JAR + H2: contexto sin token descarga CSV, ZIP válido con description.md y datos, y BibTeX; verifica tres transferencias completadas y ausencia de errores JavaScript. La publicación usa DOI sintético, no DataCite.
+- [x] Prueba reproducible del monitor (`node tools/e2e/transfer-smoke.cjs`): stream HTTP lento sin tamaño, cancelación con cierre de conexión, éxito, error y limpieza, sin sesión ni servicios externos. No demuestra rendimiento de archivos masivos ni rollback de subidas.
