@@ -125,9 +125,6 @@ No fusionar con `main` sin aprobaci처n. Actualizar esta lista al terminar cada �
 
 ## Pendiente o sujeto a validaci처n
 
-- [ ] Sustituir por un servidor HTTP local las solicitudes a `www.heise.de`
-      de dos pruebas heredadas `testVariousContentDownload`; la verificaci처n
-      sin Internet ejecut처 439 pruebas y excluy처 temporalmente esas dos.
 - [ ] Validar migraci처n/retroceso con copia de PostgreSQL y archivos en entorno de prueba.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Probar el nuevo asistente en un navegador conectado a una instancia de

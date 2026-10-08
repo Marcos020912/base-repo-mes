@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.sun.net.httpserver.HttpServer;
 import edu.kit.datamanager.entities.Identifier;
 import edu.kit.datamanager.entities.PERMISSION;
 import edu.kit.datamanager.entities.RepoUserRole;
@@ -52,6 +53,7 @@ import edu.kit.datamanager.service.IAuditService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -1358,6 +1360,15 @@ public class DataResourceControllerTestWithoutVersioning {
    */
   @Test
   public void testVariousContentDownload() throws Exception {
+    HttpServer httpFixture = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+    httpFixture.createContext("/file", exchange -> {
+      byte[] body = "fixture".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      exchange.sendResponseHeaders(200, body.length);
+      try (var stream = exchange.getResponseBody()) { stream.write(body); }
+    });
+    httpFixture.start();
+    String fixtureUri = "http://127.0.0.1:" + httpFixture.getAddress().getPort() + "/file";
+    try {
     ContentInformation cinfo = new ContentInformation();
     cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("missingFile");
@@ -1400,7 +1411,7 @@ public class DataResourceControllerTestWithoutVersioning {
     cinfo.setParentResource(sampleResource);
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("withRedirect");
-    cinfo.setContentUri("http://www.heise.de");
+    cinfo.setContentUri(fixtureUri);
     contentInformationDao.save(cinfo);
 
     this.mockMvc.perform(get("/api/v1/dataresources/" + sampleResource.getId() + "/data/missingFile").header(HttpHeaders.AUTHORIZATION,
@@ -1418,7 +1429,7 @@ public class DataResourceControllerTestWithoutVersioning {
             "Bearer " + userToken)).andDo(print()).andExpect(status().isOk()).andExpect(header().string("Content-Type", equalTo("text/plain")));
 
     this.mockMvc.perform(get("/api/v1/dataresources/" + sampleResource.getId() + "/data/withRedirect").header(HttpHeaders.AUTHORIZATION,
-            "Bearer " + userToken)).andDo(print()).andExpect(header().string("Location", equalTo("http://www.heise.de")));
+            "Bearer " + userToken)).andDo(print()).andExpect(header().string("Location", equalTo(fixtureUri)));
 
 //collection download ... first fails due to invalid element at /data/missingFile
     this.mockMvc.perform(get("/api/v1/dataresources/" + sampleResource.getId() + "/data/").header(HttpHeaders.AUTHORIZATION,
@@ -1449,6 +1460,7 @@ public class DataResourceControllerTestWithoutVersioning {
     this.mockMvc.perform(get("/api/v1/dataresources/" + sampleResource.getId() + "/data/").header(HttpHeaders.AUTHORIZATION,
             "Bearer " + userToken).header("Accept", "application/zip")).andDo(print()).andExpect(status().isOk());
 
+    } finally { httpFixture.stop(0); }
   }
 
   @Test
