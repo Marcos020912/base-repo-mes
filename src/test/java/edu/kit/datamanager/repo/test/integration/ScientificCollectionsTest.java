@@ -96,10 +96,10 @@ public class ScientificCollectionsTest {
     @Autowired private jakarta.persistence.EntityManager entityManager;
     @Test public void translationsAndCoverageSurviveJpaReloadAndCanBeCleared() {
         String id=dataset(PublicationStatus.DRAFT);var record=records.findById(id).orElseThrow();
-        record.setSummary("Resumen");record.setTemporalStart(java.time.LocalDate.of(2025,1,1));record.setGeographicCoverage("Cuba");
+        record.setProductionDescription("Origen");record.setProcessingDescription("Procesamiento");record.setProcessingTools("Herramienta 1.0");record.setSummary("Resumen");record.setTemporalStart(java.time.LocalDate.of(2025,1,1));record.setGeographicCoverage("Cuba");
         record.getTranslations().put("en",new LocalizedScientificMetadata("English title","English summary"));
         records.saveAndFlush(record);entityManager.clear();
-        var loaded=records.findById(id).orElseThrow();assertEquals("Resumen",loaded.getSummary());
+        var loaded=records.findById(id).orElseThrow();assertEquals("Origen",loaded.getProductionDescription());assertEquals("Procesamiento",loaded.getProcessingDescription());assertEquals("Herramienta 1.0",loaded.getProcessingTools());assertEquals("Resumen",loaded.getSummary());
         assertEquals("Cuba",loaded.getGeographicCoverage());assertEquals("English title",loaded.getTranslations().get("en").getTitle());
         loaded.getTranslations().clear();records.saveAndFlush(loaded);entityManager.clear();
         assertTrue(records.findById(id).orElseThrow().getTranslations().isEmpty());

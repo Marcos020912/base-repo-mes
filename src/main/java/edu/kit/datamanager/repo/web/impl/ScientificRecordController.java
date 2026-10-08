@@ -116,6 +116,9 @@ public class ScientificRecordController {
         record.setRor(ror);
         record.setRelatedPublications(clean(input.relatedPublications(), 2000));
         record.setMethodology(clean(input.methodology(), 2000));
+        if(input.productionDescription()!=null)record.setProductionDescription(clean(input.productionDescription(),5000));
+        if(input.processingDescription()!=null)record.setProcessingDescription(clean(input.processingDescription(),5000));
+        if(input.processingTools()!=null)record.setProcessingTools(clean(input.processingTools(),2000));
         if(input.summary()!=null)record.setSummary(clean(input.summary(),5000));
         if(input.geographicCoverage()!=null)record.setGeographicCoverage(clean(input.geographicCoverage(),1000));
         var start=input.temporalStart()==null?record.getTemporalStart():coverageDate(input.temporalStart());
@@ -304,7 +307,16 @@ public class ScientificRecordController {
                                 String accessLevel, String embargoUntil, String language, String discipline, String keywords,
                                 String orcid, String institution, String ror, String relatedPublications,
                                 String methodology,String summary,String temporalStart,String temporalEnd,String geographicCoverage,
-                                Map<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata> translations) {
+                                Map<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata> translations,
+                                String productionDescription,String processingDescription,String processingTools) {
+        public UpdateRequest(String versionLabel,String versionDoi,String conceptualDoi,String licenseId,
+                String accessLevel,String embargoUntil,String language,String discipline,String keywords,
+                String orcid,String institution,String ror,String relatedPublications,String methodology,
+                String summary,String temporalStart,String temporalEnd,String geographicCoverage,
+                Map<String,edu.kit.datamanager.repo.domain.LocalizedScientificMetadata> translations) {
+            this(versionLabel,versionDoi,conceptualDoi,licenseId,accessLevel,embargoUntil,language,discipline,keywords,
+                orcid,institution,ror,relatedPublications,methodology,summary,temporalStart,temporalEnd,geographicCoverage,translations,null,null,null);
+        }
         /** Preserve the source-level contract used by existing callers; omitted additions keep their values. */
         public UpdateRequest(String versionLabel,String versionDoi,String conceptualDoi,String licenseId,
                 String accessLevel,String embargoUntil,String language,String discipline,String keywords,

@@ -40,4 +40,12 @@ public class W3cProvExporterTest {
         assertEquals(Map.of("@id", "#activity-index-0"), file.get("prov:wasInvalidatedBy"));
         assertTrue(graph.stream().anyMatch(node -> "prov:SoftwareAgent".equals(node.get("@type"))));
     }
+
+    @SuppressWarnings("unchecked")
+    @Test public void scientificNarrativeDoesNotFabricateExecutionActivities(){
+        var record=new edu.kit.datamanager.repo.domain.ScientificRecord("r1");record.setProductionDescription("Instrument readings");record.setProcessingDescription("Cleaning missing values");record.setProcessingTools("Tool 2.0");
+        var graph=(List<Map<String,Object>>)W3cProvExporter.build("r1",List.of(),record).get("@graph");assertEquals(1,graph.size());
+        var declaration=graph.get(0);assertEquals("prov:Entity",declaration.get("@type"));assertTrue(declaration.get("schema:description").toString().contains("Cleaning missing values"));assertFalse(declaration.containsKey("prov:generatedAtTime"));assertFalse(declaration.containsKey("prov:wasGeneratedBy"));
+        record.setProductionDescription(null);record.setProcessingDescription(null);record.setProcessingTools(null);assertTrue(((List<?>)W3cProvExporter.build("r1",List.of(),record).get("@graph")).isEmpty());
+    }
 }

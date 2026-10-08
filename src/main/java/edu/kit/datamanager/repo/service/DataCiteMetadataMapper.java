@@ -83,6 +83,8 @@ public class DataCiteMetadataMapper {
         List<Map<String,String>> descriptions=new ArrayList<>();
         if(hasText(science.getSummary()))descriptions.add(Map.of("description",science.getSummary(),"descriptionType","Abstract"));
         if(hasText(science.getMethodology()))descriptions.add(Map.of("description",science.getMethodology(),"descriptionType","Methods"));
+        String provenance=ScientificProvenanceDescription.describe(science);
+        if(provenance!=null)descriptions.add(Map.of("description",provenance,"descriptionType","Methods"));
         science.getTranslations().forEach((language,value)->{
             if(hasText(value.getSummary()))descriptions.add(Map.of("description",value.getSummary(),"descriptionType","Abstract","lang",language));
         });

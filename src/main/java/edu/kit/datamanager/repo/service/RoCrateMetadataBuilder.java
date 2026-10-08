@@ -49,6 +49,8 @@ public final class RoCrateMetadataBuilder {
                 "description", science.getLicenseId() == null || science.getLicenseId().isBlank()
                         ? "No se declara ninguna licencia; este paquete no concede permisos de reutilización."
                         : "Licencia declarada por el depositante; consulte sus condiciones oficiales."));
+        String scientificProvenance=ScientificProvenanceDescription.describe(science);
+        if(scientificProvenance!=null){root.put("subjectOf",ref("#scientific-provenance"));graph.add(Map.of("@id","#scientific-provenance","@type","CreativeWork","name","Declaración de procedencia científica","description",scientificProvenance));}
         int personNumber = 0;
         List<Map<String, String>> authors = new ArrayList<>();
         for (var creator : resource.getCreators()) {

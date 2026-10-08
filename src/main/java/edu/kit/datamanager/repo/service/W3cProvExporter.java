@@ -79,6 +79,17 @@ public final class W3cProvExporter {
                 "xsd", "http://www.w3.org/2001/XMLSchema#"), "@graph", graph);
     }
 
+    /** Add the author's scientific narrative without fabricating processing events or dates. */
+    @SuppressWarnings("unchecked")
+    public static Map<String,Object> build(String resourceId,List<FileProvenanceEvent> events,
+            edu.kit.datamanager.repo.domain.ScientificRecord record) {
+        var base=build(resourceId,events);String description=ScientificProvenanceDescription.describe(record);
+        if(description==null)return base;
+        var graph=new ArrayList<>((List<Map<String,Object>>)base.get("@graph"));
+        graph.add(Map.of("@id","#scientific-provenance","@type","prov:Entity","rdfs:label","Declaración de procedencia científica", "schema:description",description));
+        return Map.of("@context",base.get("@context"),"@graph",graph);
+    }
+
     private static Map<String, String> ref(String id) { return Map.of("@id", id); }
     private static Map<String, String> dateTime(String value) {
         return Map.of("@value", value, "@type", "xsd:dateTime");

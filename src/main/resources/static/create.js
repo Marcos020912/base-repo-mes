@@ -26,7 +26,7 @@ const packageMode = () => field('uploadMode').value === 'package';
 const errorBox = $('#wizard-message');
 const translationEditor=metadataTranslations.mount($('#metadata-translations'),field('translations'));
 const autosaveKey = `reduniv-deposit-v1:${user?.username || 'anonymous'}:${basedOnId || 'new'}`;
-const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications','privacyClassification'];
+const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','productionDescription','processingDescription','processingTools','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications','privacyClassification'];
 let autosaveEnabled = false;
 let autosaveTimer;
 function storedDraft() {
@@ -244,6 +244,7 @@ async function renderPreview() {
   for (const item of fundingEntries()) identity.append(node('p', `Financiación: ${item.funderName}${item.awardTitle ? ` · ${item.awardTitle}` : ''}${item.awardNumber ? ` (${item.awardNumber})` : ''}`));
   if (basedOnId) identity.append(node('p', `Nueva versión de ${basedOnId}.`));
   if(value('privacyClassification'))identity.append(node('p',`Privacidad declarada: ${value('privacyClassification')} · la nota se conserva únicamente en evaluación privada.`));
+  for(const [name,label]of [['productionDescription','Producción y origen'],['processingDescription','Procesamiento'],['processingTools','Herramientas/versiones']])if(value(name))identity.append(node('p',`${label}: ${value(name)}`));
   if(value('summary'))identity.append(node('p',`Resumen: ${value('summary')}`));
   if(value('geographicCoverage'))identity.append(node('p',`Cobertura geográfica: ${value('geographicCoverage')}`));
   if(value('temporalStart')||value('temporalEnd'))identity.append(node('p',`Cobertura temporal: ${value('temporalStart')||'Sin inicio'} / ${value('temporalEnd')||'Sin fin'}`));
@@ -288,7 +289,7 @@ async function upload(path, file) {
   await transfers.upload(path, file);
 }
 function sciencePayload() {
-  const payload=Object.fromEntries(['versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications'].map(name => [name, value(name)]));
+  const payload=Object.fromEntries(['versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','productionDescription','processingDescription','processingTools','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications'].map(name => [name, value(name)]));
   payload.translations=translationEditor.get();return payload;
 }
 async function save(submit) {
@@ -391,7 +392,7 @@ if (basedOnId) Promise.all([
   field('type').value = base.resourceType?.typeGeneral || 'OTHER';
   $('#creator-list').replaceChildren(); for (const author of base.creators || []) addCreator(author.givenName || '', author.familyName || '');
   if (!$('#creator-list').childElementCount) addCreator();
-  for (const name of ['summary','temporalStart','temporalEnd','geographicCoverage'])field(name).value=previous[name]||'';
+  for (const name of ['productionDescription','processingDescription','processingTools','summary','temporalStart','temporalEnd','geographicCoverage'])field(name).value=previous[name]||'';
   translationEditor.set(previous.translations||{});
   for (const item of previousFunding) addFunding(item);
   applyPolicy();

@@ -46,7 +46,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | F07 | Fecha de publicación y última actualización visibles | Implementado local: publishedAt y lastUpdate públicos visibles; E2E Chrome/PostgreSQL verificó última actualización. |
 | F08 | Resumen, método, cobertura y palabras clave | Implementado local: resumen estructurado, fechas de cobertura validadas y región textual en creación/edición/ficha pública/DataCite. E2E PostgreSQL/restauración y pruebas de validación aprobados. |
 | F09 | Archivos: formato, tamaño, checksum y acceso | Base local: lista de archivos/huellas/monitor; selector nativo y volumen real pendientes. |
-| F10 | Procedencia: producción y procesamiento de datos | Parcial: eventos de archivos/PROV no equivalen a procedencia científica completa del procesamiento. |
+| F10 | Procedencia: producción y procesamiento de datos | Implementado local: producción/origen, procesamiento y herramientas/versiones por versión, creación/edición/preview/ficha pública y exportación DataCite/RO-Crate/PROV; pruebas/JPA/E2E aprobadas. Es declaración del autor, no ejecución verificada. |
 | F11 | Artículos, software, proyectos, financiación y datasets relacionados | Base local: relaciones tipadas y funding; comprobar visibilidad y representación máquina de todas las categorías. |
 | F12 | Última verificación y política de preservación aplicable | Parcial: fixity existe; política institucional y su presentación aprobada pendientes. |
 | F13 | Historial de cambios de metadatos y versiones publicadas | Parcial: historial editorial existe; comprobar presentación pública según política. |
@@ -96,7 +96,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | A06 | Metadatos multilingües | Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI. |
 | A07 | Internacionalización sin textos incrustados en JS | Pendiente: strings españoles siguen en scripts; acordar idiomas, separar catálogos y traducir estados dinámicos. |
 | A08 | Paquetes OAIS SIP/AIP/DIP | Parcial: BagIt/paquete curatorial/ZIP público; perfiles institucionales completos no acreditados. |
-| A09 | RO-Crate y W3C PROV | Base local: exportaciones; cobertura de procesamiento y validación externa pendientes. |
+| A09 | RO-Crate y W3C PROV | Implementado local: exportaciones incluyen declaración científica separada de eventos técnicos; PROV no inventa ejecuciones. Pruebas/paquete E2E aprobados; validación externa de perfiles sigue pendiente. |
 | A10 | Auditorías periódicas SHA-256 verificables | Base local: manual/programada opcional y alertas; política/volumen/buzón real pendientes. |
 | A11 | Métricas COUNTER/DataCite cuando corresponda | Pendiente: no confundir contadores locales con conformidad COUNTER o integración de eventos DataCite. |
 | A12 | Autoevaluación CoreTrustSeal | Pendiente: requiere expediente y evidencia organizativa/técnica; no afirmar certificación. |

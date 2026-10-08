@@ -231,3 +231,8 @@ CREATE TABLE IF NOT EXISTS scientific_privacy_assessments (
 );
 
 COMMIT;
+
+-- Author-declared scientific provenance; separate from machine-observed file events.
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS production_description VARCHAR(5000);
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS processing_description VARCHAR(5000);
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS processing_tools VARCHAR(2000);

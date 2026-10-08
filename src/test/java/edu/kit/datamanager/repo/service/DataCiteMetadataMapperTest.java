@@ -38,7 +38,7 @@ public class DataCiteMetadataMapperTest {
         record.setRor("03yrm5c26");
         record.setLicenseId("CC-BY-4.0");
         record.setDiscipline("Ciencias marinas");
-        record.setKeywords("océano, coral");
+        record.setKeywords("océano, coral");record.setProductionDescription("Sensores de campo");record.setProcessingDescription("Filtrado de muestras");record.setProcessingTools("Script 1.0");
 
         var mapped = new DataCiteMetadataMapper().version(resource, record, URI.create("https://datos.reduniv.edu.cu/datasets/r1"));
         assertEquals("https://datos.reduniv.edu.cu/datasets/r1", mapped.get("url"));
@@ -53,6 +53,7 @@ public class DataCiteMetadataMapperTest {
         assertEquals(java.util.List.of(java.util.Map.of("rights", "CC-BY-4.0")), mapped.get("rightsList"));
         assertEquals(3, ((java.util.List<?>) mapped.get("subjects")).size());
         assertFalse(mapped.containsKey("event"));
+        assertTrue(((java.util.List<java.util.Map<String,Object>>)mapped.get("descriptions")).stream().anyMatch(d->"Methods".equals(d.get("descriptionType"))&&d.get("description").toString().contains("Filtrado de muestras")&&d.get("description").toString().contains("no es una ejecución verificada")));
     }
 
     @Test

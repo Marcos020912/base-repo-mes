@@ -58,6 +58,12 @@ public class ScientificRecord {
     private String methodology;
     @Column(length = 5000)
     private String summary;
+    @Column(length = 5000)
+    private String productionDescription;
+    @Column(length = 5000)
+    private String processingDescription;
+    @Column(length = 2000)
+    private String processingTools;
     private java.time.LocalDate temporalStart;
     private java.time.LocalDate temporalEnd;
     @Column(length = 1000)

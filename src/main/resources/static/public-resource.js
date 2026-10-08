@@ -140,6 +140,9 @@ async function load() {
     field('Resumen',data.summary);field('Cobertura geográfica',data.geographicCoverage);
     if(data.temporalStart||data.temporalEnd)field('Cobertura temporal',`${data.temporalStart||'Sin inicio'} / ${data.temporalEnd||'Sin fin'}`);
     renderTranslations(data.translations);
+    const provenance=document.querySelector('#provenance-fields');provenance.replaceChildren();
+    for(const [key,label]of [['productionDescription','Producción y origen'],['processingDescription','Procesamiento'],['processingTools','Herramientas y versiones']])if(data[key])provenance.append(node('dt',label),node('dd',data[key]));
+    document.querySelector('#scientific-provenance').hidden=!provenance.children.length;
     field('Métodos', data.methodology); field('Publicaciones relacionadas', data.relatedPublications);
     field('Última actualización', data.lastUpdate ? new Date(data.lastUpdate).toLocaleString('es') : null);
     field('Publicado', data.publishedAt ? new Date(data.publishedAt).toLocaleDateString('es') : null);

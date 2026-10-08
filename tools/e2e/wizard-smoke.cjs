@@ -256,6 +256,9 @@ async function deposit(page, base, files, mode) {
   await page.type('input[name=institution]', 'RedUniv');
   await page.type('textarea[name=methodology]', 'Metodología de prueba local.');
   await page.select('select[name=privacyClassification]','NONE');
+  await page.type('textarea[name=productionDescription]','Producción científica declarada por sensores.');
+  await page.type('textarea[name=processingDescription]','Limpieza científica declarada de valores ausentes.');
+  await page.type('textarea[name=processingTools]','Python 3.12; script público v1.');
   await page.type('textarea[name=summary]','Resumen estructurado de prueba.');
   await page.type('input[name=geographicCoverage]','Cuba');
   await page.evaluate(()=>{document.querySelector('[name=temporalStart]').value='2025-01-01';document.querySelector('[name=temporalEnd]').value='2025-12-31';});
@@ -316,6 +319,7 @@ async function deposit(page, base, files, mode) {
     return response.ok ? (await response.json()).status : `HTTP ${response.status}`;
   });
   const structured=await page.evaluate(async()=>await (await fetch('/api/v1/scientific/'+new URLSearchParams(location.search).get('id'),{headers:auth.headers()})).json());
+  assert(structured.productionDescription==='Producción científica declarada por sensores.'&&structured.processingDescription==='Limpieza científica declarada de valores ausentes.'&&structured.processingTools==='Python 3.12; script público v1.','Procedencia científica no persistida.');
   assert(structured.summary==='Resumen estructurado de prueba.' && structured.temporalStart==='2025-01-01' && structured.geographicCoverage==='Cuba' && structured.translations.en.title==='Translated scientific title','El depósito no persistió metadatos estructurados/traducciones.');
   assert(status === 'DRAFT', `El depósito no quedó como borrador: ${status}`);
   if (mode === 'md') {
@@ -501,7 +505,7 @@ async function publicDownloads(base, resource) {
     await page.waitForSelector('#files .file-row a');
     assert(await page.evaluate(() => localStorage.getItem('base-repo-token')) === null,
       'La prueba pública heredó una sesión autenticada.');
-    assert(await page.evaluate(()=>document.querySelector('#landing').textContent.includes('Translated scientific title') && document.querySelector('#identity').textContent.includes('Cuba') && document.querySelector('#identity').textContent.includes('Resumen estructurado')), 'Ficha pública sin resumen/cobertura/traducción.');
+    assert(await page.evaluate(()=>document.querySelector('#landing').textContent.includes('Translated scientific title') && document.querySelector('#identity').textContent.includes('Cuba') && document.querySelector('#identity').textContent.includes('Resumen estructurado') && document.querySelector('#scientific-provenance').textContent.includes('Limpieza científica declarada')), 'Ficha pública sin resumen/cobertura/traducción.');
     assert(await page.evaluate(()=>document.querySelector('#identity').textContent.includes('Última actualización')), 'Ficha sin última actualización.');
     await page.evaluate(()=>{
       const original=URL.createObjectURL;window.originalCreateObjectURL=original;
@@ -761,6 +765,7 @@ async function restorePostgresFixture(page, base, files, published) {
   const response = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}`);
   assert(response.ok, 'El recurso publicado no sobrevivió a la restauración.');
   const restored=await response.json();
+  assert(restored.processingDescription==='Limpieza científica declarada de valores ausentes.'&&restored.processingTools==='Python 3.12; script público v1.','Restauración perdió procedencia científica.');
   assert(restored.title===published.title && restored.translations.en.title==='Translated scientific title' && restored.temporalStart==='2025-01-01','La restauración alteró título/traducciones/cobertura.');
   const file = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}/file?path=datos-uno.csv`);
   assert(file.ok && (await file.text()).includes('nombre,valor'), 'Los archivos no son accesibles tras restaurar.');
@@ -844,6 +849,8 @@ async function main() {
       "names=z.namelist(); assert 'data/datos-uno.csv' in names; assert any(n.endswith('description.md') for n in names)",
       "assert 'BagIt-Version: 1.0' in z.read('bagit.txt').decode()",
       "for name in ['preservation/metadata.json','preservation/provenance.json','preservation/prov.jsonld','ro-crate-metadata.json']: json.loads(z.read(name))",
+      "prov=json.loads(z.read('preservation/prov.jsonld')); declaration=next(n for n in prov['@graph'] if n['@id']=='#scientific-provenance'); assert 'Limpieza científica declarada' in declaration['schema:description'] and 'prov:wasGeneratedBy' not in declaration",
+      "crate=json.loads(z.read('ro-crate-metadata.json')); assert any(n.get('@id')=='#scientific-provenance' and 'Python 3.12' in n['description'] for n in crate['@graph'])",
       "for name in ['manifest-sha256.txt','tagmanifest-sha256.txt']:",
       " for line in z.read(name).decode().splitlines():",
       "  if line.strip():",

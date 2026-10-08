@@ -157,4 +157,21 @@ public class ScientificRecordControllerTest {
         assertThrows(ResponseStatusException.class,()->controller.submit("r1"));
         assertEquals(PublicationStatus.DRAFT,record.getStatus());
     }
+
+    private ScientificRecordController.UpdateRequest provenance(String production,String processing,String tools){
+        return new ScientificRecordController.UpdateRequest("1.0",null,null,"CC-BY-4.0","OPEN",null,"es",null,null,null,"Universidad",null,null,"Método",null,null,null,null,null,production,processing,tools);
+    }
+    @Test public void scientificProvenancePreservesOmittedAndClearsBlank(){
+        var record=controller.update("r1",provenance(" Recogida "," Limpieza "," Python 3.12 "));
+        assertEquals("Recogida",record.getProductionDescription());assertEquals("Limpieza",record.getProcessingDescription());assertEquals("Python 3.12",record.getProcessingTools());
+        when(records.findById("r1")).thenReturn(Optional.of(record));controller.update("r1",provenance(null,null,null));assertEquals("Recogida",record.getProductionDescription());
+        controller.update("r1",provenance("","",""));assertNull(record.getProductionDescription());assertNull(record.getProcessingDescription());assertNull(record.getProcessingTools());
+    }
+    @Test public void scientificProvenanceLimitsAndPublishedGuard(){
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",provenance("x".repeat(5001),null,null)));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",provenance(null,"x".repeat(5001),null)));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",provenance(null,null,"x".repeat(2001))));
+        var record=new ScientificRecord("r1");record.setStatus(PublicationStatus.PUBLISHED);when(records.findById("r1")).thenReturn(Optional.of(record));
+        assertThrows(ResponseStatusException.class,()->controller.update("r1",provenance("changed",null,null)));
+    }
 }

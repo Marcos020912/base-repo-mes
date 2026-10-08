@@ -129,7 +129,7 @@ public class PreservationController {
             byte[] history = mapper.writeValueAsBytes(events);
             write(zip, "preservation/provenance.json", history);
             packaged.add(packagedBytes("preservation/provenance.json", "application/json", history));
-            byte[] prov = mapper.writeValueAsBytes(W3cProvExporter.build(id, events));
+            byte[] prov = mapper.writeValueAsBytes(W3cProvExporter.build(id, events, record));
             write(zip, "preservation/prov.jsonld", prov);
             packaged.add(packagedBytes("preservation/prov.jsonld", "application/ld+json", prov));
             StringBuilder manifest = new StringBuilder("# SHA-256 al ingreso; no implica comprobación actual\n");

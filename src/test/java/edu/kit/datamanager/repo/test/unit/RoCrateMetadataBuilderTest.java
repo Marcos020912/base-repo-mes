@@ -23,7 +23,7 @@ public class RoCrateMetadataBuilderTest {
         ScientificRecord record = new ScientificRecord(resource.getId());
         record.setStatus(PublicationStatus.PUBLISHED);
         record.setVersionDoi("10.1234/costa.v2");
-        record.setVersionLabel("2.0");
+        record.setVersionLabel("2.0");record.setProductionDescription("Sensores");record.setProcessingDescription("Limpieza");record.setProcessingTools("Software 1.0");
         record.setLicenseId("CC-BY-4.0");
         record.setPublishedAt(Instant.parse("2026-09-01T00:00:00Z"));
         var crate = RoCrateMetadataBuilder.build(resource.getId(), record, resource,
@@ -33,6 +33,7 @@ public class RoCrateMetadataBuilderTest {
         List<Map<String, Object>> graph = (List<Map<String, Object>>) crate.get("@graph");
         Map<String, Object> root = graph.get(1);
         assertEquals("Datos costeros", root.get("name"));
+        assertEquals(Map.of("@id","#scientific-provenance"),root.get("subjectOf"));assertTrue(graph.stream().anyMatch(node->"#scientific-provenance".equals(node.get("@id"))&&node.get("description").toString().contains("Software 1.0")));
         assertEquals("Mediciones del litoral", root.get("description"));
         assertEquals(Map.of("@id", "#license"), root.get("license"));
         assertTrue(graph.stream().anyMatch(node -> "#license".equals(node.get("@id"))
