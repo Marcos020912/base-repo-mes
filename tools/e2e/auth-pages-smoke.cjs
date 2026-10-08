@@ -13,6 +13,10 @@ let resends = 0;
 let registrations = 0;
 let passwordChanges = 0;
 const server = http.createServer((request,response) => {
+  if (request.url === '/index.html') {
+    response.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
+    response.end('<!doctype html><title>Authenticated fixture</title>'); return;
+  }
   if (request.url === '/api/v1/auth/change-password') {
     passwordChanges++; request.resume();
     const attempt = passwordChanges;
@@ -26,8 +30,10 @@ const server = http.createServer((request,response) => {
     request.resume();
     const attempt=requests;
     setTimeout(() => {
-      response.writeHead(attempt===1 ? 401 : 502, {'Content-Type':attempt===1 ? 'application/json; charset=utf-8' : 'text/html'});
-      response.end(attempt===1 ? JSON.stringify({message:'Credenciales no válidas.'}) : '<h1>Proxy unavailable</h1>');
+      response.writeHead(attempt===1 ? 401 : attempt===2 ? 502 : 200, {'Content-Type':attempt===2 ? 'text/html' : 'application/json; charset=utf-8'});
+      response.end(attempt===1 ? JSON.stringify({message:'Credenciales no válidas.'}) :
+        attempt===2 ? '<h1>Proxy unavailable</h1>' :
+        JSON.stringify(attempt===3 ? {} : {token:'local-success-fixture',user:{username:'fixture',role:'USER'}}));
     },200); return;
   }
   if (request.url === '/api/v1/auth/register') {
@@ -90,6 +96,17 @@ const server = http.createServer((request,response) => {
     await page.click('#login-form button');
     await page.waitForFunction(()=>document.querySelector('#login-message').textContent==='No se pudo iniciar sesión.');
     assert.equal(requests,2,'Login duplicó solicitudes pendientes.');
+    await page.click('#login-form button');
+    await page.waitForFunction(()=>document.querySelector('#login-message').textContent.includes('respuesta del servidor no es válida'));
+    assert.equal(new URL(page.url()).pathname,'/login.html');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-token')),'invalid-local-fixture');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-user')),null);
+    await page.click('#login-form button');
+    await page.waitForFunction(()=>location.pathname==='/index.html');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-token')),'local-success-fixture');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('base-repo-user')).username),'fixture');
+    assert.equal(requests,4);
+
     await page.goto(base+'/register.html');
     for (const [name,value] of Object.entries({username:'fixture',email:'fixture@example.invalid',password,confirmation:password}))
       await page.type(`input[name=${name}]`,value);

@@ -24,6 +24,10 @@ loginForm.addEventListener('submit', async event => {
       }
       throw new Error(body.message || 'No se pudo iniciar sesión.');
     }
+    if (typeof body.token !== 'string' || !body.token.trim() ||
+        !body.user || typeof body.user.username !== 'string' || !body.user.username.trim() ||
+        !['USER', 'CURATOR', 'ADMINISTRATOR'].includes(body.user.role))
+      throw new Error('No se pudo iniciar sesión. La respuesta del servidor no es válida.');
     localStorage.setItem('base-repo-token', body.token);
     localStorage.setItem('base-repo-user', JSON.stringify(body.user));
     navigating = true; location.replace('index.html');

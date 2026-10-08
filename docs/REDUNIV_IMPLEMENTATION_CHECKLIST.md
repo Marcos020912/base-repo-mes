@@ -293,3 +293,4 @@ heredados antes de activarla.
 - [x] Login/registro sin envíos duplicados en curso, aria-busy y errores noJSON legibles. Prueba ChromeUI verifica requestSubmit duplicado, rechazoHTML y registro503 recuperable->verificación; aviso de cuenta restringida construido con nodos de texto.
 - [x] Cambio de contraseña UI bloquea solicitudes concurrentes, recupera botón tras rechazo y mantiene bloqueo hasta logout tras éxito; prueba Chrome confirma eliminación del token.
 - [x] Reenvío de verificación valida correo vacío/inválido antes de enviar: prueba Chrome verifica cero solicitudes inválidas y mantiene recuperación/éxito. Sintaxis JS y diff-check aprobados.
+- [x] Login valida estructura mínima de respuesta exitosa (token, usuario y rol existente) antes de guardar sesión; prueba Chrome rechaza HTTP200 vacío sin sobrescribir sesión y confirma login válido. No sustituye la validación criptográfica del JWT en backend.
