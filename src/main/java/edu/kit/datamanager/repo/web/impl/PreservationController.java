@@ -12,6 +12,7 @@ import edu.kit.datamanager.repo.repository.FixityAuditRunRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.service.PreservationAuditService;
 import edu.kit.datamanager.repo.service.RoCrateMetadataBuilder;
+import edu.kit.datamanager.repo.service.W3cProvExporter;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
@@ -121,9 +122,13 @@ public class PreservationController {
                             .map(title -> title.getValue()).orElse("")));
             write(zip, "preservation/metadata.json", metadata);
             packaged.add(packagedBytes("preservation/metadata.json", "application/json", metadata));
-            byte[] history = mapper.writeValueAsBytes(provenance.findByResourceIdOrderByOccurredAtAscIdAsc(id));
+            var events = provenance.findByResourceIdOrderByOccurredAtAscIdAsc(id);
+            byte[] history = mapper.writeValueAsBytes(events);
             write(zip, "preservation/provenance.json", history);
             packaged.add(packagedBytes("preservation/provenance.json", "application/json", history));
+            byte[] prov = mapper.writeValueAsBytes(W3cProvExporter.build(id, events));
+            write(zip, "preservation/prov.jsonld", prov);
+            packaged.add(packagedBytes("preservation/prov.jsonld", "application/ld+json", prov));
             StringBuilder manifest = new StringBuilder("# SHA-256 al ingreso; no implica comprobación actual\n");
             for (var file : files) {
                 String hash = file.getMetadata() == null ? null : file.getMetadata().get("sha256");

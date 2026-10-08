@@ -41,8 +41,9 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 - El ZIP curatorial de preservación incluye un RO-Crate 1.2 adjunto con JSON-LD
   de dataset y archivos. Su `sha256` describe los bytes empaquetados en ese
   momento; el manifiesto de ingreso se mantiene separado para no confundir la
-  huella histórica con la actual. Falta validación externa del paquete y los
-  perfiles OAIS/PROV completos.
+  huella histórica con la actual. Incluye una proyección W3C PROV-O de las
+  cargas/eliminaciones registradas, sin inferir historial ausente. Falta
+  validación externa del paquete, cobertura de cargas legadas y perfiles OAIS.
 - Historial editorial persistente de cambios de ficha, envío, devolución, publicación, retirada y derivación, visible para autor y curación; los DOI públicos se presentan como enlaces resolubles.
 - Integración DataCite opt-in con reserva Draft conceptual/versión, estado e
   historial persistentes, publicación Findable por curador, reconciliación y
@@ -87,7 +88,7 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID y RO-Crate pasan. La suite completa pasó con 432 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`, con procesos de prueba reiniciados cada cinco clases para evitar falta de memoria local); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID, RO-Crate y PROV-O pasan. La suite completa pasó con 434 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`, con procesos de prueba reiniciados cada cinco clases para evitar falta de memoria local); el JAR también compila sin red. El RO-Crate generado sigue pasando los requisitos obligatorios de `roc-validator`. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
 [`REDUNIV_IMPLEMENTATION_CHECKLIST.md`](REDUNIV_IMPLEMENTATION_CHECKLIST.md).

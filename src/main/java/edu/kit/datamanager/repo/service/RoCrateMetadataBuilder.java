@@ -83,6 +83,7 @@ public final class RoCrateMetadataBuilder {
         return switch (path) {
             case "preservation/metadata.json" -> "Metadatos locales y estado editorial del recurso.";
             case "preservation/provenance.json" -> "Eventos de procedencia registrados por el repositorio.";
+            case "preservation/prov.jsonld" -> "Proyección W3C PROV-O de los eventos de archivos registrados.";
             case "preservation/manifest-sha256.txt" -> "Huellas SHA-256 registradas al ingreso; no describen necesariamente el contenido actual.";
             default -> "Archivo incluido en el paquete de preservación: " + path;
         };

@@ -52,6 +52,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       Un ZIP de prueba pasó los requisitos obligatorios del validador
       `roc-validator` 0.11.4; siguen cinco recomendaciones ligadas a URL de
       licencia y URL/ROR/contacto institucional no disponibles.
+- [x] El ZIP curatorial incluye `preservation/prov.jsonld`, proyección
+      W3C PROV-O de los eventos de archivo efectivamente registrados:
+      actividades de carga/eliminación, entidades, agentes, ubicación, tiempo
+      y SHA-256. Conserva `provenance.json` interno y no inventa una carga
+      para archivos heredados sin evento de origen.
 - [x] Relaciones científicas tipadas DOI/URL con semántica DataCite,
       editables solo por el autor mientras el depósito sea borrador,
       visibles en la ficha pública y enviadas al DOI de versión.
@@ -119,7 +124,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       por `MISMATCH`/`MISSING_FILE` y política de archivos anteriores sin huella.
 - [ ] Validar RO-Crate con curadores externos, aportar URL/ROR/contacto
       institucional aprobados y completar perfiles OAIS SIP/AIP/DIP y
-      procedencia W3C PROV. Validar paquetes de preservación
+      cobertura de procedencia de cargas legadas. Validar la proyección
+      PROV-O con consumidores externos y paquetes de preservación
       y procedencia en almacenamiento externo,
       firmar manifiestos si la institución lo requiere e internacionalizar la UI.
 

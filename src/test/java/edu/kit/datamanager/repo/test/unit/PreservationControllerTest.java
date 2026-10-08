@@ -62,6 +62,10 @@ public class PreservationControllerTest {
             assertTrue(entries.get("preservation/manifest-sha256.txt").contains("0".repeat(64)));
             assertTrue(entries.containsKey("preservation/metadata.json"));
             assertTrue(entries.containsKey("preservation/provenance.json"));
+            assertTrue(entries.containsKey("preservation/prov.jsonld"));
+            var prov = new ObjectMapper().readTree(entries.get("preservation/prov.jsonld"));
+            assertEquals("http://www.w3.org/ns/prov#", prov.path("@context").path("prov").asText());
+            assertTrue(prov.path("@graph").isArray());
             var crate = new ObjectMapper().readTree(entries.get("ro-crate-metadata.json"));
             assertEquals("https://w3id.org/ro/crate/1.2/context", crate.path("@context").asText());
             assertEquals("ro-crate-metadata.json", crate.path("@graph").get(0).path("@id").asText());
