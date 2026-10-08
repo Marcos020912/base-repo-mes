@@ -3,6 +3,7 @@ package edu.kit.datamanager.repo.service;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.domain.ScientificCreator;
+import edu.kit.datamanager.repo.domain.ScientificFunding;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
@@ -19,6 +20,11 @@ public class DataCiteMetadataMapper {
 
     public Map<String, Object> version(DataResource resource, ScientificRecord science, URI landingPage,
             List<ScientificCreator> creatorDetails) {
+        return version(resource, science, landingPage, creatorDetails, List.of());
+    }
+
+    public Map<String, Object> version(DataResource resource, ScientificRecord science, URI landingPage,
+            List<ScientificCreator> creatorDetails, List<ScientificFunding> fundingDetails) {
         if (!"https".equalsIgnoreCase(landingPage.getScheme()) || landingPage.getHost() == null)
             throw new IllegalArgumentException("La landing page del DOI debe usar HTTPS.");
         String title = resource.getTitles() == null ? null : resource.getTitles().stream()
@@ -90,6 +96,21 @@ public class DataCiteMetadataMapper {
             if (hasText(keyword)) subjects.add(Map.of("subject", keyword.trim()));
         }
         if (!subjects.isEmpty()) attributes.put("subjects", subjects);
+        if (fundingDetails != null && !fundingDetails.isEmpty()) {
+            attributes.put("fundingReferences", fundingDetails.stream().map(item -> {
+                Map<String, Object> reference = new LinkedHashMap<>();
+                reference.put("funderName", item.getFunderName());
+                if (hasText(item.getFunderRor())) {
+                    String ror = item.getFunderRor().replaceFirst("^https://ror.org/", "");
+                    reference.put("funderIdentifier", "https://ror.org/" + ror);
+                    reference.put("funderIdentifierType", "ROR");
+                    reference.put("schemeUri", "https://ror.org/");
+                }
+                if (hasText(item.getAwardNumber())) reference.put("awardNumber", item.getAwardNumber());
+                if (hasText(item.getAwardTitle())) reference.put("awardTitle", item.getAwardTitle());
+                return reference;
+            }).toList());
+        }
         return attributes;
     }
 

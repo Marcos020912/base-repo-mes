@@ -12,6 +12,7 @@ import edu.kit.datamanager.repo.repository.ScientificRecordEventRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
 import edu.kit.datamanager.repo.repository.ScientificCreatorRepository;
+import edu.kit.datamanager.repo.repository.ScientificFundingRepository;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -40,6 +41,7 @@ public class DoiWorkflowService {
     private final ScientificQualityService quality;
     private final ScientificRelationRepository relations;
     private final ScientificCreatorRepository creators;
+    private final ScientificFundingRepository funding;
     private final TransactionTemplate transactions;
     private final String publicBaseUrl;
 
@@ -47,7 +49,7 @@ public class DoiWorkflowService {
             DoiRegistrationRepository registrations, DoiSyncEventRepository syncEvents,
             ScientificRecordRepository records, ScientificRecordEventRepository editorialEvents,
             IDataResourceDao resources, ScientificQualityService quality, ScientificRelationRepository relations,
-            ScientificCreatorRepository creators,
+            ScientificCreatorRepository creators, ScientificFundingRepository funding,
             org.springframework.transaction.PlatformTransactionManager manager,
             @Value("${repo.datacite.public-base-url:}") String publicBaseUrl) {
         this.datacite = datacite;
@@ -60,6 +62,7 @@ public class DoiWorkflowService {
         this.quality = quality;
         this.relations = relations;
         this.creators = creators;
+        this.funding = funding;
         this.transactions = new TransactionTemplate(manager);
         this.publicBaseUrl = publicBaseUrl;
     }
@@ -114,7 +117,8 @@ public class DoiWorkflowService {
         Map<String, Object> version = new LinkedHashMap<>(transactions.execute(status -> {
             var resource = resources.findById(resourceId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recurso no encontrado."));
-            return mapper.version(resource, science(resourceId), versionLanding, creators.findByResourceId(resourceId));
+            return mapper.version(resource, science(resourceId), versionLanding, creators.findByResourceId(resourceId),
+                    funding.findByResourceIdOrderByIdAsc(resourceId));
         }));
         List<Map<String, String>> versionRelations = new ArrayList<>();
         versionRelations.add(relation(ids.conceptualDoi(), "IsVersionOf"));
@@ -133,7 +137,8 @@ public class DoiWorkflowService {
         Map<String, Object> concept = new LinkedHashMap<>(transactions.execute(status -> {
             var resource = resources.findById(resourceId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recurso no encontrado."));
-            return mapper.version(resource, science(resourceId), conceptLanding(rootId), creators.findByResourceId(resourceId));
+            return mapper.version(resource, science(resourceId), conceptLanding(rootId), creators.findByResourceId(resourceId),
+                    funding.findByResourceIdOrderByIdAsc(resourceId));
         }));
         concept.remove("version");
         LinkedHashSet<String> versions = new LinkedHashSet<>();

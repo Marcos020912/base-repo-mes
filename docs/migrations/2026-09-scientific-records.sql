@@ -100,6 +100,17 @@ CREATE TABLE IF NOT EXISTS scientific_creators (
 );
 CREATE INDEX IF NOT EXISTS idx_scientific_creators_resource ON scientific_creators(resource_id);
 
+-- Funder and award/project references are per released version and map to DataCite fundingReferences.
+CREATE TABLE IF NOT EXISTS scientific_funding (
+    id BIGSERIAL PRIMARY KEY,
+    resource_id VARCHAR(255) NOT NULL,
+    funder_name VARCHAR(255) NOT NULL,
+    funder_ror VARCHAR(255),
+    award_number VARCHAR(100),
+    award_title VARCHAR(500)
+);
+CREATE INDEX IF NOT EXISTS idx_scientific_funding_resource ON scientific_funding(resource_id);
+
 -- Short-lived, curator-issued read-only access for an external reviewer.
 -- The plaintext bearer token must never be stored in this table.
 CREATE TABLE IF NOT EXISTS reviewer_access_links (

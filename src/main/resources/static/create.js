@@ -37,7 +37,7 @@ function persistDraft() {
   if (!autosaveEnabled || createdId) return;
   const values = Object.fromEntries(autosaveFields.map(name => [name, value(name)]));
   try {
-    localStorage.setItem(autosaveKey, JSON.stringify({ values, creators: creators(), step, updatedAt: Date.now() }));
+    localStorage.setItem(autosaveKey, JSON.stringify({ values, creators: creators(), funding: fundingEntries(), step, updatedAt: Date.now() }));
     $('#autosave-status').textContent = 'Metadatos guardados en este navegador. Los archivos deben seleccionarse de nuevo tras recargar.';
     $('#discard-autosave').hidden = false;
   } catch { $('#autosave-status').textContent = 'No se pudieron guardar los metadatos en este navegador.'; }
@@ -56,6 +56,10 @@ function restoreDraft() {
     if (Array.isArray(draft.creators) && draft.creators.length) {
       $('#creator-list').replaceChildren();
       for (const author of draft.creators) addCreator(author.givenName || '', author.familyName || '');
+    }
+    if (Array.isArray(draft.funding)) {
+      $('#funding-list').replaceChildren();
+      for (const item of draft.funding.slice(0, 20)) addFunding(item);
     }
     $('#autosave-status').textContent = 'Se recuperaron tus metadatos. Selecciona de nuevo description.md y los archivos antes de guardar.';
     $('#discard-autosave').hidden = false;
@@ -83,6 +87,23 @@ function creators() {
     givenName: row.querySelector('.creator-given').value.trim(),
     familyName: row.querySelector('.creator-family').value.trim()
   }));
+}
+function addFunding(item = {}) {
+  if ($('#funding-list').childElementCount >= 20) return;
+  const row = document.createElement('div'); row.className = 'related-editor-row funding-row';
+  for (const [name, label, max] of [['funderName','Financiador',255],['funderRor','ROR del financiador',255],
+      ['awardNumber','Número de subvención',100],['awardTitle','Nombre del proyecto',500]]) {
+    const wrapper = document.createElement('label'); wrapper.textContent = label;
+    const input = document.createElement('input'); input.name = `funding-${name}`; input.maxLength = max;
+    input.value = item[name] || ''; input.required = name === 'funderName'; wrapper.append(input); row.append(wrapper);
+  }
+  const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'secondary';
+  remove.textContent = 'Quitar'; remove.onclick = () => { row.remove(); scheduleAutosave(); };
+  row.append(remove); $('#funding-list').append(row);
+}
+function fundingEntries() {
+  return [...document.querySelectorAll('.funding-row')].map(row => Object.fromEntries(
+    [...row.querySelectorAll('[name]')].map(input => [input.name.replace(/^funding-/, ''), input.value.trim()])));
 }
 function applyPolicy() {
   const policy = policies[value('type')] || policies.OTHER;
@@ -136,6 +157,11 @@ function validateStep(index) {
       return invalid('El ORCID no tiene un formato válido.', field('orcid'));
     if (value('ror') && !/^(?:https:\/\/ror\.org\/)?0[0-9a-hjkmnp-tv-z]{6}[0-9]{2}$/.test(value('ror')))
       return invalid('El ROR no tiene un formato válido.', field('ror'));
+    for (const row of document.querySelectorAll('.funding-row')) {
+      const funderRor = row.querySelector('[name="funding-funderRor"]');
+      if (funderRor.value.trim() && !/^(?:https:\/\/ror\.org\/)?0[0-9a-hjkmnp-tv-z]{6}[0-9]{2}$/.test(funderRor.value.trim()))
+        return invalid('El ROR del financiador no tiene un formato válido.', funderRor);
+    }
   }
   if (index === 2) {
     const description = $('#description-file').files[0];
@@ -180,6 +206,7 @@ async function renderPreview() {
   if (value('keywords')) identity.append(node('p', `Palabras clave: ${value('keywords')}`));
   if (value('orcid')) identity.append(node('p', `ORCID: ${value('orcid')}`));
   if (value('ror')) identity.append(node('p', `ROR: ${value('ror')}`));
+  for (const item of fundingEntries()) identity.append(node('p', `Financiación: ${item.funderName}${item.awardTitle ? ` · ${item.awardTitle}` : ''}${item.awardNumber ? ` (${item.awardNumber})` : ''}`));
   if (basedOnId) identity.append(node('p', `Nueva versión de ${basedOnId}.`));
   target.append(identity);
   const description = document.createElement('section'); description.className = 'wizard-preview-section';
@@ -231,6 +258,11 @@ async function save(submit) {
     }
     report('Guardando ficha científica…');
     await api(`/api/v1/scientific/${encodeURIComponent(createdId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sciencePayload(), conceptualDoi: inheritedConceptualDoi }) });
+    if (fundingEntries().length) {
+      report('Guardando financiación…');
+      await api(`/api/v1/scientific/${encodeURIComponent(createdId)}/funding`, { method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fundingEntries()) });
+    }
     report('Subiendo descripción…');
     await upload(`/api/v1/dataresources/${encodeURIComponent(createdId)}/description`, $('#description-file').files[0]);
     for (const [index, file] of files().entries()) {
@@ -259,6 +291,7 @@ form.addEventListener('submit', event => {
   else if (!$('#save-draft').disabled) save(false);
 });
 $('#add-creator').addEventListener('click', () => addCreator());
+$('#add-funding').addEventListener('click', () => { addFunding(); scheduleAutosave(); });
 form.addEventListener('input', scheduleAutosave);
 form.addEventListener('change', scheduleAutosave);
 form.addEventListener('click', event => { if (event.target.closest('#add-creator,.creator-row button')) scheduleAutosave(); });
@@ -280,8 +313,9 @@ if (!basedOnId) restoreDraft();
 if (basedOnId) Promise.all([
   api(`/api/v1/dataresources/${encodeURIComponent(basedOnId)}`),
   api(`/api/v1/scientific/${encodeURIComponent(basedOnId)}`),
-  api('/api/v1/my-dataresources')
-]).then(([base, previous, mine]) => {
+  api('/api/v1/my-dataresources'),
+  api(`/api/v1/scientific/${encodeURIComponent(basedOnId)}/funding`)
+]).then(([base, previous, mine, previousFunding]) => {
   if (previous.status !== 'PUBLISHED' || !mine.some(item => item.id === basedOnId))
     throw new Error('Solo puedes derivar una versión de un depósito propio y publicado.');
   basedOnVerified = true;
@@ -291,6 +325,7 @@ if (basedOnId) Promise.all([
   field('type').value = base.resourceType?.typeGeneral || 'OTHER';
   $('#creator-list').replaceChildren(); for (const author of base.creators || []) addCreator(author.givenName || '', author.familyName || '');
   if (!$('#creator-list').childElementCount) addCreator();
+  for (const item of previousFunding) addFunding(item);
   applyPolicy();
   restoreDraft();
 }).catch(error => report(`No se pudo cargar la versión anterior: ${error.message}`, 'error'));

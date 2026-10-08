@@ -56,6 +56,10 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   muestran públicamente y se transmiten a DataCite. ORCID e institución/ROR
   pueden asignarse a cada creador por separado; faltan autenticación ORCID y
   verificación institucional en vivo antes de considerarlos certificados.
+- Cada versión puede registrar financiadores y proyectos estructurados; la
+  ficha pública, las facetas del catálogo y `fundingReferences` de DataCite
+  usan esos datos. Falta validar con DataCite Test y medir las consultas de
+  facetas en PostgreSQL con volumen real.
 - La curación puede emitir y revocar enlaces privados de revisión externos,
   con duración limitada y lectura/descarga de archivos solo mientras el
   depósito siga `IN_REVIEW`. El token no se guarda en claro.
@@ -63,13 +67,16 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 - Cambio de contraseña propia, revocación de JWT anteriores, comprobación en
   cada solicitud de rol/estado/validación de la cuenta, contraseña de arranque
   no predeterminada y secreto JWT único generado por el despliegue nuevo.
+- El arranque ya no registra valores arbitrarios de propiedades: el antiguo
+  volcado podía incluir `repo.auth.jwtSecret` y otros secretos sin `password`
+  en su nombre. Revisar y rotar secretos expuestos en logs anteriores.
 
 ### Migración y pruebas
 
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256 y cliente DataCite pasan. La suite completa pasó con 409 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256 y cliente DataCite pasan. La suite completa pasó con 414 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
 [`REDUNIV_IMPLEMENTATION_CHECKLIST.md`](REDUNIV_IMPLEMENTATION_CHECKLIST.md).
@@ -87,9 +94,8 @@ El estado detallado y actualizado de cada ítem está en
    y el mapeo por creador ya están implementados localmente.
 4. Citación: validar todos los estilos con bibliotecarios y el orden de
    autoría; completar descarga de metadatos y pruebas bibliográficas.
-5. Descubrimiento: completar facetas de financiación/proyecto,
-   además de medir el rendimiento PostgreSQL; las restantes facetas y estados
-   explícitos de búsqueda ya están implementados localmente.
+5. Descubrimiento: medir en PostgreSQL las facetas, incluidas las de
+   financiación/proyecto; el filtrado y estados explícitos ya están implementados localmente.
 6. Curación y preservación: cola de revisión, vocabularios controlados,
    checksum SHA-256, operación de la verificación periódica, procedencia de archivos/datos,
    preservación y métricas definidas.

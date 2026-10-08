@@ -10,6 +10,8 @@ import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.repository.FileFixityStateRepository;
 import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
 import edu.kit.datamanager.repo.repository.ScientificCreatorRepository;
+import edu.kit.datamanager.repo.repository.ScientificFundingRepository;
+import edu.kit.datamanager.repo.domain.ScientificFunding;
 import edu.kit.datamanager.repo.domain.ScientificRelation;
 import edu.kit.datamanager.repo.domain.FileFixityState;
 import jakarta.servlet.http.HttpServletResponse;
@@ -42,16 +44,18 @@ public class PublicScientificResourceController {
     private final FileFixityStateRepository fixityStates;
     private final ScientificRelationRepository relations;
     private final ScientificCreatorRepository creators;
+    private final ScientificFundingRepository funding;
 
     public PublicScientificResourceController(IDataResourceDao resources, ScientificRecordRepository records, IContentInformationDao contents,
                                               FileFixityStateRepository fixityStates, ScientificRelationRepository relations,
-                                              ScientificCreatorRepository creators) {
+                                              ScientificCreatorRepository creators, ScientificFundingRepository funding) {
         this.resources = resources;
         this.records = records;
         this.contents = contents;
         this.fixityStates = fixityStates;
         this.relations = relations;
         this.creators = creators;
+        this.funding = funding;
     }
 
     @GetMapping("/{id}")
@@ -92,7 +96,8 @@ public class PublicScientificResourceController {
                 science.getInstitution(), science.getOrcid(), science.getRor(), science.getLanguage(), science.getDiscipline(),
                 science.getKeywords(), science.getRelatedPublications(), science.getMethodology(), science.getPublishedAt(), markdown,
                 science.getPreviousResourceId(), newerVersionId, science.getAccessLevel(), science.getEmbargoUntil(),
-                relations.findByResourceIdOrderByIdAsc(id), authorIdentities));
+                relations.findByResourceIdOrderByIdAsc(id), authorIdentities,
+                funding.findByResourceIdOrderByIdAsc(id)));
     }
 
     @GetMapping("/{id}/files")
@@ -155,7 +160,8 @@ public class PublicScientificResourceController {
                                String orcid, String ror, String language, String discipline, String keywords,
                                String relatedPublications, String methodology, java.time.Instant publishedAt, String markdown,
                                String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil,
-                               List<ScientificRelation> relations, List<AuthorIdentity> authorIdentities) {}
+                               List<ScientificRelation> relations, List<AuthorIdentity> authorIdentities,
+                               List<ScientificFunding> funding) {}
     public record AuthorIdentity(String givenName, String familyName, String orcid, String institution, String ror) {}
     public record FileItem(String path, long size, String mediaType, String sha256, String fixityStatus, java.time.Instant fixityCheckedAt) {}
     public record PublicFiles(List<FileItem> files, long total, int page, int pages) {}

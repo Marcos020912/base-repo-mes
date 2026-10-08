@@ -45,6 +45,7 @@
             <label>Metodología <textarea name="methodology" rows="5" maxlength="2000" required></textarea></label>
             <div class="form-grid"><label>Acceso <select name="accessLevel"><option value="OPEN">Abierto</option><option value="RESTRICTED">Restringido</option><option value="EMBARGOED">Embargo</option></select></label><label>Fin del embargo (UTC) <small>Obligatorio si seleccionas embargo</small><input name="embargoUntil" placeholder="2027-01-01T00:00:00Z"></label></div>
             <label>Publicaciones relacionadas <small>DOI o URL, una por línea</small><textarea name="relatedPublications" rows="3" maxlength="2000"></textarea></label>
+            <div><label>Financiación y proyectos</label><div id="funding-list" class="related-editor"></div><button id="add-funding" type="button" class="secondary">+ Agregar financiación</button><p class="muted">Opcional. El financiador, ROR y proyecto se mostrarán en la ficha y en los metadatos DOI.</p></div>
           </div>
         </section>
         <section class="panel wizard-panel" data-step="2" aria-labelledby="step-content" hidden>

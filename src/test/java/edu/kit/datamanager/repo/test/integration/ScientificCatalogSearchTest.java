@@ -8,8 +8,10 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
+import edu.kit.datamanager.repo.domain.ScientificFunding;
 import edu.kit.datamanager.repo.domain.Title;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.repository.ScientificFundingRepository;
 import edu.kit.datamanager.repo.web.impl.ScientificCatalogController;
 import edu.kit.datamanager.repo.web.impl.PublicScientificResourceController;
 import org.junit.Test;
@@ -31,6 +33,7 @@ public class ScientificCatalogSearchTest {
     @Autowired private IDataResourceDao resources;
     @Autowired private IContentInformationDao contents;
     @Autowired private ScientificRecordRepository records;
+    @Autowired private ScientificFundingRepository funding;
     @Autowired private PublicScientificResourceController publicResources;
 
     @Test
@@ -56,6 +59,7 @@ public class ScientificCatalogSearchTest {
         file.setParentResource(data); file.setRelativePath("observaciones.csv"); file.setContentUri("file:/tmp/observaciones.csv");
         file.setMediaType("text/csv"); file.setSize(10L); file.setVersion(1); file.setFileVersion("1");
         contents.saveAndFlush(file);
+        funding.saveAndFlush(new ScientificFunding(data.getId(), "Agencia Marina", "03yrm5c26", "AM-42", "Monitoreo oceánico"));
         var after = catalog.list("astronomía", "Ada", "DATASET", "2026", "CC-BY-4.0", "astro", "", "", "", "", "", true, false, "newest", 0, 20, publicRequest);
         assertEquals(1, after.total());
         assertEquals(data.getId(), after.items().get(0).id());
@@ -71,6 +75,12 @@ public class ScientificCatalogSearchTest {
         assertTrue(facets.get("access").stream().anyMatch(option -> option.value().equals("RESTRICTED") && option.count() >= 1));
         assertTrue(facets.get("year").stream().anyMatch(option -> option.value().equals("2026") && option.count() >= 1));
         assertTrue(facets.get("mimeType").stream().anyMatch(option -> option.value().equals("text/csv") && option.count() >= 1));
+        assertTrue(facets.get("funder").stream().anyMatch(option -> option.value().equals("Agencia Marina") && option.count() >= 1));
+        assertTrue(facets.get("project").stream().anyMatch(option -> option.value().equals("Monitoreo oceánico") && option.count() >= 1));
+        assertEquals(1, catalog.list("", "", "", "", "", "", "", "", "", "", "",
+                "Agencia Marina", "Monitoreo oceánico", false, false, "newest", 0, 20, publicRequest).total());
+        assertEquals(0, catalog.list("", "", "", "", "", "", "", "", "", "", "",
+                "Otra agencia", "", false, false, "newest", 0, 20, publicRequest).total());
         assertEquals(0, catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "", "", false, true, "newest", 0, 20, publicRequest).total());
         assertEquals(1, catalog.list("", "Ada López", "DATASET", "2026", "", "", "", "", "", "", "", false, false, "newest", 0, 20, publicRequest).total());
         assertEquals(1, catalog.list("", "", "", "", "", "", "", "", "", "", "text/csv", false, false, "newest", 0, 20, publicRequest).total());
@@ -87,6 +97,7 @@ public class ScientificCatalogSearchTest {
         first = resources.save(first);
         ScientificRecord firstRecord = new ScientificRecord(first.getId());
         firstRecord.setStatus(PublicationStatus.PUBLISHED); records.saveAndFlush(firstRecord);
+        funding.saveAndFlush(new ScientificFunding(first.getId(), "Agencia Marina", null, "AM-1", "Proyecto A"));
         DataResource second = DataResource.factoryNewDataResource("catalog-version-two");
         second.getTitles().add(Title.factoryTitle("Versión posterior", Title.TYPE.OTHER));
         second = resources.save(second);
@@ -95,5 +106,6 @@ public class ScientificCatalogSearchTest {
         records.saveAndFlush(next);
         var landing = (PublicScientificResourceController.PublicDetail) publicResources.detail(first.getId()).getBody();
         assertEquals(second.getId(), landing.newerVersionId());
+        assertEquals("Proyecto A", landing.funding().get(0).getAwardTitle());
     }
 }

@@ -58,6 +58,12 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       token aleatorio de 256 bits, solo huella SHA-256 en PostgreSQL, caducidad
       máxima de 14 días, vista de solo lectura y descargas. El token viaja en
       fragmento de URL y después en cabecera, no en la ruta del servidor.
+- [x] Financiación y proyectos estructurados por versión: edición solo del autor
+      en borrador, ROR opcional del financiador, vista pública, facetas de
+      financiador/proyecto y `fundingReferences` en DOI DataCite. Requiere la
+      tabla `scientific_funding` de la migración antes del despliegue.
+- [x] El arranque ya no vuelca propiedades de entorno en los logs; el filtro
+      anterior podía revelar `repo.auth.jwtSecret`.
 
 ## Pendiente o sujeto a validación
 
@@ -83,8 +89,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       heredados; las listas actuales no son un catálogo institucional aprobado.
 - [ ] Validación bibliotecaria de todos los estilos de cita y del orden de
       autoría heredado; los nuevos formatos aún son preliminares.
-- [ ] Completar facetas de proyecto/financiador y validar
-      rendimiento de consultas agregadas con volumen real en PostgreSQL.
+- [ ] Validar rendimiento de facetas de proyecto/financiador y otras consultas
+      agregadas con volumen real en PostgreSQL; validar valores institucionales
+      de proyectos/financiadores y metadatos de financiación en DataCite Test.
 - [ ] Dimensionar I/O y pool JDBC para la auditoría, configurar alerta externa
       por `MISMATCH`/`MISSING_FILE` y política de archivos anteriores sin huella.
 - [ ] Validar paquetes de preservación y procedencia en almacenamiento externo,

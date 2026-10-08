@@ -62,6 +62,23 @@ function renderAuthors(authors) {
   }
   document.querySelector('#description').closest('.panel').before(section);
 }
+function renderFunding(funding) {
+  if (!funding?.length) return;
+  const section = document.createElement('section'); section.className = 'panel';
+  section.append(node('h2', 'Financiación y proyectos'));
+  for (const item of funding) {
+    const row = document.createElement('p'); row.className = 'related-resource';
+    row.append(node('strong', item.funderName));
+    if (item.funderRor) {
+      const link = document.createElement('a'); link.href = `https://ror.org/${item.funderRor.replace(/^https:\/\/ror\.org\//, '')}`;
+      link.textContent = 'ROR'; link.rel = 'noopener noreferrer'; row.append(' · ', link);
+    }
+    if (item.awardTitle) row.append(` · Proyecto: ${item.awardTitle}`);
+    if (item.awardNumber) row.append(` · Nº ${item.awardNumber}`);
+    section.append(row);
+  }
+  document.querySelector('#description').closest('.panel').before(section);
+}
 async function loadFiles(page = 0) {
   const response = await fetch(`/api/v1/public/resources/${encodeURIComponent(id)}/files?page=${page}&size=50`);
   if (!response.ok) throw new Error('No se pudieron consultar los archivos.');
@@ -119,7 +136,7 @@ async function load() {
       newer.textContent = 'Ver la versión posterior'; warning.append(newer);
       document.querySelector('#version-links').append(warning);
     }
-    renderAuthors(data.authorIdentities); renderMarkdown(data.markdown || ''); renderRelations(data.relations); await loadFiles(); status.textContent = '';
+    renderAuthors(data.authorIdentities); renderFunding(data.funding); renderMarkdown(data.markdown || ''); renderRelations(data.relations); await loadFiles(); status.textContent = '';
     const citation = `${data.authors?.join(', ') || 'Autor no informado'} (${data.year || 's. f.'}). ${data.title} (versión ${data.version}) [${data.type || 'Recurso'}]. ${data.publisher || 'Editorial no informada'}. https://doi.org/${data.doi}`;
     document.querySelector('#citation').textContent = citation;
     document.querySelector('#copy-citation').onclick = async () => { try { await navigator.clipboard.writeText(citation); status.textContent = 'Cita copiada.'; } catch { status.textContent = 'No se pudo copiar la cita.'; } };

@@ -5,6 +5,7 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.domain.ScientificCreator;
+import edu.kit.datamanager.repo.domain.ScientificFunding;
 import edu.kit.datamanager.repo.domain.Title;
 import java.net.URI;
 import java.util.Set;
@@ -109,5 +110,30 @@ public class DataCiteMetadataMapperTest {
         assertEquals("https://ror.org/03yrm5c26",
                 ((java.util.List<java.util.Map<String, String>>) ana.get("affiliation")).get(0).get("affiliationIdentifier"));
         assertEquals("Universidad B", ((java.util.List<java.util.Map<String, String>>) luis.get("affiliation")).get(0).get("name"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void mapsFundingReferencesWithoutInventingIdentifiers() {
+        DataResource resource = mock(DataResource.class);
+        Title title = mock(Title.class);
+        Agent author = mock(Agent.class);
+        when(title.getValue()).thenReturn("Datos financiados");
+        when(author.getGivenName()).thenReturn("Ana");
+        when(resource.getTitles()).thenReturn(Set.of(title));
+        when(resource.getCreators()).thenReturn(Set.of(author));
+        when(resource.getPublisher()).thenReturn("RedUniv");
+        when(resource.getPublicationYear()).thenReturn("2026");
+        var mapped = new DataCiteMetadataMapper().version(resource, new ScientificRecord("r1"),
+                URI.create("https://datos.reduniv.edu.cu/datasets/r1"), java.util.List.of(),
+                java.util.List.of(new ScientificFunding("r1", "Agencia A", "03yrm5c26", "P-42", "Océano"),
+                        new ScientificFunding("r1", "Agencia B", null, null, null)));
+        var refs = (java.util.List<java.util.Map<String, Object>>) mapped.get("fundingReferences");
+        assertEquals(2, refs.size());
+        assertEquals("https://ror.org/03yrm5c26", refs.get(0).get("funderIdentifier"));
+        assertEquals("ROR", refs.get(0).get("funderIdentifierType"));
+        assertEquals("P-42", refs.get(0).get("awardNumber"));
+        assertEquals("Océano", refs.get(0).get("awardTitle"));
+        assertFalse(refs.get(1).containsKey("funderIdentifier"));
     }
 }
