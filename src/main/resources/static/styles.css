@@ -171,3 +171,5 @@ main:focus { outline:none; }
 .public-nav{flex-wrap:wrap}.public-main pre{max-width:100%;overflow:auto;padding:12px;background:#eef4fb;border-radius:8px}.public-main section[id]{scroll-margin-top:20px}
 
 .help-toc a{display:inline-block;min-height:28px;padding:5px 2px}.help-toc li{margin:4px 0}
+
+.collection-check{display:flex;align-items:center;gap:8px;margin:12px 0}.collection-check input{width:auto}.resource-card h2 a{overflow-wrap:anywhere}#collection-actions[hidden]{display:none}#kind-filter-label{max-width:320px;margin:16px 0}#collection-form{display:grid;gap:16px}

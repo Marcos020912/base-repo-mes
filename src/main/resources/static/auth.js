@@ -46,3 +46,9 @@ if (['CURATOR', 'ADMINISTRATOR'].includes(signedInUser?.role)) {
     }
   });
 }
+
+if (['CURATOR','ADMINISTRATOR'].includes(signedInUser?.role)) {
+  document.querySelectorAll('.sidebar nav').forEach(nav=>{
+    const link=document.createElement('a');link.href='collections.html?manage=true';link.textContent='Colecciones';nav.append(link);
+  });
+}

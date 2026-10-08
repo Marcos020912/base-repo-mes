@@ -64,7 +64,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | C04 | Búsqueda, orden y paginación en servidor | Base local: catálogo; no sustituir por filtro de 200 registros en cliente. |
 | C05 | Filtros, página y orden reproducibles en URL | Base local: scripts catálogo; comprobar enlaces compartidos y back/forward. |
 | C06 | Distinguir vacío, cero coincidencias, permisos y caída | Base local: estados catálogo; comprobar mensajes y acciones diferentes por caso. |
-| C07 | Colecciones temáticas e institucionales | Pendiente: no hay página/gestión de colecciones identificada; definir agrupación curada frente a facetas. |
+| C07 | Colecciones temáticas e institucionales | Implementado local: colecciones temáticas/institucionales persistentes, gestión curador/admin con modales y catálogo público paginado solo PUBLISHED. Cuatro pruebas JPA y E2E PostgreSQL/SMTP/Chrome/restauración aprobados; no duplica ni elimina datasets. |
 | C08 | Políticas, ayuda y guía de citación | Parcial: nueva `help.html` ofrece guía y condiciones técnicas; políticas institucionales formales aún no aprobadas. |
 | C09 | Métricas públicas con definiciones transparentes | Pendiente: no acreditar métricas con recuentos ficticios; definir e implementar medición real. |
 

@@ -513,9 +513,60 @@ async function publicDownloads(base, resource) {
     process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción, BibTeX y CSV directo a disco (OPFS).\n');
   } finally { await context.close(); }
 }
+async function collectionsFlow(page, base, published, draft) {
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  await page.goto(base+'/collections.html?manage=true',{waitUntil:'load'});
+  await page.waitForFunction(()=>!document.querySelector('#new-collection').hidden);
+  await page.click('#new-collection');
+  await page.type('#collection-form [name=title]','Colección E2E '+Date.now());
+  await page.type('#collection-form [name=description]','Agrupación real local');
+  const creation=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/api/v1/collections'));
+  await page.click('#collection-form [type=submit]');
+  const response=await creation;assert(response.status()===201,'No se pudo crear colección por formulario.');
+  const collection=await response.json();
+  assert((await fetch(base+'/api/v1/public/collections/'+collection.id)).status===404,'Colección privada expuesta.');
+  await page.goto(base+'/collections.html?manage=true&id='+collection.id,{waitUntil:'load'});
+  await page.waitForFunction(()=>!document.querySelector('#member-form').hidden);
+  await page.type('#member-form input',published.id);
+  const membership=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().includes('/datasets/'));
+  await page.click('#member-form button');
+  assert((await membership).status()===204,'No se pudo agregar miembro por formulario.');
+  assert((await fetch(base+'/api/v1/collections/'+collection.id+'/datasets/'+draft.id,{method:'PUT',headers})).status===204,'No se pudo agregar borrador.');
+  // Repeated membership must remain a single reference, not a copy.
+  assert((await fetch(base+'/api/v1/collections/'+collection.id+'/datasets/'+published.id,{method:'PUT',headers})).status===204,'Membresía no idempotente.');
+  await page.reload({waitUntil:'load'});
+  await page.waitForFunction(()=>!document.querySelector('#edit-collection').disabled);
+  await page.click('#edit-collection');await page.click('#collection-form [name=published]');
+  const updated=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/api/v1/collections/'+collection.id));
+  await page.click('#collection-form [type=submit]');assert((await updated).ok(),'No se pudo publicar colección.');
+  const stale=await fetch(base+'/api/v1/collections/'+collection.id,{method:'PUT',headers,body:JSON.stringify({...collection,title:'Edición obsoleta'})});
+  assert(stale.status===409,'Edición obsoleta no fue rechazada.');
+  const publicPage=await (await fetch(base+'/api/v1/public/collections/'+collection.id+'?size=1')).json();
+  assert(publicPage.total===1&&publicPage.items[0].id===published.id,'Borrador expuesto o miembro duplicado en colección pública.');
+  const anonymous=await browser.createBrowserContext();
+  try {
+    const visitor=await anonymous.newPage();
+    await visitor.goto(base+'/collections.html?id='+collection.id,{waitUntil:'load'});
+    await visitor.waitForSelector('#collection-results .resource-card');
+    assert((await visitor.$$eval('#collection-results .resource-card',items=>items.length))===1,'Vista pública muestra miembros privados.');
+    assert(await visitor.$eval('#management',el=>el.hidden),'Visitante recibe controles de gestión.');
+  } finally {await anonymous.close();}
+  assert((await fetch(base+'/api/v1/collections/'+collection.id+'/datasets/'+published.id,{method:'DELETE',headers})).status===204,'No se pudo quitar miembro.');
+  assert((await fetch(base+'/api/v1/public/resources/'+published.id)).ok,'Quitar miembro eliminó dataset.');
+  await page.reload({waitUntil:'load'});await page.waitForFunction(()=>!document.querySelector('#delete-collection').disabled);
+  await page.click('#delete-collection');await page.waitForSelector('#collection-confirm[open]');
+  const removal=page.waitForResponse(r=>r.request().method()==='DELETE'&&r.url().endsWith('/api/v1/collections/'+collection.id));
+  await page.click('#confirm-action');assert((await removal).status()===204,'Eliminar colección falló.');
+  assert((await fetch(base+'/api/v1/public/resources/'+published.id)).ok,'Eliminar colección eliminó dataset.');
+  assert((await fetch(base+'/api/v1/public/collections/'+collection.id)).status===404,'Colección eliminada sigue pública.');
+  process.stdout.write('Colecciones OK: formularios, privado/público, membresía única, borradores ocultos y eliminación sin borrar datasets.\n');
+}
 async function verifyMultiuserAccess(page, base, published, otherDraft) {
   if (!verifiedAccount) return;
   let userHeaders={Authorization:`Bearer ${verifiedAccount.token}`};
+  assert((await fetch(base+'/api/v1/collections',{headers:userHeaders})).status===403,'Usuario normal puede gestionar colecciones.');
+  assert((await fetch(base+'/api/v1/collections',{method:'POST',headers:{...userHeaders,'Content-Type':'application/json'},body:JSON.stringify({title:'No autorizado',kind:'THEMATIC',published:true})})).status===403,'Usuario normal puede crear colecciones.');
   const catalogue=await fetch(base+'/api/v1/catalog?q='+encodeURIComponent(published.title), {headers:userHeaders});
   assert(catalogue.ok && (await catalogue.json()).items.some(item=>item.id===published.id),
     'El usuario verificado no ve el dataset compartido de otro autor.');
@@ -748,6 +799,7 @@ async function main() {
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
     await publicDownloads(base, markdown);
+    await collectionsFlow(page, base, markdown, packaged);
     await verifyMultiuserAccess(page,base,markdown,newVersionId);
     await restorePostgresFixture(page,base,files,markdown);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);

@@ -111,3 +111,24 @@ The KIT Data Manager is licensed under the Apache License, Version 2.0.
 ## Acknowledgements
 
 This work has been supported by the research program [‘Engineering Digital Futures’](https://www.helmholtz.de/en/research/research-fields/information/engineering-digital-futures/) of the [Helmholtz Association of German Research Centers](https://www.helmholtz.de/en) and the [Helmholtz Metadata Collaboration Platform (HMC)](https://helmholtz-metadaten.de/).
+
+## Colecciones científicas (RedUniv)
+
+`/collections.html` muestra agrupaciones temáticas e institucionales, paginadas,
+sin copiar archivos. Solo aparecen colecciones publicadas con datasets en estado
+`PUBLISHED`; los borradores y retirados no se muestran públicamente.
+
+Curadores y administradores gestionan las colecciones desde
+`/collections.html?manage=true`: crear/editar, publicar, agregar datasets por
+identificador y quitar membresías mediante formularios modales. Eliminar una
+colección **no elimina sus datasets ni sus archivos**. Los usuarios ordinarios
+no tienen acceso a estas operaciones administrativas.
+
+API pública: `GET /api/v1/public/collections` y `GET /api/v1/public/collections/{id}`.
+API de gestión: `/api/v1/collections` (requiere rol curador/administrador).
+Las actualizaciones requieren la revisión actual para detectar conflictos.
+
+Antes de actualizar una instalación con validación de esquema, hacer copia de
+seguridad y aplicar en mantenimiento la migración revisada
+`docs/migrations/2026-09-scientific-records.sql`, que incluye las dos tablas de
+colecciones. No ejecutar migraciones sobre producción sin autorización.
