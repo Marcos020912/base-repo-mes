@@ -21,6 +21,7 @@ let postgres;
 let smtp;
 const verificationMessages = [];
 let rejectSmtp = false;
+let verifiedAccount;
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -139,6 +140,7 @@ async function verificationFlow(base) {
   const logged=await post('login',{username:name,password:secret});
   assert(logged.status===200 && logged.body.token && logged.body.user.role==='USER',
     'La cuenta verificada no inició sesión como Usuario.');
+  verifiedAccount={...logged.body, password:secret};
   const replay=await post('verify',{email,code});
   assert(replay.status===400, 'El código ya consumido se pudo reutilizar.');
   const recoveryEmail='mail-recovery@example.invalid', recoveryName='mail-recovery-fixture';
@@ -490,6 +492,34 @@ async function publicDownloads(base, resource) {
     process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción y BibTeX.\n');
   } finally { await context.close(); }
 }
+async function verifyMultiuserAccess(page, base, published, otherDraft) {
+  if (!verifiedAccount) return;
+  const userHeaders={Authorization:`Bearer ${verifiedAccount.token}`};
+  const catalogue=await fetch(base+'/api/v1/catalog?q='+encodeURIComponent(published.title), {headers:userHeaders});
+  assert(catalogue.ok && (await catalogue.json()).items.some(item=>item.id===published.id),
+    'El usuario verificado no ve el dataset compartido de otro autor.');
+  const adminPage=await fetch(base+'/api/v1/users',{headers:userHeaders});
+  assert(adminPage.status===403, `Gestión administrativa devolvió ${adminPage.status}: ${await adminPage.text()}`);
+  const edit=await fetch(`${base}/api/v1/scientific/${otherDraft}`,{
+    method:'PUT',headers:{...userHeaders,'Content-Type':'application/json'},body:JSON.stringify({versionLabel:'unauthorized-change'})
+  });
+  assert(edit.status===403, 'Un Usuario editó un depósito ajeno.');
+  const adminToken=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const suspended=await fetch(`${base}/api/v1/users/${verifiedAccount.user.id}`, {
+    method:'PUT',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},
+    body:JSON.stringify({username:verifiedAccount.user.username,role:'USER',enabled:false})
+  });
+  assert(suspended.ok, 'No se pudo suspender la cuenta de prueba.');
+  const revoked=await fetch(base+'/api/v1/catalog',{headers:userHeaders});
+  assert(revoked.status===401, 'El token emitido antes de suspender conserva acceso.');
+  const loginResponse=await fetch(base+'/api/v1/auth/login',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:verifiedAccount.user.username,password:verifiedAccount.password})
+  });
+  assert(loginResponse.status===403 && (await loginResponse.json()).code==='ACCOUNT_RESTRICTED',
+    'Login no informa cuenta restringida.');
+  process.stdout.write('Multiusuario OK: catálogo compartido, administración/edición denegadas y token bloqueado al suspender.\n');
+}
 async function restorePostgresFixture(page, base, files, published) {
   if (!postgres || process.env.E2E_POSTGRES_RESTORE !== '1') return;
   await stopApp();
@@ -679,6 +709,7 @@ async function main() {
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
     await publicDownloads(base, markdown);
+    await verifyMultiuserAccess(page,base,markdown,newVersionId);
     await restorePostgresFixture(page,base,files,markdown);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);
     process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered}; nueva versión ${newVersionId}.\n`);

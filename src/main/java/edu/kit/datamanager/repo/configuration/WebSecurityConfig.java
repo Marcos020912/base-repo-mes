@@ -115,7 +115,14 @@ public class WebSecurityConfig {
                 cors(cors -> cors.configurationSource(corsConfigurationSource())).
                 sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        httpSecurity.exceptionHandling(exceptions -> exceptions.authenticationEntryPoint((request, response, failure) -> {
+        httpSecurity.exceptionHandling(exceptions -> exceptions
+                .accessDeniedHandler((request, response, failure) -> {
+                    // Do not sendError: an authenticated /error redispatch can mask 403 as 401.
+                    response.setStatus(403);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"message\":\"No tiene permisos para realizar esta operación.\"}");
+                })
+                .authenticationEntryPoint((request, response, failure) -> {
             response.setStatus(401);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"message\":\"Debe iniciar sesión para continuar.\"}");

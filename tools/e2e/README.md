@@ -181,3 +181,7 @@ recuperable, la cuenta sigue existiendo y no puede entrar, repetir registro
 devuelve conflicto y el reenvío fallido conserva mensaje opaco. Tras levantar
 el rechazo, reenvía el código, verifica y permite login USER. No reproduce
 DNS interno, TLS ni corrige el servidor de correo institucional.
+El modo correo verifica además permisos multiusuario contra el backend:
+el usuario verificado ve el dataset compartido de otro autor, no puede listar
+usuarios ni editar un borrador ajeno; tras suspensión administrativa, su token
+ya emitido queda bloqueado y el login devuelve ACCOUNT_RESTRICTED.
