@@ -578,6 +578,43 @@ async function publicDownloads(base, resource) {
     process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción, BibTeX y CSV directo a disco (OPFS).\n');
   } finally { await context.close(); }
 }
+async function metadataProfilesFlow(page,base,draft) {
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'},root=base+'/api/v1/scientific/metadata-profiles';
+  if(verifiedAccount){assert((await fetch(root+'/administration',{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===403,'Usuario gestionó perfiles admin.');assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/metadata-profile',{method:'PUT',headers:{Authorization:`Bearer ${verifiedAccount.token}`,'Content-Type':'application/json'},body:'{}'})).status===403,'Usuario aplicó perfil a dataset ajeno.');}
+  await page.goto(base+'/metadata-profiles-admin.html',{waitUntil:'load'});await page.waitForFunction(()=>document.querySelector('#profiles-admin-status')?.textContent==='Perfiles consultados.');
+  await page.click('#new-profile');await page.waitForSelector('#profile-edit-modal[open]',{visible:true});
+  for(const [name,value]of Object.entries({id:'test-profile',name:'Perfil tabular de prueba',description:'Reglas sintéticas; no es aprobación institucional.',licenseId:'CC-BY-4.0',language:'es',discipline:'Física',note:'Propuesta de prueba aislada.'}))await page.type(`#profile-edit-form [name="${name}"]`,value);
+  await page.click('#profile-required-options input[value="processingTools"]');
+  const proposed=observeResponse(page,r=>r.request().method()==='PUT'&&r.url().endsWith('/administration/test-profile'));await page.click('#profile-edit-form [type=submit]');assert((await proposed).ok(),'No propuso perfil.');
+  assert(!(await (await fetch(root,{headers})).json()).some(profile=>profile.id==='test-profile'),'Perfil no aprobado apareció como disponible.');
+  await page.waitForFunction(()=>[...document.querySelectorAll('#profiles-admin-list button')].some(button=>button.textContent==='Revisar y aprobar'));
+  await page.evaluate(()=>[...document.querySelectorAll('#profiles-admin-list button')].find(button=>button.textContent==='Revisar y aprobar').click());await page.waitForSelector('#profile-confirm-modal[open]',{visible:true});
+  const approved=observeResponse(page,r=>r.request().method()==='POST'&&r.url().endsWith('/test-profile/approve'));await page.click('#profile-confirm-form [type=submit]');assert((await approved).ok(),'No aprobó perfil.');
+  const available=await (await fetch(root,{headers})).json(),profile=available.find(value=>value.id==='test-profile');assert(profile?.requiredFields.includes('processingTools'),'Perfil no conserva reglas aprobadas.');
+  const inReview=await (await fetch(base+'/api/v1/scientific/'+draft.id,{headers})).json();assert(inReview.status==='IN_REVIEW','El fixture de perfil no estaba en revisión.');
+  assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/metadata-profile',{method:'PUT',headers,body:JSON.stringify({profileId:profile.id,profileRevision:profile.revision,resourceRevision:inReview.revision})})).status===409,'Permitió cambiar perfil en revisión.');
+  assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/return-to-draft',{method:'POST',headers})).ok,'No devolvió el fixture a borrador para editar su perfil.');
+  await page.goto(base+'/resource.html?id='+draft.id,{waitUntil:'load'});await page.waitForSelector('#main-content[aria-busy=false]');await page.waitForSelector('#change-metadata-profile:not([hidden])',{visible:true});await page.waitForFunction(()=>[...document.querySelector('#dataset-profile-select').options].some(option=>option.value==='test-profile'));
+  await page.select('#dataset-profile-select','test-profile');await page.click('#change-metadata-profile');await page.waitForSelector('#dataset-profile-confirm[open]',{visible:true});
+  const applied=observeResponse(page,r=>r.request().method()==='PUT'&&r.url().endsWith('/metadata-profile'));await page.click('#dataset-profile-confirm footer .primary');assert((await applied).ok(),'No aplicó perfil al borrador propio.');
+  await page.waitForFunction(()=>document.querySelector('#metadata-profile-current')?.textContent.includes('Perfil tabular de prueba'));
+  const science=await (await fetch(base+'/api/v1/scientific/'+draft.id,{headers})).json();assert(science.metadataProfileRevision===profile.revision&&science.metadataProfileRequiredFields.includes('processingTools'),'No congeló reglas por dataset.');
+  const changed=await fetch(base+'/api/v1/scientific/'+draft.id,{method:'PUT',headers,body:JSON.stringify({...science,processingTools:''})});assert(changed.ok,'No pudo vaciar campo científico de prueba.');
+  const report=await (await fetch(base+'/api/v1/scientific/'+draft.id+'/quality',{headers})).json();assert(report.blockers.some(blocker=>blocker.includes('Herramientas')),'Checklist no detectó requisito de perfil.');assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/submit',{method:'POST',headers})).status===400,'Perfil permitió enviar con requisito faltante.');
+  assert((await fetch(base+'/api/v1/scientific/'+draft.id,{method:'PUT',headers,body:JSON.stringify({...science,processingTools:'Python 3.12; script público v1.'})})).ok,'No restauró herramientas declaradas.');
+  const admin=(await (await fetch(root+'/administration',{headers})).json()).find(value=>value.id==='test-profile');
+  assert((await fetch(root+'/administration/test-profile/active',{method:'POST',headers,body:JSON.stringify({revision:admin.revision,active:false})})).ok,'No desactivó perfil.');
+  const retained=await (await fetch(base+'/api/v1/scientific/'+draft.id,{headers})).json();assert(retained.metadataProfileRequiredFields.includes('processingTools'),'Desactivar perfil alteró reglas del dataset.');assert(!(await (await fetch(root,{headers})).json()).some(value=>value.id==='test-profile'),'Perfil inactivo sigue disponible.');
+  const inactive=(await (await fetch(root+'/administration',{headers})).json()).find(value=>value.id==='test-profile');assert((await fetch(root+'/administration/test-profile/active',{method:'POST',headers,body:JSON.stringify({revision:inactive.revision,active:true})})).ok,'No reactivó perfil.');
+  await page.goto(base+'/create.html',{waitUntil:'load'});await page.waitForFunction(()=>[...document.querySelector('#dataset-profile-select').options].some(option=>option.value==='test-profile'));
+  await page.evaluate(()=>{document.querySelector('[data-step="0"]').hidden=true;document.querySelector('[data-step="1"]').hidden=false;document.querySelector('[name=licenseId]').value='Licencia del autor';});
+  await page.select('#dataset-profile-select','test-profile');await page.click('#apply-dataset-profile');await page.waitForSelector('#dataset-profile-confirm[open]',{visible:true});await page.click('#dataset-profile-confirm footer .primary');
+  assert(await page.$eval('[name=licenseId]',input=>input.value)==='Licencia del autor','Perfil reemplazó licencia declarada.');assert(await page.$eval('[name=language]',input=>input.value)==='es','Perfil no completó idioma vacío.');
+  assert(await page.evaluate(()=>!metadataProfileWidget.validate()),'Asistente no detecta herramienta faltante del perfil.');
+  await page.evaluate(()=>{localStorage.removeItem(`reduniv-deposit-v1:${auth.user().username}:new`);});
+  process.stdout.write('Perfiles OK: administración/aprobación, widget explícito, autoría, reglas congeladas, calidad, desactivación y valores de autor preservados.\n');
+}
 async function vocabularyFlow(page,base) {
   const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
@@ -610,6 +647,7 @@ async function privacyFlow(page,base,draft) {
   const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
   await page.goto(base+'/resource.html?id='+draft.id,{waitUntil:'load'});
+  await page.waitForSelector('#main-content[aria-busy=false]');
   await page.waitForSelector('#edit-privacy:not([hidden])',{visible:true});
   await page.click('#edit-privacy');await page.waitForSelector('#privacy-modal[open] #privacy-form [type=submit]',{visible:true});await page.select('#privacy-form select','PERSONAL');
   await page.type('#privacy-form textarea','PRIVATE_ASSESSMENT_SENTINEL protection measures');
@@ -759,7 +797,7 @@ async function verifyMultiuserAccess(page, base, published, otherDraft) {
     'Login no informa cuenta restringida.');
   process.stdout.write('Multiusuario OK: catálogo compartido, administración/edición denegadas y token bloqueado al suspender.\n');
 }
-async function restorePostgresFixture(page, base, files, published) {
+async function restorePostgresFixture(page, base, files, published, profiledDraft) {
   if (!postgres || process.env.E2E_POSTGRES_RESTORE !== '1') return;
   await stopApp();
   const args = ['-h','127.0.0.1','-p',String(postgres.port),'-U','e2e_admin'];
@@ -816,6 +854,7 @@ async function restorePostgresFixture(page, base, files, published) {
     'El nuevo login no sustituyó la sesión inválida después del reinicio.');
   const restoredVocabulary=await page.evaluate(async()=>await (await fetch('/api/v1/scientific/vocabularies',{headers:auth.headers()})).json());
   assert(restoredVocabulary.licenses.includes('Institutional-test'),'Restauración perdió vocabulario aprobado.');
+  const profileRecord=await page.evaluate(async id=>await (await fetch('/api/v1/scientific/'+id,{headers:auth.headers()})).json(),profiledDraft.id);assert(profileRecord.metadataProfileId==='test-profile'&&profileRecord.metadataProfileRequiredFields.includes('processingTools'),'Restauración perdió reglas congeladas de perfil.');
   const response = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}`);
   assert(response.ok, 'El recurso publicado no sobrevivió a la restauración.');
   const restored=await response.json();
@@ -960,8 +999,9 @@ async function main() {
     await publicDownloads(base, markdown);
     await collectionsFlow(page, base, markdown, packaged);
     await vocabularyFlow(page,base);
+    await metadataProfilesFlow(page,base,packaged);
     await verifyMultiuserAccess(page,base,markdown,newVersionId);
-    await restorePostgresFixture(page,base,files,markdown);
+    await restorePostgresFixture(page,base,files,markdown,packaged);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);
     process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered}; nueva versión ${newVersionId}.\n`);
   } catch (error) {

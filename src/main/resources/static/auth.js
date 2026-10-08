@@ -58,3 +58,5 @@ if (['CURATOR','ADMINISTRATOR'].includes(signedInUser?.role)) {
 }
 
 if(auth.user()?.role==='ADMINISTRATOR')document.querySelectorAll('.sidebar nav').forEach(nav=>{if(!nav.querySelector('a[href="vocabulary-admin.html"]')){const link=document.createElement('a');link.href='vocabulary-admin.html';link.textContent='Vocabularios';nav.append(link);}});
+
+if(auth.user()?.role==='ADMINISTRATOR')document.querySelectorAll('.sidebar nav').forEach(nav=>{if(!nav.querySelector('a[href="metadata-profiles-admin.html"]')){const link=document.createElement('a');link.href='metadata-profiles-admin.html';link.textContent='Perfiles de metadatos';nav.append(link);}});

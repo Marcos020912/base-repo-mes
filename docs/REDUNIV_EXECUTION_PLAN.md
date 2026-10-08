@@ -50,7 +50,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **W10 — Envío a curación/publicación según política**. Base local: flujo revisión/publicación; depende de política institucional.
 - [ ] **W11 — Reserva DOI, embargo y acceso privado a revisores**. Base local: DOI Draft/enlaces temporales; pruebas DataCite/HAProxy pendientes.
 - [ ] **A01 — Cola y validación de metadatos/archivos**. Base local: Curación/calidad; validación bibliotecaria/formatos real pendiente.
-- [ ] **A02 — Control de identificadores, vocabularios y perfiles**. Parcial: registro persistente de vocabularios con propuestas/aprobación administrativa explícita y revisión concurrente verificado localmente (regresión/E2E/restauración). Perfiles de metadatos y aprobación institucional pendientes.
+- [ ] **A02 — Control de identificadores, vocabularios y perfiles**. Parcial institucional: vocabularios y perfiles persistentes con propuesta/aprobación, revisión concurrente y reglas congeladas por dataset verificados localmente. Control de identidad/listas institucionales y su aprobación externa no acreditados.
 - [x] **A03 — Licencias, privacidad y datos sensibles en curación**. Implementado local: decisión de curación con notas privadas y revisión concurrente; bloquea publicación sensible sin aprobación, revoca al devolver a borrador. E2E aprobado; no sustituye aprobación jurídica institucional.
 - [ ] **A04 — Usuarios, roles e integraciones DOI/OIDC/correo**. Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID.
 - [x] **A05 — Estado almacenamiento/fixity, auditoría/reportes operativos**. Implementado local: consola autorizada con volumen local, inventario técnico/fixity, veinte auditorías e informe JSON fechado. Tests/E2E aprobados; no sustituye monitorización y backup institucional.
@@ -149,4 +149,10 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 ### Gobernanza de vocabularios
 - Registro LICENSE/DISCIPLINE con propuesta separada de lista aprobada, revisión optimista, motivo/actor/fecha y modales admin. Conserva valores heredados sin modificar; no cambia publicados ni strict-vocabulary.
 - Regresión51suites499pruebas0fallos/errores/omitidas; E2EPG18SMTPChrome/restauración aprobado, migración doble y vocabulario aprobado conservado. Axe57estados0.
-- `docs/VOCABULARY_ADMINISTRATION.md`; perfiles permanecen independientes y pendientes.
+- `docs/VOCABULARY_ADMINISTRATION.md`; perfiles se implementan y verifican en el bloque siguiente.
+
+### Perfiles de metadatos por versión
+- Administración propuesta/aprobación/disponibilidad, defaults seguros, campos adicionales obligatorios y snapshot persistente por dataset. Solo autor DRAFT aplica/quita; IN_REVIEW y publicados protegidos. Hereda snapshot al derivar nueva versión; nunca relaja checks base.
+- E2EPG18SMTPChrome/restauración completo aprobado: permisos, modales, revisión409, reglas bloquean envío, desactivación preserva copia, autoría no reemplazada y reglas conservadas después de restore/migración doble/schema validate.
+- Regresión52suites503pruebas0fallos/errores/omitidas; después18pruebas dirigidas aprobadas, incluyendo nuevo guard de publicación manual e independencia de la copia al derivar. Axe61estados0; no certifica revisión manual.
+- `docs/METADATA_PROFILES.md`. No impone un perfil institucional obligatorio ni acredita aprobación organizativa.

@@ -73,6 +73,23 @@ public class ScientificRecordController {
         return record;
     }
 
+    @Autowired(required=false)
+    private edu.kit.datamanager.repo.service.ScientificMetadataProfileService metadataProfiles;
+
+    @org.springframework.web.bind.annotation.ExceptionHandler({org.springframework.dao.DataIntegrityViolationException.class,org.springframework.orm.ObjectOptimisticLockingFailureException.class})
+    public ResponseEntity<?> concurrentScientificWrite(){return ResponseEntity.status(409).body(Map.of("message","La ficha cambió; recargue antes de guardar."));}
+
+    @PutMapping("/{id}/metadata-profile")
+    @Transactional
+    public ScientificRecord applyMetadataProfile(@PathVariable String id,@RequestBody MetadataProfileApplication input){
+        requireOwner(id);
+        ScientificRecord saved=metadataProfiles.apply(id,input.profileId(),input.profileRevision(),input.resourceRevision());
+        audit(id,"METADATA_PROFILE_APPLIED",saved.getMetadataProfileId());
+        return saved;
+    }
+    @io.swagger.v3.oas.annotations.media.Schema(name="MetadataProfileApplication")
+    public record MetadataProfileApplication(String profileId,Long profileRevision,Long resourceRevision){}
+
     @PutMapping("/{id}")
     @Transactional
     public ScientificRecord update(@PathVariable String id, @RequestBody UpdateRequest input) {
@@ -172,6 +189,10 @@ public class ScientificRecordController {
         }
         current.setPreviousResourceId(previousId);
         current.setConceptualDoi(previous.getConceptualDoi());
+        current.setMetadataProfileId(previous.getMetadataProfileId());
+        current.setMetadataProfileName(previous.getMetadataProfileName());
+        current.setMetadataProfileRevision(previous.getMetadataProfileRevision());
+        current.setMetadataProfileRequiredFields(new java.util.LinkedHashSet<>(previous.getMetadataProfileRequiredFields()));
         ScientificRecord saved = records.save(current);
         audit(id, "VERSION_DERIVED", previousId);
         return saved;
@@ -224,6 +245,7 @@ public class ScientificRecordController {
         if (records.existsByVersionDoiIgnoreCaseAndResourceIdNot(record.getVersionDoi(), id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Este DOI ya pertenece a otra versión.");
         }
+        if(record.getMetadataProfileRequiredFields().stream().anyMatch(field->!edu.kit.datamanager.repo.service.ScientificMetadataProfileService.complete(record,field)))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Complete los campos requeridos por el perfil aplicado antes de publicar.");
         record.setStatus(PublicationStatus.PUBLISHED);
         record.setPublishedAt(Instant.now());
         ScientificRecord saved = records.save(record);

@@ -26,7 +26,7 @@ const packageMode = () => field('uploadMode').value === 'package';
 const errorBox = $('#wizard-message');
 const translationEditor=metadataTranslations.mount($('#metadata-translations'),field('translations'));
 const autosaveKey = `reduniv-deposit-v1:${user?.username || 'anonymous'}:${basedOnId || 'new'}`;
-const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','productionDescription','processingDescription','processingTools','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications','privacyClassification'];
+const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','productionDescription','processingDescription','processingTools','summary','temporalStart','temporalEnd','geographicCoverage','translations','accessLevel','embargoUntil','relatedPublications','privacyClassification','profileSnapshot'];
 let autosaveEnabled = false;
 let autosaveTimer;
 function storedDraft() {
@@ -179,6 +179,7 @@ function validateStep(index) {
     if (creators().some(author => !author.givenName)) return invalid('Indica el nombre de cada autor.', $('.creator-given'));
   }
   if (index === 1) {
+    if(!metadataProfileWidget.validate())return false;
     if(['PERSONAL','CONFIDENTIAL'].includes(value('privacyClassification')) && value('accessLevel')!=='RESTRICTED')return invalid('Los datos personales/confidenciales necesitan acceso restringido.',field('accessLevel'));
     if (value('accessLevel') === 'EMBARGOED' && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value('embargoUntil')) || Number.isNaN(Date.parse(value('embargoUntil')))))
       return invalid('Indica el fin del embargo en formato UTC ISO 8601.', field('embargoUntil'));
@@ -238,6 +239,7 @@ async function renderPreview() {
     node('p', `Tipo: ${value('type')} · Versión: ${value('versionLabel')} · Licencia: ${value('licenseId')}`),
     node('p', `Institución: ${value('institution')} · Acceso: ${value('accessLevel')}`),
     node('p', `Metodología: ${value('methodology')}`));
+  const appliedProfile=metadataProfileWidget.snapshot();if(appliedProfile)identity.append(node('p',`Perfil: ${metadataProfileWidget.title(appliedProfile)} · revisión ${appliedProfile.revision??'heredada'} · reglas: ${metadataProfileWidget.fields(appliedProfile).join(', ')||'solo base'}`));
   if (value('keywords')) identity.append(node('p', `Palabras clave: ${value('keywords')}`));
   if (value('orcid')) identity.append(node('p', `ORCID: ${value('orcid')}`));
   if (value('ror')) identity.append(node('p', `ROR: ${value('ror')}`));
@@ -314,7 +316,8 @@ async function save(submit) {
       inheritedConceptualDoi = derived.conceptualDoi;
     }
     report('Guardando ficha científica…');
-    await api(`/api/v1/scientific/${encodeURIComponent(createdId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sciencePayload(), conceptualDoi: inheritedConceptualDoi }) });
+    const savedScience=await api(`/api/v1/scientific/${encodeURIComponent(createdId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sciencePayload(), conceptualDoi: inheritedConceptualDoi }) });
+    await metadataProfileWidget.save(createdId,savedScience.revision);
     await scientificPrivacy.saveWizard(createdId);
     if (fundingEntries().length) {
       report('Guardando financiación…');
@@ -376,7 +379,7 @@ $('#save-draft').addEventListener('click', () => save(false));
 $('#save-submit').addEventListener('click', () => save(true));
 window.addEventListener('beforeunload', event => { if (busy && createdId) { event.preventDefault(); event.returnValue = ''; } });
 addCreator(); field('year').value = String(new Date().getFullYear()); field('publisher').value = 'Repositorio local'; updateUploadMode(); applyPolicy(); showStep(0);
-if (!basedOnId) restoreDraft();
+if (!basedOnId) {restoreDraft();metadataProfileWidget.refresh();}
 if (basedOnId) Promise.all([
   api(`/api/v1/dataresources/${encodeURIComponent(basedOnId)}`),
   api(`/api/v1/scientific/${encodeURIComponent(basedOnId)}`),
@@ -396,5 +399,6 @@ if (basedOnId) Promise.all([
   translationEditor.set(previous.translations||{});
   for (const item of previousFunding) addFunding(item);
   applyPolicy();
-  restoreDraft();
+  metadataProfileWidget.inherit(previous);
+  restoreDraft();metadataProfileWidget.refresh();
 }).catch(error => report(`No se pudo cargar la versión anterior: ${error.message}`, 'error'));

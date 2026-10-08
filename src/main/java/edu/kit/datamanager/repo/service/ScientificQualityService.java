@@ -48,6 +48,7 @@ public class ScientificQualityService {
         checks.add(new QualityCheck("ror", "ROR institucional", hasText(science.getRor()) || identities.stream().anyMatch(item -> hasText(item.getRor())), false));
         checks.add(new QualityCheck("summary","Resumen científico",hasText(science.getSummary()),false));
         checks.add(new QualityCheck("coverage","Cobertura temporal/geográfica",science.getTemporalStart()!=null || science.getTemporalEnd()!=null || hasText(science.getGeographicCoverage()),false));
+        for(String field:science.getMetadataProfileRequiredFields())checks.add(new QualityCheck("profile:"+field,"Perfil: "+ScientificMetadataProfileService.FIELDS.getOrDefault(field,field),ScientificMetadataProfileService.complete(science,field),true));
         long completed = checks.stream().filter(QualityCheck::complete).count();
         return new QualityReport((int) (100 * completed / checks.size()),
                 checks.stream().filter(item -> item.required() && !item.complete()).map(QualityCheck::label).toList(), checks);
@@ -57,6 +58,7 @@ public class ScientificQualityService {
     public record QualityCheck(String code, String label, boolean complete, boolean required) {
         @com.fasterxml.jackson.annotation.JsonProperty("explanation")
         public String explanation() {
+            if(code.startsWith("profile:"))return "Este campo es obligatorio según las reglas guardadas del perfil aplicado; cambiar el perfil administrativo no modifica este depósito.";
             return switch(code) {
                 case "title" -> "Permite identificar y encontrar el depósito.";
                 case "authors" -> "Atribuye el trabajo a quienes produjeron los datos.";

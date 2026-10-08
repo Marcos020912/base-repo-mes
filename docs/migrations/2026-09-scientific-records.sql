@@ -252,3 +252,25 @@ CREATE TABLE IF NOT EXISTS scientific_vocabulary_proposed (
  kind varchar(20) NOT NULL REFERENCES scientific_vocabulary_registry(kind),
  position integer NOT NULL, value varchar(255) NOT NULL, PRIMARY KEY(kind,position)
 );
+
+-- Approved metadata profiles and frozen per-dataset rule snapshots.
+CREATE TABLE IF NOT EXISTS scientific_metadata_profiles (
+ id varchar(50) PRIMARY KEY, revision bigint NOT NULL DEFAULT 0, approved_revision bigint,
+ active boolean NOT NULL DEFAULT false,
+ approved_name varchar(100), approved_description varchar(1000), approved_license_id varchar(100), approved_language varchar(16), approved_discipline varchar(255),
+ proposed_name varchar(100), proposed_description varchar(1000), proposed_license_id varchar(100), proposed_language varchar(16), proposed_discipline varchar(255),
+ proposal_note varchar(1000), proposed_by varchar(80), approved_by varchar(80), updated_by varchar(80),
+ proposed_at timestamp(6) with time zone, approved_at timestamp(6) with time zone, updated_at timestamp(6) with time zone
+);
+CREATE TABLE IF NOT EXISTS scientific_profile_approved_fields (
+ profile_id varchar(50) NOT NULL REFERENCES scientific_metadata_profiles(id), field_name varchar(80) NOT NULL, PRIMARY KEY(profile_id,field_name)
+);
+CREATE TABLE IF NOT EXISTS scientific_profile_proposed_fields (
+ profile_id varchar(50) NOT NULL REFERENCES scientific_metadata_profiles(id), field_name varchar(80) NOT NULL, PRIMARY KEY(profile_id,field_name)
+);
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS metadata_profile_id varchar(50);
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS metadata_profile_name varchar(100);
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS metadata_profile_revision bigint;
+CREATE TABLE IF NOT EXISTS scientific_record_profile_fields (
+ resource_id varchar(255) NOT NULL REFERENCES scientific_records(resource_id), field_name varchar(80) NOT NULL, PRIMARY KEY(resource_id,field_name)
+);

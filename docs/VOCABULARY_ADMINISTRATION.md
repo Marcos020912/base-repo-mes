@@ -12,4 +12,4 @@ Cada lista tiene una propuesta pendiente separada de la última lista aprobada. 
 - La lista aprobada permanece en PostgreSQL y entra en el backup/restauración ordinarios.
 - Migración idempotente: `docs/migrations/2026-09-scientific-records.sql`; no ejecutada contra producción.
 
-No elimina las políticas institucionales de revisión de licencias, identificadores o perfiles de metadatos. Los perfiles son un requisito independiente todavía pendiente.
+No elimina las políticas institucionales de revisión de licencias, identificadores o perfiles de metadatos. Los perfiles son un módulo independiente implementado en `METADATA_PROFILES.md`; su definición y aprobación institucional no se sustituyen por estas listas.

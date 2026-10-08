@@ -72,6 +72,13 @@ public class ScientificRecord {
     @jakarta.persistence.CollectionTable(name="scientific_record_translations",joinColumns=@jakarta.persistence.JoinColumn(name="resource_id"))
     @jakarta.persistence.MapKeyColumn(name="language",length=35)
     private java.util.Map<String,LocalizedScientificMetadata> translations = new java.util.LinkedHashMap<>();
+    @Column(length=50) private String metadataProfileId;
+    @Column(length=100) private String metadataProfileName;
+    private Long metadataProfileRevision;
+    @jakarta.persistence.ElementCollection(fetch=jakarta.persistence.FetchType.EAGER)
+    @jakarta.persistence.CollectionTable(name="scientific_record_profile_fields",joinColumns=@jakarta.persistence.JoinColumn(name="resource_id"))
+    @Column(name="field_name",length=80,nullable=false)
+    private java.util.Set<String> metadataProfileRequiredFields=new java.util.LinkedHashSet<>();
     private Instant submittedAt;
     private Instant publishedAt;
     private Instant withdrawnAt;

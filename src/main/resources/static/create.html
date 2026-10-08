@@ -37,6 +37,7 @@
         <section class="panel wizard-panel" data-step="1" aria-labelledby="step-science" hidden>
           <p class="eyebrow">Paso 2 de 4</p><h2 id="step-science">Ficha científica</h2>
           <p class="muted">Versión, licencia, institución y metodología son necesarias para solicitar revisión.</p>
+          <fieldset><legend>Perfil de metadatos opcional</legend><label>Perfil aprobado<select id="dataset-profile-select"><option value="">Sin perfil adicional</option></select></label><input type="hidden" name="profileSnapshot"><button id="apply-dataset-profile" type="button" class="secondary">Revisar y aplicar perfil</button><p id="dataset-profile-status" role="status">Consultando perfiles…</p></fieldset>
           <div class="wizard-fields">
             <div class="form-grid"><label>Versión <input name="versionLabel" value="1.0" maxlength="40" required></label><label>Licencia <small>Ejemplo: CC-BY-4.0</small><input name="licenseId" maxlength="100" required></label></div>
             <div class="form-grid"><label>Institución <input name="institution" maxlength="255" required></label><label>ROR institucional <small>Opcional</small><input name="ror" placeholder="https://ror.org/..."></label></div>
@@ -78,6 +79,6 @@
       </form>
     </main>
   </div>
-  <script src="auth.js"></script><script src="transfers.js"></script><script src="vocabularies.js"></script><script src="metadata-translations.js"></script><script src="privacy.js"></script><script src="create.js"></script>
+  <script src="auth.js"></script><script src="transfers.js"></script><script src="vocabularies.js"></script><script src="metadata-translations.js"></script><script src="privacy.js"></script><script src="metadata-profile-widget.js"></script><script src="create.js"></script>
 </body>
 </html>

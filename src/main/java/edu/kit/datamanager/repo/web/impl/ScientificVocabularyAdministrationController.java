@@ -12,6 +12,7 @@ public class ScientificVocabularyAdministrationController {
     public ScientificVocabularyAdministrationController(ScientificVocabularyAdministrationService service){this.service=service;}
     @ExceptionHandler({org.springframework.dao.DataIntegrityViolationException.class,org.springframework.orm.ObjectOptimisticLockingFailureException.class})
     public org.springframework.http.ResponseEntity<?> conflict(){return org.springframework.http.ResponseEntity.status(409).body(java.util.Map.of("message","El vocabulario cambió; vuelva a consultarlo antes de guardar."));}
+    @ModelAttribute public void noStore(jakarta.servlet.http.HttpServletResponse response){response.setHeader("Cache-Control","no-store");}
     @GetMapping public List<View> list(){return service.list();}
     @PutMapping("/{kind}") public View propose(@PathVariable Kind kind,@RequestBody Proposal input){return service.propose(kind,input.values(),input.note(),input.revision(),actor());}
     @PostMapping("/{kind}/approve") public View approve(@PathVariable Kind kind,@RequestBody Approval input){return service.approve(kind,input.revision(),actor());}

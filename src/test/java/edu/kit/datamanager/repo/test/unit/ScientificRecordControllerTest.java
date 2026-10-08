@@ -94,11 +94,13 @@ public class ScientificRecordControllerTest {
         when(owners.findById("r2")).thenReturn(Optional.of(new ResourceOwnership("r2", "author")));
         ScientificRecord previous = new ScientificRecord("r1"); previous.setStatus(PublicationStatus.PUBLISHED);
         previous.setConceptualDoi("10.1234/concept");
+        previous.setMetadataProfileId("tabular");previous.setMetadataProfileName("Perfil publicado");previous.setMetadataProfileRevision(3L);previous.setMetadataProfileRequiredFields(new java.util.LinkedHashSet<>(java.util.Set.of("processingTools")));
         when(records.findById("r1")).thenReturn(Optional.of(previous));
         ScientificRecord derived = controller.deriveFrom("r2", "r1");
         assertEquals("r1", derived.getPreviousResourceId());
         assertEquals("10.1234/concept", derived.getConceptualDoi());
         assertEquals(PublicationStatus.DRAFT, derived.getStatus());
+        assertEquals("tabular",derived.getMetadataProfileId());assertEquals(Long.valueOf(3),derived.getMetadataProfileRevision());assertEquals(java.util.Set.of("processingTools"),derived.getMetadataProfileRequiredFields());assertNotSame(previous.getMetadataProfileRequiredFields(),derived.getMetadataProfileRequiredFields());previous.getMetadataProfileRequiredFields().clear();assertEquals(java.util.Set.of("processingTools"),derived.getMetadataProfileRequiredFields());
     }
 
     @Test
@@ -173,5 +175,9 @@ public class ScientificRecordControllerTest {
         assertThrows(ResponseStatusException.class,()->controller.update("r1",provenance(null,null,"x".repeat(2001))));
         var record=new ScientificRecord("r1");record.setStatus(PublicationStatus.PUBLISHED);when(records.findById("r1")).thenReturn(Optional.of(record));
         assertThrows(ResponseStatusException.class,()->controller.update("r1",provenance("changed",null,null)));
+    }
+    @Test public void manualPublicationChecksFrozenProfileRules(){
+        var record=new ScientificRecord("r1");record.setStatus(PublicationStatus.IN_REVIEW);record.setVersionLabel("1.0");record.setVersionDoi("10.1234/profiled");record.setLicenseId("CC-BY-4.0");record.setMetadataProfileRequiredFields(new java.util.LinkedHashSet<>(java.util.Set.of("processingTools")));when(records.findById("r1")).thenReturn(Optional.of(record));
+        var error=assertThrows(ResponseStatusException.class,()->controller.publish("r1",new ScientificRecordController.PublicationApproval(true)));assertEquals(400,error.getStatusCode().value());assertEquals(PublicationStatus.IN_REVIEW,record.getStatus());record.setProcessingTools("Python 3.12");assertEquals(PublicationStatus.PUBLISHED,controller.publish("r1",new ScientificRecordController.PublicationApproval(true)).getStatus());
     }
 }
