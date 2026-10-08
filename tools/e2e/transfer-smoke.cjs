@@ -54,6 +54,12 @@ const server = http.createServer((request, response) => {
     assert.equal(await page.$eval('.transfer-item progress', el => el.hasAttribute('value')), false,
       'Sin Content-Length el progreso debe ser indeterminado.');
     await page.click('.transfer-toggle');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'transfer-panel');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.$eval('#transfer-panel', el => el.hidden), true);
+    assert.equal(await page.$eval('.transfer-toggle', el => el.getAttribute('aria-expanded')), 'false');
+    assert.equal(await page.evaluate(() => document.activeElement.className), 'transfer-toggle');
+    await page.click('.transfer-toggle');
     await page.click('.transfer-item button');
     await page.waitForFunction(() => window.downloadResult === 'AbortError');
     await page.waitForFunction(() => document.querySelector('.transfer-item span').textContent === 'Descarga cancelada');
@@ -70,7 +76,7 @@ const server = http.createServer((request, response) => {
     assert.equal(failure, 'No se pudo descargar el archivo.');
     assert.equal(await page.$eval('.transfer-item span', el => el.textContent), 'Error en la descarga');
     assert.equal(unauthorizedHeader, false, 'La página pública envió Authorization.');
-    await page.click('.transfer-heading button');
+    await page.click('.transfer-heading button:not(.transfer-close)');
     assert.equal(await page.$$eval('.transfer-item', items => items.length), 0);
     await page.evaluate(() => transfers.upload('/upload', new File(['nombre,valor\nuno,1\n'], 'datos.csv')));
     assert(uploaded > 18, 'No se recibió el cuerpo multipart de la subida.');
@@ -95,6 +101,9 @@ const server = http.createServer((request, response) => {
     assert(uploadClosed, 'Cancelar subida no cerró la conexión HTTP.');
     assert.equal(await page.$eval('.transfer-item span', el => el.textContent), 'Subida cancelada');
     assert.equal(await page.$eval('.transfer-item button', el => el.hidden), true);
+    await page.click('.transfer-close');
+    assert.equal(await page.$eval('#transfer-panel', el => el.hidden), true);
+    assert.equal(await page.evaluate(() => document.activeElement.className), 'transfer-toggle');
     assert.deepEqual(errors, []);
     console.log('Transferencias OK: stream sin tamaño, cancelación HTTP, éxito, error y limpieza anónimos; subida multipart, rechazo y cancelación HTTP.');
   } finally {

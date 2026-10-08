@@ -9,11 +9,14 @@ const transfers = (() => {
   const panel = document.createElement('section');
   panel.id = 'transfer-panel'; panel.className = 'transfer-panel'; panel.hidden = true;
   panel.setAttribute('aria-label', 'Subidas y descargas');
+  panel.tabIndex = -1;
   const heading = document.createElement('div'); heading.className = 'transfer-heading';
   const title = document.createElement('h2'); title.textContent = 'Transferencias';
   const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'link-button'; clear.textContent = 'Limpiar finalizadas';
+  const close = document.createElement('button'); close.type = 'button'; close.className = 'link-button transfer-close';
+  close.textContent = 'Cerrar'; close.setAttribute('aria-label', 'Cerrar monitor de transferencias');
   const list = document.createElement('ol'); list.className = 'transfer-list';
-  heading.append(title, clear); panel.append(heading, list); document.body.append(panel);
+  heading.append(title, clear, close); panel.append(heading, list); document.body.append(panel);
   (document.querySelector('.page-header .button-row') || document.querySelector('.page-header') || document.body).append(toggle);
 
   function refreshToggle() {
@@ -51,9 +54,18 @@ const transfers = (() => {
     task.active = false; task.status.textContent = text;
     task.progress.value = 100; task.progress.hidden = !success; task.cancel.hidden = true; refreshToggle();
   }
+  function closePanel() {
+    const returnFocus = panel.contains(document.activeElement);
+    panel.hidden = true; toggle.setAttribute('aria-expanded', 'false');
+    if (returnFocus) toggle.focus();
+  }
   toggle.addEventListener('click', () => {
-    panel.hidden = !panel.hidden;
-    toggle.setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) { closePanel(); return; }
+    panel.hidden = false; toggle.setAttribute('aria-expanded', 'true'); panel.focus();
+  });
+  close.addEventListener('click', closePanel);
+  panel.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); closePanel(); }
   });
   clear.addEventListener('click', () => {
     for (const task of [...tasks]) if (!task.active) {

@@ -65,3 +65,6 @@ También prueba la subida multipart con respuesta 201, un rechazo 400 con
 mensaje JSON y la cancelación XHR de una petición que ya llegó al servidor.
 El servidor de prueba consume el cuerpo y retiene la respuesta para permitir
 cancelar una petición activa: no simula almacenamiento ni garantiza rollback.
+El test del monitor verifica además el foco al abrir, cierre con Escape y botón
+Cerrar, estado aria-expanded y retorno al activador. El panel es no modal:
+permite seguir navegando por el resto de la página.
