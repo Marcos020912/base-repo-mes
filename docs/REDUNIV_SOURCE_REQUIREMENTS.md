@@ -63,7 +63,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | C03 | Facetas: acceso, formato, proyecto/financiador, DOI, idioma | Base local: API/funding; comprobar todas visibles y utilizables en catálogo público. |
 | C04 | Búsqueda, orden y paginación en servidor | Base local: catálogo; no sustituir por filtro de 200 registros en cliente. |
 | C05 | Filtros, página y orden reproducibles en URL | Implementado local: URL reproducible, historial de filtros/orden/página y restauración en popstate; prueba Chrome de ambos catálogos aprobada (API fixture, no prueba de búsqueda backend). |
-| C06 | Distinguir vacío, cero coincidencias, permisos y caída | Base local: estados catálogo; comprobar mensajes y acciones diferentes por caso. |
+| C06 | Distinguir vacío, cero coincidencias, permisos y caída | Implementado local: vacío general, cero coincidencias, permiso y caída diferenciados en ambos catálogos; limpiar filtros/soporte/reintento y prueba Chrome de recuperación aprobados. |
 | C07 | Colecciones temáticas e institucionales | Implementado local: colecciones temáticas/institucionales persistentes, gestión curador/admin con modales y catálogo público paginado solo PUBLISHED. Cuatro pruebas JPA y E2E PostgreSQL/SMTP/Chrome/restauración aprobados; no duplica ni elimina datasets. |
 | C08 | Políticas, ayuda y guía de citación | Parcial: nueva `help.html` ofrece guía y condiciones técnicas; políticas institucionales formales aún no aprobadas. |
 | C09 | Métricas públicas con definiciones transparentes | Parcial: inventario público real de versiones PUBLISHED, política OPEN y colecciones públicas con definiciones/fecha; JPA y E2E aprobados. Uso/descargas y metodología COUNTER/DataCite aún pendientes. |

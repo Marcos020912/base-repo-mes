@@ -34,7 +34,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **C03 — Facetas: acceso, formato, proyecto/financiador, DOI, idioma**. Base local: API/funding; comprobar todas visibles y utilizables en catálogo público.
 - [ ] **C04 — Búsqueda, orden y paginación en servidor**. Base local: catálogo; no sustituir por filtro de 200 registros en cliente.
 - [x] **C05 — Filtros, página y orden reproducibles en URL**. Implementado local: pushState/replace inicial, popstate restaurando valores ausentes, filtro/orden/página y cancelando debounce. Test Chrome de ambos catálogos aprobado (API fixture, no prueba de búsqueda backend).
-- [ ] **C06 — Distinguir vacío, cero coincidencias, permisos y caída**. Base local: estados catálogo; comprobar mensajes y acciones diferentes por caso.
+- [x] **C06 — Distinguir vacío, cero coincidencias, permisos y caída**. Implementado local: mensajes y acciones de limpiar filtros, soporte y reintento diferenciados, sin códigos HTTP ni errores técnicos al usuario. Test Chrome de ambos catálogos y recuperación aprobado.
 - [x] **C07 — Colecciones temáticas e institucionales**. Implementado local: colecciones temáticas/institucionales persistentes, gestión curador/admin con modales y catálogo público paginado solo PUBLISHED. Cuatro pruebas JPA y E2E PostgreSQL/SMTP/Chrome/restauración aprobados; no duplica ni elimina datasets.
 - [ ] **C08 — Políticas, ayuda y guía de citación**. Parcial: nueva `help.html` ofrece guía y condiciones técnicas; políticas institucionales formales aún no aprobadas.
 - [ ] **C09 — Métricas públicas con definiciones transparentes**. Parcial: inventario público real de versiones PUBLISHED, política OPEN y colecciones públicas con definiciones/fecha; JPA y E2E aprobados. Uso/descargas y metodología COUNTER/DataCite aún pendientes.
@@ -127,3 +127,6 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 ### Historial reproducible de catálogo
 - `node tools/e2e/catalog-history.cjs`: ambos catálogos, URL inicial, búsqueda, página, orden, Atrás/Adelante, valores ausentes, facetas y recarga aprobados. API/auth fixture; no reemplaza integración de seguridad/búsqueda.
 - Build JAR aprobado; axe53estados0. Última regresión backend sin cambios Java:48 suites487pruebas aprobadas en bloque operaciones.
+
+### Estados de búsqueda
+- Test Chrome fixture de ambos catálogos: vacío, cero coincidencias, permiso403 y caída503 con ayuda/limpieza/reintento que recupera resultados. JAR aprobado y axe53estados0.

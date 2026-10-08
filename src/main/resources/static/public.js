@@ -86,6 +86,7 @@ async function load({historyMode='push'}={}) {
     if (response.status === 403) throw new Error('No tienes permiso para consultar este catálogo.');
     if (!response.ok) throw new Error('El servicio de búsqueda no está disponible en este momento.');
     const data = await response.json(); if (requestId !== pendingRequest) return;
+    if(!Array.isArray(data.items)||!Number.isInteger(data.page)||!Number.isInteger(data.pages)||!Number.isFinite(data.total))throw new Error('El servicio de búsqueda no está disponible en este momento.');
     state.page = data.page; state.pages = data.pages;
     results.replaceChildren(); pagination.replaceChildren();
     if (!data.items.length) {
@@ -119,7 +120,7 @@ async function load({historyMode='push'}={}) {
       if (facetResponse.ok) { const facets = await facetResponse.json(); if (requestId === pendingRequest) renderFacets(facets); }
       else if (requestId === pendingRequest) facetPanel.textContent = 'No se pudieron cargar las facetas.';
     } catch { if (requestId === pendingRequest) facetPanel.textContent = 'No se pudieron cargar las facetas.'; }
-  } catch (error) { if (requestId !== pendingRequest) return; status.textContent = error.message; results.replaceChildren(); pagination.replaceChildren(); facetPanel.replaceChildren(); }
+  } catch (error) { if (requestId !== pendingRequest) return; status.textContent = error.message==='No tienes permiso para consultar este catálogo.'?error.message:'El servicio de búsqueda no está disponible en este momento.'; results.replaceChildren(); pagination.replaceChildren(); facetPanel.replaceChildren(); const panel=text('div','','panel empty');const forbidden=error.message==='No tienes permiso para consultar este catálogo.';const action=text(forbidden?'a':'button',forbidden?'Solicitar ayuda':'Reintentar búsqueda','secondary');if(forbidden)action.href='mailto:soporte@mes.gob.cu';else{action.type='button';action.onclick=()=>load();}panel.append(action);results.append(panel); }
 }
 let timer; q.addEventListener('input', () => { state.page = 0; clearTimeout(timer); timer = setTimeout(load, 300); });
 for(const control of [discipline,institution,language,format]) control.addEventListener('input', () => { state.page=0; clearTimeout(timer); timer=setTimeout(load,300); });
