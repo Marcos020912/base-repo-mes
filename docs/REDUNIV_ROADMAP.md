@@ -47,6 +47,14 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   La ficha del autor muestra una vista previa real y el checklist de calidad
   antes de confirmar ese envío. Si falla una carga parcial, el borrador no se
   envía y puede corregirse desde su ficha.
+- El asistente conserva localmente metadatos y autores por 14 días para poder
+  reanudar un formulario interrumpido; por seguridad, los archivos se
+  seleccionan de nuevo. El catálogo público muestra facetas agregadas con
+  recuentos y estados diferenciados de vacío, error y cero coincidencias.
+- Los recursos científicos pueden declarar relaciones tipadas DOI/URL que se
+  muestran públicamente y se transmiten a DataCite. ORCID e institución/ROR
+  pueden asignarse a cada creador por separado; faltan autenticación ORCID y
+  verificación institucional en vivo antes de considerarlos certificados.
 - El registro por correo deja recuperar el envío cuando SMTP falla, y las rutas de verificación/reenvío son accesibles antes del primer login.
 - Cambio de contraseña propia, revocación de JWT anteriores, comprobación en
   cada solicitud de rol/estado/validación de la cuenta, contraseña de arranque
@@ -57,7 +65,7 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256 y cliente DataCite pasan. La suite completa pasa con 399 pruebas y 0 fallos (28 de septiembre de 2026); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256 y cliente DataCite pasan. La suite completa pasó con 405 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`); el JAR también compila sin red. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
 [`REDUNIV_IMPLEMENTATION_CHECKLIST.md`](REDUNIV_IMPLEMENTATION_CHECKLIST.md).
@@ -68,13 +76,15 @@ El estado detallado y actualizado de cada ítem está en
    producción, rate limiting distribuido, auditoría y pruebas de seguridad funcionales. La suite heredada ya se adecuó al comportamiento 401 sin debilitar la autorización.
 2. Modelo de depósito: enlaces privados temporales para revisores externos, pruebas de
    concurrencia/transiciones y evaluación curatorial de formatos/datos sensibles. Una versión nueva requiere cargar sus archivos.
-3. Identidad científica: integrar registro DOI con el proveedor institucional,
-   verificación ORCID/ROR, autores e instituciones múltiples, vocabularios de
-   licencia/disciplinas y relaciones tipadas procesables por máquinas.
+3. Identidad científica: validar integración DOI con el proveedor institucional,
+   autenticación ORCID y consulta ROR, múltiples afiliaciones por autor y
+   aprobación de vocabularios de licencia/disciplinas. Las relaciones tipadas
+   y el mapeo por creador ya están implementados localmente.
 4. Citación: validar estilos con bibliotecarios, agregar Vancouver/Chicago/IEEE,
    descarga completa de metadatos y validación bibliográfica de citas.
-5. Descubrimiento: facetas agregadas y estados de catálogo
-   vacío, cero coincidencias, falta de permisos y fallo de búsqueda.
+5. Descubrimiento: completar facetas de autor, formato y financiación/proyecto,
+   además de medir el rendimiento PostgreSQL; las restantes facetas y estados
+   explícitos de búsqueda ya están implementados localmente.
 6. Curación y preservación: cola de revisión, vocabularios controlados,
    checksum SHA-256, operación de la verificación periódica, procedencia de archivos/datos,
    preservación y métricas definidas.

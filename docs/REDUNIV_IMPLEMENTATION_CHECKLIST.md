@@ -64,7 +64,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       manuales existentes antes de activar el modo automático en producción.
 - [ ] Integrar búsqueda/verificación en vivo ORCID/ROR y, si se requiere,
       múltiples afiliaciones por un mismo autor; la captura actual valida el
-      formato y permite una institución por autor.
+      formato y permite una institución por autor. La búsqueda ORCID necesita
+      token de su API y no debe usarse para atribuir identidad por coincidencia
+      de nombres; para acreditar titularidad se requiere OAuth ORCID y
+      autorización del investigador. ROR dispone de consulta pública v2.
 - [ ] Aprobar vocabularios institucionales de licencia/disciplinas y activar
       `repo.scientific.strict-vocabulary=true` después de migrar valores
       heredados; las listas actuales no son un catálogo institucional aprobado.
