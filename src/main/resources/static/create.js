@@ -23,6 +23,46 @@ const field = name => form.elements.namedItem(name);
 const value = name => field(name).value.trim();
 const files = () => Array.from($('#dataset-files').files);
 const errorBox = $('#wizard-message');
+const autosaveKey = `reduniv-deposit-v1:${user?.username || 'anonymous'}:${basedOnId || 'new'}`;
+const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','accessLevel','embargoUntil','relatedPublications'];
+let autosaveEnabled = false;
+let autosaveTimer;
+function storedDraft() {
+  try {
+    const draft = JSON.parse(localStorage.getItem(autosaveKey) || 'null');
+    return draft && Date.now() - draft.updatedAt < 14 * 86400000 ? draft : null;
+  } catch { return null; }
+}
+function persistDraft() {
+  if (!autosaveEnabled || createdId) return;
+  const values = Object.fromEntries(autosaveFields.map(name => [name, value(name)]));
+  try {
+    localStorage.setItem(autosaveKey, JSON.stringify({ values, creators: creators(), step, updatedAt: Date.now() }));
+    $('#autosave-status').textContent = 'Metadatos guardados en este navegador. Los archivos deben seleccionarse de nuevo tras recargar.';
+    $('#discard-autosave').hidden = false;
+  } catch { $('#autosave-status').textContent = 'No se pudieron guardar los metadatos en este navegador.'; }
+}
+function scheduleAutosave() {
+  if (!autosaveEnabled || createdId) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(persistDraft, 500);
+}
+function restoreDraft() {
+  const draft = storedDraft();
+  if (draft) {
+    for (const [name, saved] of Object.entries(draft.values || {})) {
+      if (autosaveFields.includes(name) && typeof saved === 'string') field(name).value = saved;
+    }
+    if (Array.isArray(draft.creators) && draft.creators.length) {
+      $('#creator-list').replaceChildren();
+      for (const author of draft.creators) addCreator(author.givenName || '', author.familyName || '');
+    }
+    $('#autosave-status').textContent = 'Se recuperaron tus metadatos. Selecciona de nuevo description.md y los archivos antes de guardar.';
+    $('#discard-autosave').hidden = false;
+  }
+  autosaveEnabled = true;
+  applyPolicy();
+}
 
 function report(message, kind = '') {
   errorBox.className = `message ${kind}`;
@@ -73,6 +113,7 @@ function showStep(next) {
       .catch(error => report(`No se pudo generar la vista previa: ${error.message}`, 'error'));
   }
   document.querySelector('.wizard-progress').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scheduleAutosave();
 }
 function invalid(message, input) {
   report(message, 'error');
@@ -180,6 +221,8 @@ async function save(submit) {
     report('Creando borrador…');
     const created = await api('/api/v1/dataresources/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     createdId = created.id;
+    clearTimeout(autosaveTimer);
+    try { localStorage.removeItem(autosaveKey); } catch { /* Storage may be disabled. */ }
     let inheritedConceptualDoi = null;
     if (basedOnId) {
       report('Enlazando nueva versión…');
@@ -216,6 +259,15 @@ form.addEventListener('submit', event => {
   else if (!$('#save-draft').disabled) save(false);
 });
 $('#add-creator').addEventListener('click', () => addCreator());
+form.addEventListener('input', scheduleAutosave);
+form.addEventListener('change', scheduleAutosave);
+form.addEventListener('click', event => { if (event.target.closest('#add-creator,.creator-row button')) scheduleAutosave(); });
+$('#discard-autosave').addEventListener('click', () => {
+  clearTimeout(autosaveTimer);
+  try { localStorage.removeItem(autosaveKey); } catch { /* Storage may be disabled. */ }
+  $('#discard-autosave').hidden = true;
+  $('#autosave-status').textContent = 'Datos locales descartados; los campos actuales permanecen hasta recargar.';
+});
 field('type').addEventListener('change', applyPolicy);
 $('#dataset-files').addEventListener('change', updateFileCount);
 $('#wizard-back').addEventListener('click', () => showStep(step - 1));
@@ -224,6 +276,7 @@ $('#save-draft').addEventListener('click', () => save(false));
 $('#save-submit').addEventListener('click', () => save(true));
 window.addEventListener('beforeunload', event => { if (busy && createdId) { event.preventDefault(); event.returnValue = ''; } });
 addCreator(); field('year').value = String(new Date().getFullYear()); field('publisher').value = 'Repositorio local'; applyPolicy(); showStep(0);
+if (!basedOnId) restoreDraft();
 if (basedOnId) Promise.all([
   api(`/api/v1/dataresources/${encodeURIComponent(basedOnId)}`),
   api(`/api/v1/scientific/${encodeURIComponent(basedOnId)}`),
@@ -239,4 +292,5 @@ if (basedOnId) Promise.all([
   $('#creator-list').replaceChildren(); for (const author of base.creators || []) addCreator(author.givenName || '', author.familyName || '');
   if (!$('#creator-list').childElementCount) addCreator();
   applyPolicy();
+  restoreDraft();
 }).catch(error => report(`No se pudo cargar la versión anterior: ${error.message}`, 'error'));

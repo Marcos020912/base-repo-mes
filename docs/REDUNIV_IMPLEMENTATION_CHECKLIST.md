@@ -33,6 +33,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       guardado como borrador o envío a revisión. Antes de enviar un borrador
       existente, el autor ve metadatos, descripción renderizada, archivos y
       bloqueos de calidad. Si falla una carga, conserva el enlace al borrador.
+      Los metadatos del asistente se guardan localmente por usuario y depósito
+      durante 14 días; los archivos deben reseleccionarse tras recargar.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
 - [x] Ítem 7 (curación/preservación): auditorías SHA-256 manuales y programadas
