@@ -16,7 +16,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [x] Control de acceso a archivos restringidos o embargados y aviso de versión sucesora.
 - [x] Checklist de calidad antes de enviar a revisión e historial editorial.
 - [x] Versiones enlazadas y bloqueo de edición de la versión publicada.
-- [x] Exportación preliminar APA, BibTeX, RIS y CSL-JSON.
+- [x] Exportación preliminar APA, Vancouver, Chicago, IEEE, BibTeX, RIS y
+      CSL-JSON para la versión publicada. Pendiente validación bibliotecaria.
 - [x] SHA-256 al cargar por la interfaz web, comprobación manual por curador y
       estado independiente visible en la ficha pública. Auditoría programada
       **opcional** (desactivada por defecto).
@@ -75,7 +76,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Aprobar vocabularios institucionales de licencia/disciplinas y activar
       `repo.scientific.strict-vocabulary=true` después de migrar valores
       heredados; las listas actuales no son un catálogo institucional aprobado.
-- [ ] Validación bibliotecaria de citas y estilos adicionales.
+- [ ] Validación bibliotecaria de todos los estilos de cita y del orden de
+      autoría heredado; los nuevos formatos aún son preliminares.
 - [ ] Completar facetas de autor, formato y proyecto/financiador y validar
       rendimiento de consultas agregadas con volumen real en PostgreSQL.
 - [ ] Dimensionar I/O y pool JDBC para la auditoría, configurar alerta externa

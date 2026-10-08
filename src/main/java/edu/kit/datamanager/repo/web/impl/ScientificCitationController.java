@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.DataResource;
+import edu.kit.datamanager.repo.domain.Agent;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
@@ -48,10 +49,19 @@ public class ScientificCitationController {
         String doi = science.getVersionDoi();
         String version = science.getVersionLabel();
         String publisher = safe(resource.getPublisher());
+        List<Agent> creatorAgents = resource.getCreators().stream().toList();
         String filename = "citation-" + id.replaceAll("[^A-Za-z0-9_-]", "_");
         String result; MediaType mime; String extension;
         switch (format.toLowerCase()) {
             case "apa" -> { result = String.join(", ", authors) + " (" + year + "). " + title + " (versión " + version + ") [Conjunto de datos]. " + publisher + ". https://doi.org/" + doi; mime = MediaType.TEXT_PLAIN; extension = "txt"; }
+            case "vancouver" -> { result = String.join(", ", creatorAgents.stream().map(ScientificCitationController::vancouverName).toList())
+                    + ". " + safe(title) + " [conjunto de datos]. Versión " + safe(version) + ". " + publisher + "; " + year + ". doi:" + safe(doi); mime = MediaType.TEXT_PLAIN; extension = "txt"; }
+            case "chicago" -> { result = String.join(", ", authors.stream().map(ScientificCitationController::safe).toList())
+                    + ". \"" + safe(title) + ".\" Conjunto de datos, versión " + safe(version) + ". "
+                    + publisher + ", " + year + ". https://doi.org/" + safe(doi); mime = MediaType.TEXT_PLAIN; extension = "txt"; }
+            case "ieee" -> { result = String.join(", ", creatorAgents.stream().map(ScientificCitationController::ieeeName).toList())
+                    + ", \"" + safe(title) + ",\" conjunto de datos, " + publisher + ", ver. "
+                    + safe(version) + ", " + year + ", doi: " + safe(doi) + "."; mime = MediaType.TEXT_PLAIN; extension = "txt"; }
             case "bibtex" -> { result = "@dataset{" + filename + ",\n  author = {" + bib(String.join(" and ", authors)) + "},\n  title = {" + bib(title) + "},\n  year = {" + bib(year) + "},\n  publisher = {" + bib(publisher) + "},\n  version = {" + bib(version) + "},\n  doi = {" + bib(doi) + "}\n}\n"; mime = MediaType.TEXT_PLAIN; extension = "bib"; }
             case "ris" -> { result = "TY  - DATA\n" + authors.stream().map(name -> "AU  - " + safe(name) + "\n").reduce("", String::concat) + "TI  - " + safe(title) + "\nPY  - " + year + "\nPB  - " + publisher + "\nDO  - " + doi + "\nET  - " + safe(version) + "\nER  - \n"; mime = MediaType.TEXT_PLAIN; extension = "ris"; }
             case "csl-json" -> {
@@ -69,4 +79,17 @@ public class ScientificCitationController {
 
     private static String safe(String input) { return input == null ? "" : input.replaceAll("[\\r\\n\\t]+", " ").trim(); }
     private static String bib(String input) { return safe(input).replace("\\", "").replace("{", "").replace("}", ""); }
+    private static String initials(String given) {
+        if (given == null || given.isBlank()) return "";
+        return java.util.Arrays.stream(given.trim().split("\\s+"))
+                .filter(part -> !part.isBlank()).map(part -> part.substring(0, 1).toUpperCase()).reduce("", String::concat);
+    }
+    private static String vancouverName(Agent author) {
+        return (safe(author.getFamilyName()) + " " + initials(author.getGivenName())).trim();
+    }
+    private static String ieeeName(Agent author) {
+        String first = initials(author.getGivenName());
+        String dotted = first.replaceAll("(.)", "$1.");
+        return (dotted + " " + safe(author.getFamilyName())).trim();
+    }
 }

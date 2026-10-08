@@ -30,8 +30,9 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   `PUBLISHED`. Los metadatos de versiones restringidas o embargadas son
   visibles, pero la descarga pública de archivos solo se permite para acceso
   abierto o al expirar el embargo. La retirada presenta un tombstone HTTP 410.
-- Exportaciones de cita APA preliminar, BibTeX, RIS y CSL-JSON para versiones
-  publicadas. Requieren validación bibliotecaria antes de producción.
+- Exportaciones de cita APA, Vancouver, Chicago, IEEE, BibTeX, RIS y CSL-JSON
+  para versiones publicadas. Son preliminares y requieren validación
+  bibliotecaria y comprobación del orden de autoría antes de producción.
 - Lista automática de calidad con porcentaje, requisitos de metadatos, description.md y al menos un archivo; el envío a curación se bloquea si faltan requisitos. Esta validación no sustituye la curación humana.
 - Huellas SHA-256 calculadas al subir por los endpoints web y visibles en la
   ficha. Una comprobación manual independiente permite detectar cambios y una
@@ -80,8 +81,8 @@ El estado detallado y actualizado de cada ítem está en
    autenticación ORCID y consulta ROR, múltiples afiliaciones por autor y
    aprobación de vocabularios de licencia/disciplinas. Las relaciones tipadas
    y el mapeo por creador ya están implementados localmente.
-4. Citación: validar estilos con bibliotecarios, agregar Vancouver/Chicago/IEEE,
-   descarga completa de metadatos y validación bibliográfica de citas.
+4. Citación: validar todos los estilos con bibliotecarios y el orden de
+   autoría; completar descarga de metadatos y pruebas bibliográficas.
 5. Descubrimiento: completar facetas de autor, formato y financiación/proyecto,
    además de medir el rendimiento PostgreSQL; las restantes facetas y estados
    explícitos de búsqueda ya están implementados localmente.
