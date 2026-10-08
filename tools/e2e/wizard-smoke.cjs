@@ -450,8 +450,11 @@ async function restorePostgresFixture(page, base, files, published) {
   process.stdout.write('Inventario de contentUri PostgreSQL restaurado OK (sin modificar datos).\n');
   postgres.database='reduniv_restored'; postgres.restored=true;
   await startApp(new URL(base).port,files);
-  await page.evaluate(() => localStorage.clear());
+  const staleToken = await page.evaluate(() => localStorage.getItem('base-repo-token'));
+  assert(staleToken, 'Falta la sesión antigua para probar recuperación tras reinicio.');
   await login(page,base);
+  assert(await page.evaluate(() => localStorage.getItem('base-repo-token')) !== staleToken,
+    'El nuevo login no sustituyó la sesión inválida después del reinicio.');
   const response = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}`);
   assert(response.ok, 'El recurso publicado no sobrevivió a la restauración.');
   assert((await response.json()).title === published.title, 'La restauración alteró el título.');

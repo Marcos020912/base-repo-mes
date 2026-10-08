@@ -134,7 +134,9 @@ del dataset publicado, descarga CSV y huellas SHA-256 del árbol de archivos
 sin cambios. No modifica ni importa bases existentes.
 El fixture empieza con el esquema actual generado por Hibernate; no representa
 todas las variantes de esquemas antiguos ni sustituye el ensayo de staging.
-El reinicio renueva la clave JWT efímera y exige volver a iniciar sesión.
+El reinicio renueva la clave JWT efímera. Se conserva el token antiguo del
+navegador y se verifica que el login siga accesible y lo sustituya, sin limpiar
+localStorage manualmente.
 
 En el segundo arranque se usa ddl-auto=validate: Hibernate no puede completar
 ni corregir el esquema restaurado para ocultar incompatibilidades. Antes de
