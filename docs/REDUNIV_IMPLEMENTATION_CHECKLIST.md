@@ -21,6 +21,12 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [x] SHA-256 al cargar por la interfaz web, comprobación manual por curador y
       estado independiente visible en la ficha pública. Auditoría programada
       **opcional** (desactivada por defecto).
+- [x] Alerta SMTP opt-in, resumida una vez por auditoría completada con
+      `MISMATCH` o `MISSING_FILE`. `deploy.sh` pregunta si activar el barrido
+      semanal y la dirección `repo.fixity.alert-to` (vacía = sin correo);
+      la curación muestra si el envío tuvo éxito o falló. Un error SMTP no
+      convierte una auditoría de archivos completada en fallida. La salida
+      de correo tiene tiempos máximos configurados en despliegues nuevos.
 - [x] Cliente backend DataCite y mapeo de metadatos obligatorios y opcionales
       seguros (licencia, materias, institución/ROR y ORCID cuando hay un solo
       autor), probados contra HTTP simulado; desactivados por defecto y sin
@@ -150,8 +156,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Validar rendimiento de facetas de proyecto/financiador y otras consultas
       agregadas con volumen real en PostgreSQL; validar valores institucionales
       de proyectos/financiadores y metadatos de financiación en DataCite Test.
-- [ ] Dimensionar I/O y pool JDBC para la auditoría, configurar alerta externa
-      por `MISMATCH`/`MISSING_FILE` y política de archivos anteriores sin huella.
+- [ ] Dimensionar I/O y pool JDBC para la auditoría, configurar/validar una
+      dirección institucional real para las alertas y definir política de
+      archivos anteriores sin huella.
 - [ ] Validar RO-Crate con curadores externos, aportar URL/ROR/contacto
       institucional aprobados y completar perfiles OAIS SIP/AIP/DIP y
       cobertura de procedencia de cargas legadas. Validar la proyección
@@ -174,6 +181,15 @@ Curación o por `POST /api/v1/scientific/preservation/audits`. Historial:
 `GET /api/v1/scientific/preservation/audits`; métricas:
 `GET /api/v1/scientific/preservation/metrics`. El servicio mantiene una conexión
 JDBC durante todo el barrido; dimensionar pool e I/O antes de habilitarlo.
+Para activar el aviso por correo, configure `repo.fixity.alert-to` con un único
+buzón y compruebe la entrega con una auditoría de prueba que detecte una
+incidencia controlada. En `deploy.sh`, responda **N** a «¿Reutilizarla sin
+volver a pedir datos?» para cambiar el buzón; Enter conserva el anterior y
+`-` lo desactiva. Sin dirección configurada, la auditoría sigue funcionando
+pero no sale ningún correo. Los despliegues nuevos fijan en 10 s los tiempos
+máximos SMTP de conexión, lectura y escritura; para una instalación anterior
+que reutiliza la configuración sin reescribirla, añada esos valores de forma
+controlada antes de activar las alertas.
 `NO_BASELINE` identifica archivos anteriores sin huella; no se adopta la huella
 actual automáticamente porque ocultaría una alteración previa. El paquete
 `GET /api/v1/scientific/preservation/{id}/package` está reservado a curadores;

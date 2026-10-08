@@ -146,7 +146,7 @@ async function load() {
 async function loadPreservation() {
   try {
     const metrics = await request('/api/v1/scientific/preservation/metrics');
-    const latest = metrics.latestAudit?.id ? `${metrics.latestAudit.status}: ${metrics.latestAudit.checked} comprobados, ${metrics.latestAudit.mismatched} alterados, ${metrics.latestAudit.missing} ausentes, ${metrics.latestAudit.noBaseline} sin huella inicial.` : 'Todavía no hay auditorías.';
+    const latest = metrics.latestAudit?.id ? `${metrics.latestAudit.status}: ${metrics.latestAudit.checked} comprobados, ${metrics.latestAudit.mismatched} alterados, ${metrics.latestAudit.missing} ausentes, ${metrics.latestAudit.noBaseline} sin huella inicial. ${metrics.latestAudit.message || ''}` : 'Todavía no hay auditorías.';
     preservation.textContent = `${metrics.published} publicados · ${metrics.inReview} en revisión · ${metrics.files} archivos · ${metrics.filesChecked} con resultado de verificación · ${metrics.mismatched} alterados · ${metrics.missing} ausentes. Última auditoría: ${latest}`;
   } catch (error) { preservation.textContent = 'No se pudieron consultar las métricas de preservación.'; }
 }

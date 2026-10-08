@@ -31,14 +31,17 @@ public class PreservationAuditService {
     private final FileFixityService fixity;
     private final FixityAuditRunRepository runs;
     private final DataSource dataSource;
+    private final FixityAlertService alerts;
     private final AtomicBoolean localRunning = new AtomicBoolean();
     private final ExecutorService executor = Executors.newSingleThreadExecutor(task -> {
         Thread thread = new Thread(task, "reduniv-fixity-audit"); thread.setDaemon(true); return thread;
     });
 
     public PreservationAuditService(IContentInformationDao contents, FileFixityService fixity,
-                                    FixityAuditRunRepository runs, DataSource dataSource) {
-        this.contents = contents; this.fixity = fixity; this.runs = runs; this.dataSource = dataSource;
+                                    FixityAuditRunRepository runs, DataSource dataSource,
+                                    FixityAlertService alerts) {
+        this.contents = contents; this.fixity = fixity; this.runs = runs;
+        this.dataSource = dataSource; this.alerts = alerts;
     }
 
     /** Empty means an audit is already running on this JVM. */
@@ -70,6 +73,13 @@ public class PreservationAuditService {
             run.setStatus("FAILED");
             run.setMessage("No se pudo completar la auditoría. Revise el registro del servidor.");
         } finally {
+            if ("COMPLETED".equals(run.getStatus()) && (run.getMismatched() > 0 || run.getMissing() > 0)) {
+                try { run.setMessage(alerts.notifyAnomalies(run)); }
+                catch (RuntimeException error) {
+                    LOGGER.error("Could not process fixity alert for audit {}", run.getId(), error);
+                    run.setMessage("Incidencias detectadas; falló el procesamiento de la alerta.");
+                }
+            }
             run.setCompletedAt(Instant.now());
             try { runs.save(run); } catch (RuntimeException error) { LOGGER.error("Could not persist fixity audit result", error); }
             localRunning.set(false);
