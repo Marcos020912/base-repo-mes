@@ -47,3 +47,5 @@ Ficha pública: `node tools/e2e/public-record-i18n.cjs` verifica interfaz biling
 Administración de vocabularios: `node tools/e2e/vocabulary-i18n.cjs` valida etiquetas es/en, preservación de términos/notas/formulario, ausencia de solicitudes por cambio de idioma y aprobación explícita con revisión. Los términos no se traducen automáticamente; la aprobación local no certifica aprobación institucional externa.
 
 Perfiles administrativos: `node tools/e2e/profiles-admin-i18n.cjs` comprueba etiquetas es/en, definición original, requisitos conocidos traducidos por código y etiquetas institucionales desconocidas conservadas, selección de checkbox y aprobación con revisión explícita. No sustituye pruebas del backend ni de snapshots congelados de los datasets.
+
+Colecciones: `node tools/e2e/collections-i18n.cjs` prueba modos público/gestión, datos originales y formularios conservados, revisión en PUT y eliminación explícita de pertenencia. Cambiar idioma no consulta API ni cambia URL/filtros. No prueba permisos reales de servidor ni que un borrador se oculte correctamente en publicación.

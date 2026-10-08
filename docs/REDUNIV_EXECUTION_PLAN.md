@@ -241,3 +241,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Perfiles administrativos es/en: definición, requisitos conocidos por código, propuesta, aprobación y disponibilidad; nombres/descripciones/notas y campos institucionales desconocidos originales.
 - [x] Chrome `node tools/e2e/profiles-admin-i18n.cjs`: cambio es/en sin consultas, controles y checks preservados, payload PUT con revisión/campos y POST solo tras confirmación. Fixture UI aislada, no prueba autorización ni inmutabilidad de snapshots backend.
 - [ ] Ficha privada, revisiones, colecciones y ayuda pendientes; pruebas integradas reales y demás requisitos globales siguen abiertos.
+
+### Colecciones públicas y gestión curatorial bilingües — avance A07 (2026-10-08)
+- [x] Vista de colecciones, fichas agrupadas, filtros/paginación, creación/edición y confirmaciones es/en; títulos, descripción, autoría y valores de categorías permanecen originales.
+- [x] Chrome `node tools/e2e/collections-i18n.cjs`: público/gestión, sin consultas ni cambios de URL por idioma, formulario conservado, PUT con revisión y eliminación de pertenencia solo tras confirmación. Fixture UI no demuestra permisos de servidor.
+- [ ] Ficha privada, revisiones, ayuda y comprobación integrada general siguen pendientes; objetivo global activo.
