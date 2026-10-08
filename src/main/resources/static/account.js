@@ -8,27 +8,27 @@ passwordForm.addEventListener('submit', async event => {
   event.preventDefault();
   if (passwordSubmit.disabled) return;
   const form = new FormData(passwordForm);
-  if (form.get('newPassword') !== form.get('confirmation')) { toast.error('Las contraseñas nuevas no coinciden.'); return; }
+  if (form.get('newPassword') !== form.get('confirmation')) { toast.errorKey('account.mismatch'); return; }
   let completed = false;
   passwordSubmit.disabled = true;
   passwordForm.setAttribute('aria-busy', 'true');
-  passwordSubmit.textContent = 'Actualizando…';
+  uiI18n.set(passwordSubmit,'account.busy');
   try {
     const response = await fetch('/api/v1/auth/change-password', {
       method: 'POST', headers: auth.headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ currentPassword: form.get('currentPassword'), newPassword: form.get('newPassword') })
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || 'No se pudo cambiar la contraseña.');
+    if (!response.ok) throw body.message?new Error(body.message):uiI18n.error('account.failed');
     completed = true;
-    toast.success('Contraseña actualizada. Inicia sesión de nuevo.');
+    toast.successKey('account.success');
     setTimeout(auth.logout, 1200);
-  } catch (error) { toast.error(error.message); }
+  } catch (error) { toast.errorObject(error); }
   finally {
     if (!completed) {
       passwordSubmit.disabled = false;
       passwordForm.setAttribute('aria-busy', 'false');
-      passwordSubmit.textContent = 'Cambiar contraseña';
+      uiI18n.set(passwordSubmit,'account.submit');
     }
   }
 });

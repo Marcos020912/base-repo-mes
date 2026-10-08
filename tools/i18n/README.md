@@ -13,12 +13,14 @@ node tools/e2e/auth-pages-smoke.cjs
 
 ## Alcance actual
 
-Login, registro y verificación de correo: textos estáticos, mensajes locales, título, documento `lang` y selector persistente español/inglés. El idioma inicial es español; el cambio no recarga, no altera credenciales ni borra formularios. Si el almacenamiento local está bloqueado, funciona en memoria.
+Login, registro, verificación de correo y cuenta personal: textos estáticos, mensajes locales, título, documento `lang` y selector persistente español/inglés. El idioma inicial es español; el cambio no recarga, no altera credenciales ni borra formularios. Si el almacenamiento local está bloqueado, funciona en memoria.
 
 Los mensajes arbitrarios del servidor conservan su texto original: no se traducen por coincidencias ni se inventa un diagnóstico. Los códigos/roles/estados de API y los metadatos científicos no cambian de idioma con la interfaz. Los mensajes nativos de validación siguen la configuración del navegador.
 
-**A07 continúa parcial**: falta migrar catálogo, depósito, fichas, cuenta, administración, modales, transferencias y demás mensajes. No se anuncia la plataforma entera como bilingüe. Traducciones y recorridos deben revisarse con usuarios institucionales.
+**A07 continúa parcial**: la navegación compartida también usa claves, pero falta migrar el contenido de catálogo, depósito, fichas, administración, modales, transferencias y demás mensajes. Las páginas aún no migradas mantienen `lang=es`; cada nodo traducido declara su idioma. Solo las páginas completamente migradas cambian el idioma del documento. No se anuncia la plataforma entera como bilingüe. Traducciones y recorridos deben revisarse con usuarios institucionales.
 
 ## Evidencia
 
-Dos pruebas de coherencia de catálogos/bindings; prueba Chrome real de cambio sin perder campos, persistencia entre páginas, selección en memoria con localStorage bloqueado, errores locales actualizados y ausencia de solicitudes de autenticación por cambiar idioma. Auditoría axe del login inglés a320px y del baseline español; no acredita revisión WCAG manual.
+Cuatro pruebas de coherencia, protección de controles y orden de assets de catálogos/bindings; prueba Chrome real de cambio sin perder campos, persistencia entre páginas, selección en memoria con localStorage bloqueado, errores locales actualizados y ausencia de solicitudes de autenticación por cambiar idioma. Auditoría axe del login y la cuenta en inglés a320px y del baseline español; no acredita revisión WCAG manual.
+
+Los bindings de texto se colocan únicamente en nodos hoja. Una etiqueta que contiene un input debe tener un span separado con `data-i18n`; el guard de HTML rechaza bindings que borrarían controles o markup. Para atributos, usar `data-i18n-aria-label`/`data-i18n-alt`.

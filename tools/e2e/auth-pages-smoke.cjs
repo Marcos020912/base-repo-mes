@@ -163,6 +163,15 @@ const server = http.createServer((request,response) => {
     await page.goto(base+'/account.html');
     for (const [name,value] of Object.entries({currentPassword:password,newPassword:password+'new',confirmation:password+'new'}))
       await page.type(`input[name=${name}]`,value);
+    await page.select('[data-ui-locale]','en');
+    assert.equal(await page.$eval('h1',node=>node.textContent),'My account');
+    assert.equal(await page.$eval('.sidebar a[href="account.html"]',node=>node.textContent),'◉ My account');
+    assert.equal(await page.$eval('input[name=currentPassword]',node=>node.value),password);
+    await page.setViewport({width:320,height:700});await page.evaluate(axe.source);
+    const accountAccessibility=await page.evaluate(async()=>axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
+    assert.equal(accountAccessibility.violations.length,0,'Account English at320px axe violations: '+accountAccessibility.violations.map(item=>item.id).join(','));
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1),false);
+    await page.setViewport({width:1280,height:800});await page.select('[data-ui-locale]','es');
     await page.click('#password-form button');
     assert.equal(await page.$eval('#password-form button',el=>el.disabled),true);
     await page.evaluate(()=>document.querySelector('#password-form').requestSubmit());

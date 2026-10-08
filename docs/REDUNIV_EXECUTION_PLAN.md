@@ -55,7 +55,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **A04 — Usuarios, roles e integraciones DOI/OIDC/correo**. Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID.
 - [x] **A05 — Estado almacenamiento/fixity, auditoría/reportes operativos**. Implementado local: consola autorizada con volumen local, inventario técnico/fixity, veinte auditorías e informe JSON fechado. Tests/E2E aprobados; no sustituye monitorización y backup institucional.
 - [x] **A06 — Metadatos multilingües**. Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI.
-- [ ] **A07 — Internacionalización sin textos incrustados en JS**. Parcial: catálogos fuente JSON es/en y acceso/login/registro/verificación migrados, selector persistente sin borrar formularios. Chrome/catálogos/axe aprobados; demás vistas pendientes.
+- [ ] **A07 — Internacionalización sin textos incrustados en JS**. Parcial: catálogos fuente JSON es/en y acceso/login/registro/verificación/cuenta y navegación compartida migrados, selector persistente sin borrar formularios. Chrome/catálogos/axe aprobados; demás vistas pendientes.
 - [ ] **A08 — Paquetes OAIS SIP/AIP/DIP**. Parcial: BagIt/paquete curatorial/ZIP público; perfiles institucionales completos no acreditados.
 - [x] **A09 — RO-Crate y W3C PROV**. Implementado local: declaración científica y eventos técnicos separados, manifiestos/paquetes probados; no inventa actividades ni fechas. Tests/E2E aprobados. Validación externa de perfiles pendiente.
 - [ ] **A10 — Auditorías periódicas SHA-256 verificables**. Base local: manual/programada opcional y alertas; política/volumen/buzón real pendientes.
@@ -179,3 +179,10 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Dos tests de coherencia/bindings y Chrome authfixture aprobado, incluidos idioma entre páginas, mensajes dinámicos, credenciales conservadas y login inglés a320px sin desbordamiento/infracciones axe.
 - Regresión Java21:52suites504tests0fallos/errores/omitidas. JAR y E2E PostgreSQL/SMTP/Chrome/restauración aprobados después de añadir whitelist deassets; axe estático66estados0.
 - Catálogo, depósito, fichas, cuenta, administración y transferencias aún pendientes de migración. No marcar A07 completo ni anunciar plataforma entera bilingüe. Ver tools/i18n/README.md.
+
+### Internacionalización — cuenta y navegación (A07 parcial)
+
+- 63 claves es/en; cuenta personal, cambio de contraseña y toasts locales migrados. Navegación compartida traducida por rutas estables en14páginas; roles y permisos no cambian.
+- Solo páginas totalmente migradas cambian idioma del documento. Otras conservan español; nodos traducidos declaran idioma propio. Metadatos de autor no se traducen.
+- Guard impide bindings de texto en etiquetas con controles/markup: cuatro pruebas Python; Chrome cuenta en inglés320px sin infracciones axe/desbordamiento, preserva contraseña al cambiar idioma. Authfixture e historial de ambos catálogos aprobados.
+- RegresiónJava2152suites504tests0fallos/errores/omitidas; JAR y E2E PostgreSQL/SMTP/Chrome/restauración completo aprobados. No implica traducción completa ni revisión WCAG manual.
