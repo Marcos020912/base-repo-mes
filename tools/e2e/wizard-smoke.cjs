@@ -20,6 +20,7 @@ let browser;
 let postgres;
 let smtp;
 const verificationMessages = [];
+let rejectSmtp = false;
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -95,7 +96,7 @@ async function smtpProperties() {
             if (line==='.') { verificationMessages.push(message.join('\n')); message=[]; data=false; socket.write('250 accepted\r\n'); }
             else message.push(line);
           } else if (/^(EHLO|HELO)/i.test(line)) socket.write('250 localhost\r\n');
-          else if (/^MAIL FROM:/i.test(line)) socket.write('250 sender accepted\r\n');
+          else if (/^MAIL FROM:/i.test(line)) socket.write(rejectSmtp ? '451 4.3.0 Temporary lookup error\r\n' : '250 sender accepted\r\n');
           else if (/^RCPT TO:/i.test(line)) socket.write(/@example\.invalid>/i.test(line) ? '250 recipient accepted\r\n' : '550 only test recipients\r\n');
           else if (/^DATA$/i.test(line)) { data=true; socket.write('354 send data\r\n'); }
           else if (/^QUIT$/i.test(line)) socket.end('221 bye\r\n');
@@ -140,7 +141,31 @@ async function verificationFlow(base) {
     'La cuenta verificada no inició sesión como Usuario.');
   const replay=await post('verify',{email,code});
   assert(replay.status===400, 'El código ya consumido se pudo reutilizar.');
-  process.stdout.write('Correo local OK: registro, envío SMTP, bloqueo previo, verificación, login Usuario y código de un uso.\n');
+  const recoveryEmail='mail-recovery@example.invalid', recoveryName='mail-recovery-fixture';
+  rejectSmtp=true;
+  try {
+    const failed=await post('register',{username:recoveryName,email:recoveryEmail,password:secret});
+    assert(failed.status===503 && failed.body.code==='VERIFICATION_MAIL_UNAVAILABLE',
+      'El fallo SMTP no conservó la respuesta recuperable de registro.');
+    assert(verificationMessages.length===1, 'El SMTP rechazado aceptó un mensaje.');
+    const retry=await post('register',{username:recoveryName,email:recoveryEmail,password:secret});
+    assert(retry.status===409, 'La cuenta creada con correo fallido desapareció o se duplicó.');
+    const denied=await post('login',{username:recoveryName,password:secret});
+    assert(denied.body.code==='EMAIL_NOT_VERIFIED' && !denied.body.token,
+      'La cuenta con correo fallido obtuvo acceso.');
+    const unavailable=await post('resend-verification',{email:recoveryEmail});
+    assert(unavailable.status===503 && !JSON.stringify(unavailable.body).includes('Temporary lookup error'),
+      'Reenvío fallido no devolvió mensaje seguro.');
+  } finally { rejectSmtp=false; }
+  const resent=await post('resend-verification',{email:recoveryEmail});
+  assert(resent.status===200 && verificationMessages.length===2, 'No se recuperó el reenvío SMTP.');
+  const recoveryCode=verificationMessages[1].match(/es: ([0-9]{6})/)?.[1];
+  assert(recoveryCode, 'No llegó código de recuperación.');
+  assert((await post('verify',{email:recoveryEmail,code:recoveryCode})).status===200,
+    'El código reenviado no verificó la cuenta conservada.');
+  const recovered=await post('login',{username:recoveryName,password:secret});
+  assert(recovered.status===200 && recovered.body.user.role==='USER', 'No se pudo entrar tras recuperar correo.');
+  process.stdout.write('Correo local OK: registro/verificación y recuperación tras rechazo SMTP451.\n');
 }
 async function databaseProperties() {
   if (process.env.E2E_POSTGRES !== '1') return [

@@ -176,3 +176,8 @@ y no imprime el código. Prueba JavaMail real: registro 201, código de seis
 dígitos, login bloqueado antes de verificar, verificación, login con rol USER
 y rechazo de reutilizar el código consumido. El SMTP efímero no autentica ni
 usa TLS; no certifica STARTTLS, credenciales ni entrega del correo institucional.
+El SMTP fixture también rechaza MAIL FROM con 451: registro devuelve 503
+recuperable, la cuenta sigue existiendo y no puede entrar, repetir registro
+devuelve conflicto y el reenvío fallido conserva mensaje opaco. Tras levantar
+el rechazo, reenvía el código, verifica y permite login USER. No reproduce
+DNS interno, TLS ni corrige el servidor de correo institucional.
