@@ -32,6 +32,9 @@ const server = http.createServer((request, response) => {
     response.on('close', () => {clearInterval(timer); closed = true;});
   } else if (request.url === '/file') {
     response.setHeader('Content-Length', '5'); response.end('datos');
+  } else if (request.url === '/problem') {
+    response.writeHead(409, {'Content-Type':'application/problem+json; charset=utf-8'});
+    response.end(JSON.stringify({status:409, detail:'El archivo cambió. Actualiza la ficha antes de descargar.'}));
   } else if (request.url === '/error') {
     response.writeHead(403); response.end('Forbidden');
   } else {response.writeHead(404); response.end();}
@@ -109,6 +112,16 @@ const server = http.createServer((request, response) => {
     await page.click('.transfer-close');
     assert.equal(await page.$eval('#transfer-panel', el => el.hidden), true);
     assert.equal(await page.evaluate(() => document.activeElement.className), 'transfer-toggle');
+    const problem = await page.evaluate(async () => {
+      try {await transfers.download('/problem', 'changed.csv'); return null;}
+      catch (error) {return error.message;}
+    });
+    assert.equal(problem, 'El archivo cambió. Actualiza la ficha antes de descargar.');
+    const privateProblem = await page.evaluate(async () => {
+      try {await transfers.download('/problem', 'changed.csv', 'private', {errorMessage:'No se pudo descargar el archivo.'}); return null;}
+      catch (error) {return error.message;}
+    });
+    assert.equal(privateProblem, 'No se pudo descargar el archivo.');
     const external = await page.evaluate(async () => {
       try { await transfers.download('https://example.invalid/file', 'file.csv', 'file', {headers:{'X-Review-Token':'test-only'}}); return null; }
       catch (error) { return error.message; }

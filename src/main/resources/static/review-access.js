@@ -20,7 +20,7 @@ async function files(page = 0) {
     button.onclick = async () => {
       button.disabled = true;
       try {
-        await transfers.download(`/api/v1/reviewer/file?path=${encodeURIComponent(file.path)}`, file.path.split('/').pop(), file.path, {headers, cache:'no-store'});
+        await transfers.download(`/api/v1/reviewer/file?path=${encodeURIComponent(file.path)}`, file.path.split('/').pop(), file.path, {headers, cache:'no-store', errorMessage:'No se pudo descargar el archivo.'});
         status.textContent = 'Descarga preparada.';
       } catch (error) { status.textContent = error.name === 'AbortError' ? 'Descarga cancelada.' : error.message; } finally { button.disabled = false; }
     };

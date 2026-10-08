@@ -86,3 +86,6 @@ El escenario de revisión comprueba no-store tanto en el archivo servido como
 en el rechazo posterior. Revoca el enlace desde la sesión curatorial y vuelve
 a descargar desde la página del revisor ya abierta: debe ser denegado y mostrar
 error. Las copias descargadas antes de revocar no se pueden retirar.
+También comprueba errores application/problem+json: conserva detail legible
+sin prefijar el estado HTTP, y permite imponer un mensaje genérico para la
+revisión privada. Los cuerpos no JSON o inválidos conservan el mensaje genérico.

@@ -118,7 +118,17 @@ const transfers = (() => {
     task.cancel.addEventListener('click', () => controller.abort());
     try {
       const response = await fetch(url, {headers:options.headers || headers(), cache:options.cache || 'default', redirect:'error', signal:controller.signal});
-      if (!response.ok) throw new Error('No se pudo descargar el archivo.');
+      if (!response.ok) {
+        let message = options.errorMessage || 'No se pudo descargar el archivo.';
+        if (!options.errorMessage && (response.headers.get('Content-Type') || '').includes('json')) {
+          try {
+            const problem = await response.json();
+            const detail = problem.detail || problem.message;
+            if (typeof detail === 'string' && detail.trim()) message = detail;
+          } catch { /* Keep the generic message for invalid error bodies. */ }
+        }
+        throw new Error(message);
+      }
       const total = Number(response.headers.get('Content-Length')) || 0;
       const chunks = []; let loaded = 0;
       if (response.body) {
