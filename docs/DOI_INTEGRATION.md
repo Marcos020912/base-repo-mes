@@ -17,9 +17,13 @@ y [estados](https://support.datacite.org/docs/doi-states).
    a DataCite con `event=publish`; la aplicación comprueba `findable` para ambos
    DOI antes de cambiar el estado local a `PUBLISHED`. Se incluyen título,
    autoría, editorial, año, tipo y URL; cuando constan, también licencia,
-   disciplina, palabras clave, institución/ROR y ORCID. El formulario actual
-   solo tiene un ORCID: se envía a DataCite únicamente si hay un autor, para
-   no atribuirlo erróneamente cuando hay varios.
+   disciplina, palabras clave, institución/ROR y ORCID. La ficha admite
+   identidades por creador: el ORCID se asigna al autor correspondiente por
+   `creatorId`, y sus afiliaciones se envían en el orden configurado, con ROR
+   cuando consta. Si no hay identidades por autor, el campo ORCID heredado
+   del dataset se usa únicamente cuando existe un solo creador, para no
+   atribuirlo erróneamente a coautores. Un ORCID declarado no implica que se
+   haya autenticado por OAuth ni que la identidad personal esté contrastada.
 4. El DOI de versión apunta a `https://<dominio>/datasets/<id>` y el conceptual
    a `/datasets/<id-raíz>/concept`, que redirige a la versión publicada más
    reciente. Los DOI de versión incluyen `IsVersionOf` y, si corresponde,

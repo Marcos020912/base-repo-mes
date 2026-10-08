@@ -43,8 +43,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       Pasó con fixture y con un dump/árbol de archivos de prueba. Aún falta
       repetirlo con una copia real de staging y arrancar la app restaurada.
 - [x] Cliente backend DataCite y mapeo de metadatos obligatorios y opcionales
-      seguros (licencia, materias, institución/ROR y ORCID cuando hay un solo
-      autor), probados contra HTTP simulado; desactivados por defecto y sin
+      seguros (licencia, materias, institución/ROR, ORCID y afiliaciones
+      por autor; ORCID heredado solo cuando hay un creador), probados contra HTTP simulado; desactivados por defecto y sin
       credenciales en Git.
 - [x] Reserva DOI Draft conceptual y por versión, registro persistente,
       reintentos/reconciliación, publicación Findable por curador y landing
@@ -301,3 +301,4 @@ heredados antes de activarla.
 - [x] Guardado directo: fallo simulado de escritura tras primer bloque aborta también HTTP, conserva archivo previo y muestra error (no cancelación). Prueba Chrome con stream OPFS real y HTTP local aprobada. Descarga sintética de 16 MiB guardada con bytes exactos y constructor Blob bloqueado; no equivale a benchmark de memoria ni volumen masivo institucional.
 - [x] Prueba aislada de transferencias carga ahora CSS real y viewport móvil de 320 px: panel y opción de disco quedan dentro del viewport, sin desbordamiento horizontal; axe del panel con estilos reales cero infracciones. Selector nativo y WCAG manual siguen pendientes.
 - [x] E2E Chrome + JAR + PostgreSQL18 + SMTP local: ficha pública anónima activa guardado directo, cierra panel y guarda CSV en OPFS real con selector simulado; bytes iguales a respuesta backend y «Archivo guardado» en ficha/monitor. La descarga tradicional sigue «Descarga preparada». Regresión conjunta pasó; no valida selector del SO.
+- [x] Guía DOI corregida para el modelo actual de ORCID y afiliaciones por creador (sin atribuir el campo heredado a coautores). Se ejecutaron las seis pruebas de DataCiteMetadataMapperTest, todas aprobadas: autoría/ORCID/ROR, afiliaciones múltiples, financiación, campos obligatorios y rechazo de publicación incompleta. No prueba DataCite institucional.
