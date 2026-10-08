@@ -8,6 +8,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 
 - [x] Identidad visual, portada científica, ficha con metadatos reales y DOI solo cuando existe.
 - [x] Catálogo público separado de borradores, paginación, búsqueda y filtros en servidor.
+- [x] Facetas agregadas de tipo, año, acceso, licencia, disciplina,
+      institución, idioma y DOI con recuentos sobre resultados publicados;
+      estados diferentes para catálogo vacío, filtros sin coincidencias,
+      falta de permisos y fallo del servicio.
 - [x] Estados de borrador, revisión, publicación y retirada; cola y vista de curación.
 - [x] Control de acceso a archivos restringidos o embargados y aviso de versión sucesora.
 - [x] Checklist de calidad antes de enviar a revisión e historial editorial.
@@ -36,6 +40,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       eventos de procedencia de altas/bajas de archivos web y exportación ZIP
       curatorial con metadatos, archivos, historial y manifiesto de huellas
       iniciales. Sugerencias configurables de licencia y disciplina en formularios.
+- [x] Relaciones científicas tipadas DOI/URL con semántica DataCite,
+      editables solo por el autor mientras el depósito sea borrador,
+      visibles en la ficha pública y enviadas al DOI de versión.
 
 ## Pendiente o sujeto a validación
 
@@ -52,9 +59,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Aprobar vocabularios institucionales de licencia/disciplinas y activar
       `repo.scientific.strict-vocabulary=true` después de migrar valores
       heredados; las listas actuales no son un catálogo institucional aprobado.
-      Relaciones tipadas pendientes.
 - [ ] Validación bibliotecaria de citas y estilos adicionales.
-- [ ] Facetas agregadas y estados explícitos de resultados vacíos/fallo de búsqueda.
+- [ ] Completar facetas de autor, formato y proyecto/financiador y validar
+      rendimiento de consultas agregadas con volumen real en PostgreSQL.
 - [ ] Dimensionar I/O y pool JDBC para la auditoría, configurar alerta externa
       por `MISMATCH`/`MISSING_FILE` y política de archivos anteriores sin huella.
 - [ ] Validar paquetes de preservación y procedencia en almacenamiento externo,

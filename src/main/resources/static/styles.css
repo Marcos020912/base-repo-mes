@@ -127,3 +127,15 @@ body { margin:0; background:var(--soft); color:var(--ink); font-family:Inter,ui-
 .wizard-submit-modal .modal-body>h3{margin:10px 0 0}
 .wizard-submit-modal .modal-body>ul{margin:0;max-height:170px;overflow:auto}
 @media(max-width:700px){.wizard-progress ol{grid-template-columns:repeat(2,minmax(0,1fr))}.creator-row{grid-template-columns:1fr}.wizard-actions{justify-content:stretch}.wizard-actions button{flex:1 1 100%}.wizard-actions #wizard-back{margin-right:0}}
+
+/* Server-calculated scientific facets; buttons retain a visible selected state. */
+.public-facet-layout{display:grid;grid-template-columns:minmax(180px,220px) minmax(0,1fr);gap:24px;align-items:start}
+.public-facet-panel{min-width:0;border:1px solid var(--line);border-radius:12px;padding:18px;background:#fff}
+.public-facet-panel h2{font-size:18px;margin:0 0 16px}
+.public-facet-group{border-top:1px solid var(--line);padding:13px 0}
+.public-facet-group h3{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em}
+.public-facet-option{display:block;width:100%;border:0;background:transparent;color:var(--text);text-align:left;padding:7px 9px;border-radius:7px;overflow-wrap:anywhere;cursor:pointer}
+.public-facet-option:hover,.public-facet-option:focus-visible{background:#e9f2fa;outline:2px solid #064f8f;outline-offset:1px}
+.public-facet-option[aria-pressed="true"]{background:#dcebf7;color:#07375f;font-weight:700}
+@media(max-width:760px){.public-facet-layout{grid-template-columns:1fr}.public-facet-panel{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 14px}.public-facet-panel h2{grid-column:1/-1}}
+.related-list,.related-editor{display:grid;gap:12px}.related-resource{overflow-wrap:anywhere;margin:8px 0}.related-editor-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}.related-editor-row label{min-width:0}.related-editor-row label:nth-child(4),.related-editor-row label:nth-child(5){grid-column:1/-1}.related-editor-row input,.related-editor-row select{width:100%;min-width:0}.related-editor-row button{justify-self:start}@media(max-width:560px){.related-editor-row{grid-template-columns:1fr}.related-editor-row label:nth-child(4),.related-editor-row label:nth-child(5){grid-column:auto}}

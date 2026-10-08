@@ -8,12 +8,19 @@ import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,8 +39,10 @@ import org.springframework.web.server.ResponseStatusException;
 public class ScientificCatalogController {
     private final IDataResourceDao resources;
     private final ScientificRecordRepository scientificRecords;
-    public ScientificCatalogController(IDataResourceDao resources, ScientificRecordRepository scientificRecords) {
-        this.resources = resources; this.scientificRecords = scientificRecords;
+    private final EntityManager entityManager;
+    public ScientificCatalogController(IDataResourceDao resources, ScientificRecordRepository scientificRecords,
+                                       EntityManager entityManager) {
+        this.resources = resources; this.scientificRecords = scientificRecords; this.entityManager = entityManager;
     }
 
     @GetMapping
@@ -60,13 +69,41 @@ public class ScientificCatalogController {
                 !List.of("newest", "oldest", "year_asc", "year_desc").contains(sort)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parámetros de búsqueda no válidos.");
         }
-        ResourceType.TYPE_GENERAL selectedType = null;
         if (!type.isBlank()) {
-            try { selectedType = ResourceType.TYPE_GENERAL.valueOf(type); }
+            try { ResourceType.TYPE_GENERAL.valueOf(type); }
             catch (IllegalArgumentException ex) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de recurso no válido."); }
         }
-        final ResourceType.TYPE_GENERAL category = selectedType;
-        Specification<DataResource> spec = (root, query, cb) -> {
+        Specification<DataResource> spec = specification(q, author, type, year, license, discipline, institution, language, access, format, hasDoi, publicOnly);
+        Sort order = switch (sort) {
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "lastUpdate", "id");
+            case "year_asc" -> Sort.by(Sort.Direction.ASC, "publicationYear", "id");
+            case "year_desc" -> Sort.by(Sort.Direction.DESC, "publicationYear", "id");
+            default -> Sort.by(Sort.Direction.DESC, "lastUpdate", "id");
+        };
+        Page<DataResource> result = resources.findAll(spec, PageRequest.of(page, size, order));
+        java.util.Map<String, ScientificRecord> scienceById = new java.util.HashMap<>();
+        scientificRecords.findAllById(result.getContent().stream().map(DataResource::getId).toList())
+                .forEach(record -> scienceById.put(record.getResourceId(), record));
+        return new CatalogPage(result.getContent().stream().map(item -> new CatalogItem(item.getId(),
+                item.getTitles().stream().findFirst().map(title -> title.getValue()).orElse("Sin título"),
+                item.getCreators().stream().map(creator -> String.join(" ",
+                        creator.getGivenName() == null ? "" : creator.getGivenName(),
+                        creator.getFamilyName() == null ? "" : creator.getFamilyName()).trim()).toList(),
+                item.getPublisher(), item.getPublicationYear(),
+                item.getResourceType() == null ? null : item.getResourceType().getTypeGeneral().name(),
+                scienceById.containsKey(item.getId()) ? scienceById.get(item.getId()).getVersionDoi() :
+                        item.getIdentifier() == null ? null : item.getIdentifier().getValue(),
+                scienceById.containsKey(item.getId()) ? scienceById.get(item.getId()).getAccessLevel() : null)).toList(),
+                result.getTotalElements(), result.getNumber(), result.getTotalPages());
+    }
+
+    private static Specification<DataResource> specification(String q, String author, String type, String year,
+            String license, String discipline, String institution, String language, String access,
+            String format, boolean hasDoi, boolean publicOnly) {
+        final ResourceType.TYPE_GENERAL category;
+        if (type.isBlank()) category = null;
+        else category = ResourceType.TYPE_GENERAL.valueOf(type);
+        return (root, query, cb) -> {
             query.distinct(true);
             List<Predicate> predicates = new ArrayList<>();
             if (!q.isBlank()) {
@@ -126,29 +163,80 @@ public class ScientificCatalogController {
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };
-        Sort order = switch (sort) {
-            case "oldest" -> Sort.by(Sort.Direction.ASC, "lastUpdate", "id");
-            case "year_asc" -> Sort.by(Sort.Direction.ASC, "publicationYear", "id");
-            case "year_desc" -> Sort.by(Sort.Direction.DESC, "publicationYear", "id");
-            default -> Sort.by(Sort.Direction.DESC, "lastUpdate", "id");
-        };
-        Page<DataResource> result = resources.findAll(spec, PageRequest.of(page, size, order));
-        java.util.Map<String, ScientificRecord> scienceById = new java.util.HashMap<>();
-        scientificRecords.findAllById(result.getContent().stream().map(DataResource::getId).toList())
-                .forEach(record -> scienceById.put(record.getResourceId(), record));
-        return new CatalogPage(result.getContent().stream().map(item -> new CatalogItem(item.getId(),
-                item.getTitles().stream().findFirst().map(title -> title.getValue()).orElse("Sin título"),
-                item.getCreators().stream().map(creator -> String.join(" ",
-                        creator.getGivenName() == null ? "" : creator.getGivenName(),
-                        creator.getFamilyName() == null ? "" : creator.getFamilyName()).trim()).toList(),
-                item.getPublisher(), item.getPublicationYear(),
-                item.getResourceType() == null ? null : item.getResourceType().getTypeGeneral().name(),
-                scienceById.containsKey(item.getId()) ? scienceById.get(item.getId()).getVersionDoi() :
-                        item.getIdentifier() == null ? null : item.getIdentifier().getValue(),
-                scienceById.containsKey(item.getId()) ? scienceById.get(item.getId()).getAccessLevel() : null)).toList(),
-                result.getTotalElements(), result.getNumber(), result.getTotalPages());
     }
 
     public record CatalogItem(String id, String title, List<String> authors, String publisher, String year, String type, String identifier, String accessLevel) {}
     public record CatalogPage(List<CatalogItem> items, long total, int page, int pages) {}
+
+    @GetMapping("/facets")
+    @Transactional(readOnly = true)
+    public Map<String, List<FacetOption>> facets(@RequestParam(defaultValue = "") String q,
+            @RequestParam(defaultValue = "") String author, @RequestParam(defaultValue = "") String type,
+            @RequestParam(defaultValue = "") String year, @RequestParam(defaultValue = "") String license,
+            @RequestParam(defaultValue = "") String discipline, @RequestParam(defaultValue = "") String institution,
+            @RequestParam(defaultValue = "") String language, @RequestParam(defaultValue = "") String access,
+            @RequestParam(defaultValue = "") String format, @RequestParam(defaultValue = "false") boolean hasDoi,
+            HttpServletRequest request) {
+        if (q.length() > 200 || author.length() > 200 || year.length() > 4 || license.length() > 100 ||
+                discipline.length() > 255 || institution.length() > 200 || language.length() > 16 ||
+                !format.matches("[a-zA-Z0-9]{0,16}") ||
+                (!access.isBlank() && !List.of("OPEN", "RESTRICTED", "EMBARGOED").contains(access)))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parámetros de facetas no válidos.");
+        if (!type.isBlank()) {
+            try { ResourceType.TYPE_GENERAL.valueOf(type); }
+            catch (IllegalArgumentException ex) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de recurso no válido."); }
+        }
+        CatalogFilters filters = new CatalogFilters(q, author, type, year, license, discipline, institution,
+                language, access, format, hasDoi);
+        boolean publicOnly = request.getRequestURI().startsWith("/api/v1/public/");
+        Map<String, List<FacetOption>> result = new LinkedHashMap<>();
+        for (String dimension : List.of("type", "year", "access", "license", "discipline", "institution", "language", "hasDoi"))
+            result.put(dimension, facetValues(dimension, filters.without(dimension), publicOnly));
+        return result;
+    }
+
+    private List<FacetOption> facetValues(String dimension, CatalogFilters filter, boolean publicOnly) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Tuple> query = cb.createTupleQuery();
+        Root<DataResource> root = query.from(DataResource.class);
+        Root<ScientificRecord> science = query.from(ScientificRecord.class);
+        Expression<?> value = switch (dimension) {
+            case "type" -> root.join("resourceType", JoinType.LEFT).get("typeGeneral");
+            case "year" -> root.get("publicationYear");
+            case "access" -> science.get("accessLevel");
+            case "license" -> science.get("licenseId");
+            case "discipline" -> science.get("discipline");
+            case "institution" -> science.get("institution");
+            case "language" -> science.get("language");
+            case "hasDoi" -> cb.<String>selectCase().when(cb.isNotNull(science.get("versionDoi")), "true").otherwise("false");
+            default -> throw new IllegalArgumentException("Faceta no admitida.");
+        };
+        var condition = specification(filter.q, filter.author, filter.type, filter.year, filter.license,
+                filter.discipline, filter.institution, filter.language, filter.access, filter.format,
+                filter.hasDoi, publicOnly).toPredicate(root, query, cb);
+        Expression<Long> count = cb.countDistinct(root.get("id"));
+        query.multiselect(value.alias("value"), count.alias("count"))
+                .where(cb.and(condition, cb.equal(science.get("resourceId"), root.get("id")),
+                        cb.equal(science.get("status"), PublicationStatus.PUBLISHED)))
+                .groupBy(value).orderBy(cb.desc(count));
+        return entityManager.createQuery(query).setMaxResults(30).getResultList().stream()
+                .filter(row -> row.get("value") != null && !row.get("value").toString().isBlank())
+                .map(row -> new FacetOption(row.get("value").toString(), ((Number) row.get("count")).longValue()))
+                .toList();
+    }
+
+    private record CatalogFilters(String q, String author, String type, String year, String license,
+            String discipline, String institution, String language, String access, String format, boolean hasDoi) {
+        CatalogFilters without(String dimension) {
+            return new CatalogFilters(q, author, dimension.equals("type") ? "" : type,
+                    dimension.equals("year") ? "" : year, dimension.equals("license") ? "" : license,
+                    dimension.equals("discipline") ? "" : discipline,
+                    dimension.equals("institution") ? "" : institution,
+                    dimension.equals("language") ? "" : language,
+                    dimension.equals("access") ? "" : access, format,
+                    !dimension.equals("hasDoi") && hasDoi);
+        }
+    }
+
+    public record FacetOption(String value, long count) {}
 }

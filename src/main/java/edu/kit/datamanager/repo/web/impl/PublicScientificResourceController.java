@@ -8,6 +8,8 @@ import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.repository.FileFixityStateRepository;
+import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
+import edu.kit.datamanager.repo.domain.ScientificRelation;
 import edu.kit.datamanager.repo.domain.FileFixityState;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -37,12 +39,15 @@ public class PublicScientificResourceController {
     private final ScientificRecordRepository records;
     private final IContentInformationDao contents;
     private final FileFixityStateRepository fixityStates;
+    private final ScientificRelationRepository relations;
 
-    public PublicScientificResourceController(IDataResourceDao resources, ScientificRecordRepository records, IContentInformationDao contents, FileFixityStateRepository fixityStates) {
+    public PublicScientificResourceController(IDataResourceDao resources, ScientificRecordRepository records, IContentInformationDao contents,
+                                              FileFixityStateRepository fixityStates, ScientificRelationRepository relations) {
         this.resources = resources;
         this.records = records;
         this.contents = contents;
         this.fixityStates = fixityStates;
+        this.relations = relations;
     }
 
     @GetMapping("/{id}")
@@ -73,7 +78,8 @@ public class PublicScientificResourceController {
                 science.getVersionLabel(), science.getVersionDoi(), science.getConceptualDoi(), science.getLicenseId(),
                 science.getInstitution(), science.getOrcid(), science.getRor(), science.getLanguage(), science.getDiscipline(),
                 science.getKeywords(), science.getRelatedPublications(), science.getMethodology(), science.getPublishedAt(), markdown,
-                science.getPreviousResourceId(), newerVersionId, science.getAccessLevel(), science.getEmbargoUntil()));
+                science.getPreviousResourceId(), newerVersionId, science.getAccessLevel(), science.getEmbargoUntil(),
+                relations.findByResourceIdOrderByIdAsc(id)));
     }
 
     @GetMapping("/{id}/files")
@@ -135,7 +141,8 @@ public class PublicScientificResourceController {
                                String version, String doi, String conceptualDoi, String license, String institution,
                                String orcid, String ror, String language, String discipline, String keywords,
                                String relatedPublications, String methodology, java.time.Instant publishedAt, String markdown,
-                               String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil) {}
+                               String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil,
+                               List<ScientificRelation> relations) {}
     public record FileItem(String path, long size, String mediaType, String sha256, String fixityStatus, java.time.Instant fixityCheckedAt) {}
     public record PublicFiles(List<FileItem> files, long total, int page, int pages) {}
 }

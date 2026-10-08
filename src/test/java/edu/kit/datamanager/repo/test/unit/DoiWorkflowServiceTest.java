@@ -5,10 +5,12 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.DoiRegistration;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
+import edu.kit.datamanager.repo.domain.ScientificRelation;
 import edu.kit.datamanager.repo.repository.DoiRegistrationRepository;
 import edu.kit.datamanager.repo.repository.DoiSyncEventRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordEventRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
 import edu.kit.datamanager.repo.service.DataCiteMetadataMapper;
 import edu.kit.datamanager.repo.service.DataCiteService;
 import edu.kit.datamanager.repo.service.DoiWorkflowService;
@@ -35,6 +37,7 @@ public class DoiWorkflowServiceTest {
     private final ScientificRecordEventRepository editorial = mock(ScientificRecordEventRepository.class);
     private final IDataResourceDao resources = mock(IDataResourceDao.class);
     private final ScientificQualityService quality = mock(ScientificQualityService.class);
+    private final ScientificRelationRepository relations = mock(ScientificRelationRepository.class);
     private final PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
     private final Map<String, DoiRegistration> local = new HashMap<>();
     private final Map<String, String> remote = new HashMap<>();
@@ -75,8 +78,9 @@ public class DoiWorkflowServiceTest {
         when(records.findByConceptualDoiIgnoreCaseAndStatusOrderByPublishedAtDesc(anyString(), eq(PublicationStatus.PUBLISHED)))
                 .thenReturn(java.util.List.of());
         when(records.findByConceptualDoiIgnoreCase(anyString())).thenReturn(java.util.List.of());
+        when(relations.findByResourceIdOrderByIdAsc(anyString())).thenReturn(java.util.List.of());
         workflow = new DoiWorkflowService(datacite, mapper, registrations, syncEvents, records, editorial,
-                resources, quality, manager, "https://datos.reduniv.edu.cu");
+                resources, quality, relations, manager, "https://datos.reduniv.edu.cu");
     }
 
     @Test
@@ -100,6 +104,27 @@ public class DoiWorkflowServiceTest {
         assertEquals("FINDABLE", local.get("v:r1").getState());
         verify(datacite, times(2)).publish(anyString(), anyMap());
         verify(editorial).save(any());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void versionDoiContainsTypedScientificRelations() {
+        science.setStatus(PublicationStatus.IN_REVIEW);
+        when(relations.findByResourceIdOrderByIdAsc("r1")).thenReturn(java.util.List.of(
+                new ScientificRelation("r1", ScientificRelation.Kind.ARTICLE,
+                        ScientificRelation.IdentifierType.DOI, ScientificRelation.RelationType.IsSupplementTo,
+                        "10.5678/article.42", "Artículo relacionado")));
+        workflow.publish("r1", "curator");
+        var payloads = org.mockito.ArgumentCaptor.forClass(Map.class);
+        verify(datacite, times(2)).publish(anyString(), payloads.capture());
+        Map<String, Object> version = payloads.getAllValues().stream()
+                .filter(value -> ((java.util.List<Map<String, String>>) value.get("relatedIdentifiers")).stream()
+                        .anyMatch(item -> "IsVersionOf".equals(item.get("relationType"))))
+                .findFirst().orElseThrow();
+        assertTrue(((java.util.List<Map<String, String>>) version.get("relatedIdentifiers")).stream()
+                .anyMatch(item -> "10.5678/article.42".equals(item.get("relatedIdentifier"))
+                        && "DOI".equals(item.get("relatedIdentifierType"))
+                        && "IsSupplementTo".equals(item.get("relationType"))));
     }
 
     @Test
@@ -131,7 +156,7 @@ public class DoiWorkflowServiceTest {
     @Test
     public void invalidPublicUrlFailsBeforeCreatingAnyDoi() {
         var invalid = new DoiWorkflowService(datacite, mapper, registrations, syncEvents, records, editorial,
-                resources, quality, manager, "http://localhost:8090");
+                resources, quality, relations, manager, "http://localhost:8090");
         assertThrows(ResponseStatusException.class, () -> invalid.reserve("r1"));
         verify(datacite, never()).reserveDraft(anyString());
         assertTrue(local.isEmpty());

@@ -28,6 +28,20 @@ function renderMarkdown(source) {
     else root.append(node('p', line));
   }
 }
+function renderRelations(relations) {
+  if (!relations?.length) return;
+  const section = document.createElement('section'); section.className = 'panel';
+  section.append(node('h2', 'Recursos relacionados'));
+  for (const relation of relations) {
+    const row = document.createElement('div'); row.className = 'related-resource';
+    const label = node('p', `${relation.kind} · ${relation.relationType}`);
+    const link = document.createElement('a');
+    link.href = relation.identifierType === 'DOI' ? `https://doi.org/${relation.identifier.split('/').map(encodeURIComponent).join('/')}` : relation.identifier;
+    link.rel = 'noopener noreferrer'; link.textContent = relation.title || relation.identifier;
+    row.append(label, link); section.append(row);
+  }
+  document.querySelector('#landing').append(section);
+}
 async function loadFiles(page = 0) {
   const response = await fetch(`/api/v1/public/resources/${encodeURIComponent(id)}/files?page=${page}&size=50`);
   if (!response.ok) throw new Error('No se pudieron consultar los archivos.');
@@ -83,7 +97,7 @@ async function load() {
       newer.textContent = 'Ver la versión posterior'; warning.append(newer);
       document.querySelector('#version-links').append(warning);
     }
-    renderMarkdown(data.markdown || ''); await loadFiles(); status.textContent = '';
+    renderMarkdown(data.markdown || ''); renderRelations(data.relations); await loadFiles(); status.textContent = '';
     const citation = `${data.authors?.join(', ') || 'Autor no informado'} (${data.year || 's. f.'}). ${data.title} (versión ${data.version}) [${data.type || 'Recurso'}]. ${data.publisher || 'Editorial no informada'}. https://doi.org/${data.doi}`;
     document.querySelector('#citation').textContent = citation;
     document.querySelector('#copy-citation').onclick = async () => { try { await navigator.clipboard.writeText(citation); status.textContent = 'Cita copiada.'; } catch { status.textContent = 'No se pudo copiar la cita.'; } };

@@ -10,6 +10,7 @@ import edu.kit.datamanager.repo.repository.DoiRegistrationRepository;
 import edu.kit.datamanager.repo.repository.DoiSyncEventRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordEventRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -36,13 +37,14 @@ public class DoiWorkflowService {
     private final ScientificRecordEventRepository editorialEvents;
     private final IDataResourceDao resources;
     private final ScientificQualityService quality;
+    private final ScientificRelationRepository relations;
     private final TransactionTemplate transactions;
     private final String publicBaseUrl;
 
     public DoiWorkflowService(DataCiteService datacite, DataCiteMetadataMapper mapper,
             DoiRegistrationRepository registrations, DoiSyncEventRepository syncEvents,
             ScientificRecordRepository records, ScientificRecordEventRepository editorialEvents,
-            IDataResourceDao resources, ScientificQualityService quality,
+            IDataResourceDao resources, ScientificQualityService quality, ScientificRelationRepository relations,
             org.springframework.transaction.PlatformTransactionManager manager,
             @Value("${repo.datacite.public-base-url:}") String publicBaseUrl) {
         this.datacite = datacite;
@@ -53,6 +55,7 @@ public class DoiWorkflowService {
         this.editorialEvents = editorialEvents;
         this.resources = resources;
         this.quality = quality;
+        this.relations = relations;
         this.transactions = new TransactionTemplate(manager);
         this.publicBaseUrl = publicBaseUrl;
     }
@@ -117,6 +120,10 @@ public class DoiWorkflowService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "La versión anterior debe estar publicada con DOI.");
             versionRelations.add(relation(previous.getVersionDoi(), "IsNewVersionOf"));
         }
+        relations.findByResourceIdOrderByIdAsc(resourceId).forEach(item -> versionRelations.add(Map.of(
+                "relatedIdentifier", item.getIdentifier(),
+                "relatedIdentifierType", item.getIdentifierType().name(),
+                "relationType", item.getRelationType().name())));
         version.put("relatedIdentifiers", versionRelations);
 
         Map<String, Object> concept = new LinkedHashMap<>(transactions.execute(status -> {

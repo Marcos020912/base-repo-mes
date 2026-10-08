@@ -58,6 +58,10 @@ public class ScientificCatalogSearchTest {
         assertEquals("RESTRICTED", restricted.items().get(0).accessLevel());
         var filtered = catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "Universidad", "es", "RESTRICTED", "", false, "year_desc", 0, 20, publicRequest);
         assertEquals(1, filtered.total());
+        var facets = catalog.facets("astronomía", "Ada", "", "", "", "", "", "", "", "", false, publicRequest);
+        assertTrue(facets.get("type").stream().anyMatch(option -> option.value().equals("DATASET") && option.count() >= 1));
+        assertTrue(facets.get("access").stream().anyMatch(option -> option.value().equals("RESTRICTED") && option.count() >= 1));
+        assertTrue(facets.get("year").stream().anyMatch(option -> option.value().equals("2026") && option.count() >= 1));
         assertEquals(0, catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "csv", false, "newest", 0, 20, publicRequest).total());
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
                 catalog.list("", "", "", "", "", "", "", "", "", "", false, "arbitrary", 0, 20, publicRequest));
