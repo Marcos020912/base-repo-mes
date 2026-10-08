@@ -36,7 +36,14 @@ install_if_missing(){ command -v "$1" >/dev/null 2>&1 || { apt-get update; apt-g
 # Obtiene el último valor de una clave YAML simple sin interpretar la clave como una expresión regular.
 property_value(){
   [[ -r "$CONF" ]] || return 0
-  awk -v key="$1" '(index($0, key ":") == 1 || index($0, key "=") == 1) { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF"
+  local value env_name fallback
+  value="$(awk -v key="$1" '(index($0, key ":") == 1 || index($0, key "=") == 1) { value=substr($0, length(key)+2); sub(/^[[:space:]]+/, "", value) } END { print value }' "$CONF")"
+  # Resolve only a complete Spring environment placeholder; never eval configuration.
+  if [[ "$value" =~ ^\$\{([A-Za-z_][A-Za-z0-9_]*)(:(.*))?\}$ ]]; then
+    env_name="${BASH_REMATCH[1]}"; fallback="${BASH_REMATCH[3]:-}"
+    if [[ -v "$env_name" ]]; then value="${!env_name}"; else value="$fallback"; fi
+  fi
+  printf '%s\n' "$value"
 }
 boolean_value(){
   case "${1,,}" in s|si|sí|y|yes|true|1) printf 'true\n' ;; n|no|false|0) printf 'false\n' ;; *) printf '%s\n' "$1" ;; esac

@@ -27,7 +27,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 |---|---|---|
 | S01 | Rotar contraseña expuesta en revisión | Institucional: no modificar cuentas reales sin autorización. |
 | S02 | Suite automática corregida y ejecutable | Implementado local: Gradle JUnit4, E2E PostgreSQL18/SMTP/Chrome/restauración y axe ejecutables; evidencia por bloque en plan. No sustituye validación externa. |
-| S03 | Eliminar secretos/credenciales predeterminados | Base local: configuración de despliegue/JWT; auditar también historia Git y artefactos reales. |
+| S03 | Eliminar secretos/credenciales predeterminados | Parcial: retiradas credenciales literales de plantillas; gate local del árbol sin hallazgos y cuatro tests aprobados. Historial contiene 102 ocurrencias de propiedades literales en blobs únicos (incluye defaults de desarrollo), requiere evaluación/rotación y autorización de limpieza; artefactos aún pendientes. |
 | S04 | Autorización por recurso, no solo autenticación | Base local: endpoints científicos y E2E edición ajena denegada; ampliar auditoría de todos los endpoints. |
 | S05 | Rate limiting, auditoría y políticas seguras | Base local: limitador PostgreSQL y plantilla HAProxy; prueba real multiinstancia y rotación pendientes. |
 | S06 | Lectura, depósito, curación, publicación y administración separados | Base local: roles USER/CURATOR/ADMINISTRATOR y controles por estado; verificar matriz completa. |
@@ -117,7 +117,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | D06 | HasVersion/IsVersionOf/IsNewVersionOf/IsPreviousVersionOf | Implementado local: sincroniza IsPreviousVersionOf del predecesor gestionado, preserva sucesores y relaciones locales y permite reintento sin publicar localmente antes de confirmar. Pruebas mock aprobadas; DataCite real pendiente. |
 | D07 | reserve/publish/updateMetadata/get/createVersion/updateUrl | Base local: operaciones existentes y mantenimiento admin de URLs con vista previa/confirmación contra origen configurado y auditoría. Cuatro pruebas nuevas mock aprobadas; validación institucional y auditoría contractual pendientes. |
 | D08 | Estado, fechas, última sincronización, URL, versión metadatos e historial local | Base local/parcial: registros/eventos DOI; contrastar todos los campos sugeridos y semántica de retirada. |
-| D09 | Secretos solo backend, nunca JS/Git | Base local: properties/despliegue; revisar historial y artefactos con manejo seguro. |
+| D09 | Secretos solo backend, nunca JS/Git | Parcial: gate readonly sin valores en salida; árbol actual sin hallazgos, historial con propiedades literales por evaluar y sin reescritura automática. Artefactos/releases reales y rotación institucional pendientes. |
 | D10 | Sufijo generado por DataCite recomendado | Desviación documentada: sufijo UUID estable local para idempotencia; recomendación no obligatoria, requiere transparencia institucional. |
 | D11 | Cuenta Repository, prefijo, credenciales y validación Test→staging→production | Institucional: no resuelto únicamente con código; no dar integración externa por probada. |
 

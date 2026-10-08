@@ -8,7 +8,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 
 - [ ] **S01 — Rotar contraseña expuesta en revisión**. Institucional: no modificar cuentas reales sin autorización.
 - [x] **S02 — Suite automática corregida y ejecutable**. Implementado local: regresión Java21/JUnit4 offline, E2E PostgreSQL18/SMTP/Chrome/restauración y axe ejecutables; fechas/alcance exactos por bloque.
-- [ ] **S03 — Eliminar secretos/credenciales predeterminados**. Base local: configuración de despliegue/JWT; auditar también historia Git y artefactos reales.
+- [ ] **S03 — Eliminar secretos/credenciales predeterminados**. Parcial: plantillas sin credenciales literales; gate actual sin hallazgos y cuatro tests. Historial: 102 ocurrencias por evaluar/rotar; sin reescritura y artefactos pendientes.
 - [ ] **S04 — Autorización por recurso, no solo autenticación**. Base local: endpoints científicos y E2E edición ajena denegada; ampliar auditoría de todos los endpoints.
 - [ ] **S05 — Rate limiting, auditoría y políticas seguras**. Base local: limitador PostgreSQL y plantilla HAProxy; prueba real multiinstancia y rotación pendientes.
 - [ ] **S06 — Lectura, depósito, curación, publicación y administración separados**. Base local: roles USER/CURATOR/ADMINISTRATOR y controles por estado; verificar matriz completa.
@@ -73,7 +73,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [x] **D06 — HasVersion/IsVersionOf/IsNewVersionOf/IsPreviousVersionOf**. Implementado local: sincroniza IsPreviousVersionOf del predecesor gestionado, preserva sucesores y relaciones locales y permite reintento sin publicar localmente antes de confirmar. Pruebas mock aprobadas; DataCite real pendiente.
 - [ ] **D07 — reserve/publish/updateMetadata/get/createVersion/updateUrl**. Base local: operaciones existentes y mantenimiento admin de URLs con vista previa/confirmación contra origen configurado y auditoría. Cuatro pruebas nuevas mock aprobadas; validación institucional y auditoría contractual pendientes.
 - [ ] **D08 — Estado, fechas, última sincronización, URL, versión metadatos e historial local**. Base local/parcial: registros/eventos DOI; contrastar todos los campos sugeridos y semántica de retirada.
-- [ ] **D09 — Secretos solo backend, nunca JS/Git**. Base local: properties/despliegue; revisar historial y artefactos con manejo seguro.
+- [ ] **D09 — Secretos solo backend, nunca JS/Git**. Parcial: gate readonly seguro y árbol actual sin hallazgos. Historial/artefactos y rotación institucional siguen pendientes.
 - [ ] **D10 — Sufijo generado por DataCite recomendado**. Desviación documentada: sufijo UUID estable local para idempotencia; recomendación no obligatoria, requiere transparencia institucional.
 - [ ] **D11 — Cuenta Repository, prefijo, credenciales y validación Test→staging→production**. Institucional: no resuelto únicamente con código; no dar integración externa por probada.
 
@@ -164,3 +164,10 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - E2E PostgreSQL/SMTP/Chrome/restauración aprobado: tres modos, subida interrumpida, nueva versión, ningún POST sin confirmar, rechazo de URL HTTP y persistencia SOFTWARE; axe del formulario dinámico sin infracciones.
 - Regresión Java 21: 52 suites, 504 pruebas, cero fallos/errores/omitidas. Axe estático: 66 estados, cero infracciones automáticas. No acredita revisión WCAG manual ni certificación institucional.
 - Guard de accesibilidad verifica id y tabindex en la misma etiqueta main sin depender del orden de atributos HTML.
+
+### Auditoría de credenciales versionadas
+
+- Siete pruebas Python: placeholders vacíos, fallback inseguro, redacción de tokens/claves, hallazgo histórico eliminado sin modificar Git y resolución segura de entorno/default en deploy.sh.
+- Árbol actual: cero patrones detectados. Historial: 102 ocurrencias de propiedades literales en ocho rutas; no son necesariamente 102 secretos activos. No se revelaron valores ni se reescribió historia.
+- Plantillas DB/Rabbit/JWT usan configuración externa/env. H2 existente requiere conservar contraseña anterior externa; no se cambian cuentas ni datos. Ver tools/security/README.md.
+- JAR reconstruido y E2E PostgreSQL/SMTP/Chrome/restauración aprobado después de retirar defaults. `bash -n deploy.sh` aprobado; no se ejecutó el despliegue ni se modificaron servicios reales.
