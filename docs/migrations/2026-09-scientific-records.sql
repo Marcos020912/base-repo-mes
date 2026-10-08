@@ -100,6 +100,19 @@ CREATE TABLE IF NOT EXISTS scientific_creators (
 );
 CREATE INDEX IF NOT EXISTS idx_scientific_creators_resource ON scientific_creators(resource_id);
 
+-- Extra institutions per author; scientific_creators.institution/ror remains
+-- the first-affiliation fallback for existing records, so no lossy backfill is needed.
+CREATE TABLE IF NOT EXISTS scientific_affiliations (
+    id BIGSERIAL PRIMARY KEY,
+    resource_id VARCHAR(255) NOT NULL,
+    creator_id BIGINT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    institution VARCHAR(255) NOT NULL,
+    ror VARCHAR(255),
+    CONSTRAINT uq_scientific_affiliation_order UNIQUE (resource_id, creator_id, sort_order)
+);
+CREATE INDEX IF NOT EXISTS idx_scientific_affiliations_resource ON scientific_affiliations(resource_id);
+
 -- Funder and award/project references are per released version and map to DataCite fundingReferences.
 CREATE TABLE IF NOT EXISTS scientific_funding (
     id BIGSERIAL PRIMARY KEY,

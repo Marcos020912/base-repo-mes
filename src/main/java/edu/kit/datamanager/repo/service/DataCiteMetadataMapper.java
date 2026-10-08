@@ -4,6 +4,7 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.domain.ScientificCreator;
 import edu.kit.datamanager.repo.domain.ScientificFunding;
+import edu.kit.datamanager.repo.domain.ScientificAffiliation;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
@@ -25,12 +26,21 @@ public class DataCiteMetadataMapper {
 
     public Map<String, Object> version(DataResource resource, ScientificRecord science, URI landingPage,
             List<ScientificCreator> creatorDetails, List<ScientificFunding> fundingDetails) {
+        return version(resource, science, landingPage, creatorDetails, fundingDetails, List.of());
+    }
+
+    public Map<String, Object> version(DataResource resource, ScientificRecord science, URI landingPage,
+            List<ScientificCreator> creatorDetails, List<ScientificFunding> fundingDetails,
+            List<ScientificAffiliation> affiliationDetails) {
         if (!"https".equalsIgnoreCase(landingPage.getScheme()) || landingPage.getHost() == null)
             throw new IllegalArgumentException("La landing page del DOI debe usar HTTPS.");
         String title = resource.getTitles() == null ? null : resource.getTitles().stream()
                 .map(item -> item.getValue()).filter(DataCiteMetadataMapper::hasText).findFirst().orElse(null);
         Map<Long, ScientificCreator> identities = new java.util.HashMap<>();
         if (creatorDetails != null) creatorDetails.forEach(item -> identities.put(item.getCreatorId(), item));
+        Map<Long, List<ScientificAffiliation>> organizations = new java.util.HashMap<>();
+        if (affiliationDetails != null) affiliationDetails.forEach(item ->
+                organizations.computeIfAbsent(item.getCreatorId(), unused -> new ArrayList<>()).add(item));
         List<Map<String, Object>> creators = resource.getCreators() == null ? List.of() : resource.getCreators().stream()
                 .filter(item -> hasText(item.getGivenName()) || hasText(item.getFamilyName())).map(item -> {
                     String name = String.join(" ", item.getGivenName() == null ? "" : item.getGivenName(),
@@ -44,18 +54,17 @@ public class DataCiteMetadataMapper {
                             creator.put("nameIdentifiers", List.of(Map.of("nameIdentifier", "https://orcid.org/" + orcid,
                                     "nameIdentifierScheme", "ORCID", "schemeUri", "https://orcid.org/")));
                         }
-                        if (hasText(identity.getInstitution())) {
-                            Map<String, Object> affiliation = new LinkedHashMap<>();
-                            affiliation.put("name", identity.getInstitution());
-                            if (hasText(identity.getRor())) {
-                                String ror = identity.getRor().replaceFirst("^https://ror.org/", "");
-                                affiliation.put("affiliationIdentifier", "https://ror.org/" + ror);
-                                affiliation.put("affiliationIdentifierScheme", "ROR");
-                                affiliation.put("schemeUri", "https://ror.org/");
-                            }
-                            creator.put("affiliation", List.of(affiliation));
-                        }
                     }
+                    List<ScientificAffiliation> affiliations = organizations.getOrDefault(item.getId(), List.of());
+                    List<Map<String, Object>> mappedAffiliations = new ArrayList<>();
+                    if (!affiliations.isEmpty()) {
+                        affiliations.stream().sorted(java.util.Comparator.comparingInt(ScientificAffiliation::getSortOrder))
+                                .forEach(affiliation -> mappedAffiliations.add(affiliation(
+                                        affiliation.getInstitution(), affiliation.getRor())));
+                    } else if (identity != null && hasText(identity.getInstitution())) {
+                        mappedAffiliations.add(affiliation(identity.getInstitution(), identity.getRor()));
+                    }
+                    if (!mappedAffiliations.isEmpty()) creator.put("affiliation", mappedAffiliations);
                     return creator;
                 }).toList();
         String publisher = resource.getPublisher();
@@ -124,6 +133,18 @@ public class DataCiteMetadataMapper {
             case DATASET -> "Dataset";
             default -> "Other";
         };
+    }
+
+    private static Map<String, Object> affiliation(String institution, String rorValue) {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("name", institution);
+        if (hasText(rorValue)) {
+            String ror = rorValue.replaceFirst("^https://ror.org/", "");
+            value.put("affiliationIdentifier", "https://ror.org/" + ror);
+            value.put("affiliationIdentifierScheme", "ROR");
+            value.put("schemeUri", "https://ror.org/");
+        }
+        return value;
     }
 
     private static boolean hasText(String value) { return value != null && !value.isBlank(); }

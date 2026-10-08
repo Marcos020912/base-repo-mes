@@ -11,7 +11,9 @@ import edu.kit.datamanager.repo.repository.FileFixityStateRepository;
 import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
 import edu.kit.datamanager.repo.repository.ScientificCreatorRepository;
 import edu.kit.datamanager.repo.repository.ScientificFundingRepository;
+import edu.kit.datamanager.repo.repository.ScientificAffiliationRepository;
 import edu.kit.datamanager.repo.domain.ScientificFunding;
+import edu.kit.datamanager.repo.domain.ScientificAffiliation;
 import edu.kit.datamanager.repo.domain.ScientificRelation;
 import edu.kit.datamanager.repo.domain.FileFixityState;
 import jakarta.servlet.http.HttpServletResponse;
@@ -45,10 +47,12 @@ public class PublicScientificResourceController {
     private final ScientificRelationRepository relations;
     private final ScientificCreatorRepository creators;
     private final ScientificFundingRepository funding;
+    private final ScientificAffiliationRepository affiliations;
 
     public PublicScientificResourceController(IDataResourceDao resources, ScientificRecordRepository records, IContentInformationDao contents,
                                               FileFixityStateRepository fixityStates, ScientificRelationRepository relations,
-                                              ScientificCreatorRepository creators, ScientificFundingRepository funding) {
+                                              ScientificCreatorRepository creators, ScientificFundingRepository funding,
+                                              ScientificAffiliationRepository affiliations) {
         this.resources = resources;
         this.records = records;
         this.contents = contents;
@@ -56,6 +60,7 @@ public class PublicScientificResourceController {
         this.relations = relations;
         this.creators = creators;
         this.funding = funding;
+        this.affiliations = affiliations;
     }
 
     @GetMapping("/{id}")
@@ -74,12 +79,19 @@ public class PublicScientificResourceController {
                 item.getFamilyName() == null ? "" : item.getFamilyName()).trim()).toList();
         var details = creators.findByResourceId(id).stream().collect(java.util.stream.Collectors.toMap(
                 edu.kit.datamanager.repo.domain.ScientificCreator::getCreatorId, item -> item));
+        var organizations = affiliations.findByResourceIdOrderByCreatorIdAscSortOrderAsc(id).stream().collect(
+                java.util.stream.Collectors.groupingBy(ScientificAffiliation::getCreatorId,
+                        java.util.stream.Collectors.mapping(item -> new AuthorAffiliation(item.getInstitution(), item.getRor()),
+                                java.util.stream.Collectors.toList())));
         List<AuthorIdentity> authorIdentities = resource.getCreators().stream().map(item -> {
             var identity = details.get(item.getId());
+            List<AuthorAffiliation> knownAffiliations = organizations.getOrDefault(item.getId(), List.of());
+            if (knownAffiliations.isEmpty() && identity != null && identity.getInstitution() != null)
+                knownAffiliations = List.of(new AuthorAffiliation(identity.getInstitution(), identity.getRor()));
             return new AuthorIdentity(item.getGivenName(), item.getFamilyName(),
                     identity == null ? null : identity.getOrcid(),
                     identity == null ? null : identity.getInstitution(),
-                    identity == null ? null : identity.getRor());
+                    identity == null ? null : identity.getRor(), knownAffiliations);
         }).toList();
         String markdown = contents.findByParentResourceAndRelativePath(resource, "description.md")
                 .map(info -> {
@@ -162,7 +174,9 @@ public class PublicScientificResourceController {
                                String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil,
                                List<ScientificRelation> relations, List<AuthorIdentity> authorIdentities,
                                List<ScientificFunding> funding) {}
-    public record AuthorIdentity(String givenName, String familyName, String orcid, String institution, String ror) {}
+    public record AuthorIdentity(String givenName, String familyName, String orcid, String institution,
+                                 String ror, List<AuthorAffiliation> affiliations) {}
+    public record AuthorAffiliation(String institution, String ror) {}
     public record FileItem(String path, long size, String mediaType, String sha256, String fixityStatus, java.time.Instant fixityCheckedAt) {}
     public record PublicFiles(List<FileItem> files, long total, int page, int pages) {}
 }

@@ -9,9 +9,11 @@ import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.domain.ScientificFunding;
+import edu.kit.datamanager.repo.domain.ScientificAffiliation;
 import edu.kit.datamanager.repo.domain.Title;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.repository.ScientificFundingRepository;
+import edu.kit.datamanager.repo.repository.ScientificAffiliationRepository;
 import edu.kit.datamanager.repo.web.impl.ScientificCatalogController;
 import edu.kit.datamanager.repo.web.impl.PublicScientificResourceController;
 import org.junit.Test;
@@ -34,6 +36,7 @@ public class ScientificCatalogSearchTest {
     @Autowired private IContentInformationDao contents;
     @Autowired private ScientificRecordRepository records;
     @Autowired private ScientificFundingRepository funding;
+    @Autowired private ScientificAffiliationRepository affiliations;
     @Autowired private PublicScientificResourceController publicResources;
 
     @Test
@@ -98,6 +101,12 @@ public class ScientificCatalogSearchTest {
         ScientificRecord firstRecord = new ScientificRecord(first.getId());
         firstRecord.setStatus(PublicationStatus.PUBLISHED); records.saveAndFlush(firstRecord);
         funding.saveAndFlush(new ScientificFunding(first.getId(), "Agencia Marina", null, "AM-1", "Proyecto A"));
+        Agent firstAuthor = Agent.factoryAgent("Ana", "López", new String[]{"Universidad A"});
+        first.getCreators().add(firstAuthor);
+        first = resources.saveAndFlush(first);
+        long authorId = first.getCreators().stream().findFirst().orElseThrow().getId();
+        affiliations.saveAndFlush(new ScientificAffiliation(first.getId(), authorId, 0, "Universidad A", "03yrm5c26"));
+        affiliations.saveAndFlush(new ScientificAffiliation(first.getId(), authorId, 1, "Instituto B", null));
         DataResource second = DataResource.factoryNewDataResource("catalog-version-two");
         second.getTitles().add(Title.factoryTitle("Versión posterior", Title.TYPE.OTHER));
         second = resources.save(second);
@@ -107,5 +116,6 @@ public class ScientificCatalogSearchTest {
         var landing = (PublicScientificResourceController.PublicDetail) publicResources.detail(first.getId()).getBody();
         assertEquals(second.getId(), landing.newerVersionId());
         assertEquals("Proyecto A", landing.funding().get(0).getAwardTitle());
+        assertEquals(2, landing.authorIdentities().get(0).affiliations().size());
     }
 }

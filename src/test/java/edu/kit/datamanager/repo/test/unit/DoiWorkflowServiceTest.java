@@ -7,6 +7,7 @@ import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.domain.ScientificRelation;
 import edu.kit.datamanager.repo.domain.ScientificFunding;
+import edu.kit.datamanager.repo.domain.ScientificAffiliation;
 import edu.kit.datamanager.repo.repository.DoiRegistrationRepository;
 import edu.kit.datamanager.repo.repository.DoiSyncEventRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordEventRepository;
@@ -14,6 +15,7 @@ import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
 import edu.kit.datamanager.repo.repository.ScientificCreatorRepository;
 import edu.kit.datamanager.repo.repository.ScientificFundingRepository;
+import edu.kit.datamanager.repo.repository.ScientificAffiliationRepository;
 import edu.kit.datamanager.repo.service.DataCiteMetadataMapper;
 import edu.kit.datamanager.repo.service.DataCiteService;
 import edu.kit.datamanager.repo.service.DoiWorkflowService;
@@ -43,6 +45,7 @@ public class DoiWorkflowServiceTest {
     private final ScientificRelationRepository relations = mock(ScientificRelationRepository.class);
     private final ScientificCreatorRepository creators = mock(ScientificCreatorRepository.class);
     private final ScientificFundingRepository funding = mock(ScientificFundingRepository.class);
+    private final ScientificAffiliationRepository affiliations = mock(ScientificAffiliationRepository.class);
     private final PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
     private final Map<String, DoiRegistration> local = new HashMap<>();
     private final Map<String, String> remote = new HashMap<>();
@@ -78,7 +81,7 @@ public class DoiWorkflowServiceTest {
         when(datacite.updateMetadata(anyString(), anyMap())).thenAnswer(call -> {
             String doi = call.getArgument(0); return new DataCiteService.DoiResponse(doi, "findable");
         });
-        when(mapper.version(any(), any(), any(), any(), any())).thenAnswer(call -> Map.of("url", call.getArgument(2).toString()));
+        when(mapper.version(any(), any(), any(), any(), any(), any())).thenAnswer(call -> Map.of("url", call.getArgument(2).toString()));
         when(quality.inspect(any())).thenReturn(new ScientificQualityService.QualityReport(100, java.util.List.of(), java.util.List.of()));
         when(records.findByConceptualDoiIgnoreCaseAndStatusOrderByPublishedAtDesc(anyString(), eq(PublicationStatus.PUBLISHED)))
                 .thenReturn(java.util.List.of());
@@ -86,8 +89,9 @@ public class DoiWorkflowServiceTest {
         when(relations.findByResourceIdOrderByIdAsc(anyString())).thenReturn(java.util.List.of());
         when(creators.findByResourceId(anyString())).thenReturn(java.util.List.of());
         when(funding.findByResourceIdOrderByIdAsc(anyString())).thenReturn(java.util.List.of());
+        when(affiliations.findByResourceIdOrderByCreatorIdAscSortOrderAsc(anyString())).thenReturn(java.util.List.of());
         workflow = new DoiWorkflowService(datacite, mapper, registrations, syncEvents, records, editorial,
-                resources, quality, relations, creators, funding, manager, "https://datos.reduniv.edu.cu");
+                resources, quality, relations, creators, funding, affiliations, manager, "https://datos.reduniv.edu.cu");
     }
 
     @Test
@@ -140,7 +144,17 @@ public class DoiWorkflowServiceTest {
         var grant = new ScientificFunding("r1", "Agencia", "03yrm5c26", "P-42", "Proyecto");
         when(funding.findByResourceIdOrderByIdAsc("r1")).thenReturn(java.util.List.of(grant));
         workflow.publish("r1", "curator");
-        verify(mapper, times(2)).version(any(), any(), any(), any(), eq(java.util.List.of(grant)));
+        verify(mapper, times(2)).version(any(), any(), any(), any(), eq(java.util.List.of(grant)), any());
+    }
+
+    @Test
+    public void publishingPassesAllCreatorAffiliationsToDatacite() {
+        science.setStatus(PublicationStatus.IN_REVIEW);
+        var affiliation = new ScientificAffiliation("r1", 1L, 0, "Universidad", "03yrm5c26");
+        when(affiliations.findByResourceIdOrderByCreatorIdAscSortOrderAsc("r1"))
+                .thenReturn(java.util.List.of(affiliation));
+        workflow.publish("r1", "curator");
+        verify(mapper, times(2)).version(any(), any(), any(), any(), any(), eq(java.util.List.of(affiliation)));
     }
 
     @Test
@@ -172,7 +186,7 @@ public class DoiWorkflowServiceTest {
     @Test
     public void invalidPublicUrlFailsBeforeCreatingAnyDoi() {
         var invalid = new DoiWorkflowService(datacite, mapper, registrations, syncEvents, records, editorial,
-                resources, quality, relations, creators, funding, manager, "http://localhost:8090");
+                resources, quality, relations, creators, funding, affiliations, manager, "http://localhost:8090");
         assertThrows(ResponseStatusException.class, () -> invalid.reserve("r1"));
         verify(datacite, never()).reserveDraft(anyString());
         assertTrue(local.isEmpty());

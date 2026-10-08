@@ -47,8 +47,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       editables solo por el autor mientras el depósito sea borrador,
       visibles en la ficha pública y enviadas al DOI de versión.
 - [x] Identidad científica por autor: cada creador del recurso puede tener su
-      propio ORCID, institución y ROR; se presenta en la ficha pública y se
-      asigna al autor correcto al generar metadatos DataCite. Se conserva el
+      propio ORCID y hasta diez instituciones/ROR ordenadas; se presentan en la
+      ficha pública y se asignan al autor correcto al generar metadatos DataCite.
+      Se conserva el
       campo heredado para registros anteriores. La edición general ya no
       elimina los coautores al guardar.
 - [x] Búsqueda institucional ROR v2 bajo demanda en el editor de autores,
@@ -85,9 +86,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Validar el flujo DOI real con cuenta Repository, prefijo y credenciales
       de DataCite Test/Production; probar resolución pública y conciliar DOI
       manuales existentes antes de activar el modo automático en producción.
-- [ ] Integrar autenticación/verificación ORCID y, si se requiere,
-      múltiples afiliaciones por un mismo autor; la captura actual valida el
-      formato y permite una institución por autor. La búsqueda ORCID necesita
+- [ ] Integrar autenticación/verificación ORCID; la captura actual valida solo
+      el formato y ya permite varias instituciones por autor. La búsqueda ORCID necesita
       token de su API y no debe usarse para atribuir identidad por coincidencia
       de nombres; para acreditar titularidad se requiere OAuth ORCID y
       autorización del investigador. La consulta ROR necesita salida a Internet

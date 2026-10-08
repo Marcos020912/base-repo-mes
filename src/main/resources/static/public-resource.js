@@ -53,10 +53,14 @@ function renderAuthors(authors) {
       const link = document.createElement('a'); link.href = `https://orcid.org/${author.orcid.replace(/^https:\/\/orcid\.org\//, '')}`;
       link.textContent = `ORCID ${author.orcid}`; link.rel = 'noopener noreferrer'; row.append(' · ', link);
     }
-    if (author.institution) row.append(node('span', ` · ${author.institution}`));
-    if (author.ror) {
-      const link = document.createElement('a'); link.href = `https://ror.org/${author.ror.replace(/^https:\/\/ror\.org\//, '')}`;
-      link.textContent = `ROR ${author.ror}`; link.rel = 'noopener noreferrer'; row.append(' · ', link);
+    const affiliations = Array.isArray(author.affiliations) ? author.affiliations :
+      (author.institution ? [{institution: author.institution, ror: author.ror}] : []);
+    for (const affiliation of affiliations) {
+      row.append(node('span', ` · ${affiliation.institution}`));
+      if (affiliation.ror) {
+        const link = document.createElement('a'); link.href = `https://ror.org/${affiliation.ror.replace(/^https:\/\/ror\.org\//, '')}`;
+        link.textContent = `ROR ${affiliation.ror}`; link.rel = 'noopener noreferrer'; row.append(' · ', link);
+      }
     }
     section.append(row);
   }
