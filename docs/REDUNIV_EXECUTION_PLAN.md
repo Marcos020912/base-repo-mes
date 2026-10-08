@@ -50,7 +50,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **W10 — Envío a curación/publicación según política**. Base local: flujo revisión/publicación; depende de política institucional.
 - [ ] **W11 — Reserva DOI, embargo y acceso privado a revisores**. Base local: DOI Draft/enlaces temporales; pruebas DataCite/HAProxy pendientes.
 - [ ] **A01 — Cola y validación de metadatos/archivos**. Base local: Curación/calidad; validación bibliotecaria/formatos real pendiente.
-- [ ] **A02 — Control de identificadores, vocabularios y perfiles**. Parcial: listas configurables e identidad; administración de perfiles/vocabularios y aprobación no acreditadas.
+- [ ] **A02 — Control de identificadores, vocabularios y perfiles**. Parcial: registro persistente de vocabularios con propuestas/aprobación administrativa explícita y revisión concurrente verificado localmente (regresión/E2E/restauración). Perfiles de metadatos y aprobación institucional pendientes.
 - [x] **A03 — Licencias, privacidad y datos sensibles en curación**. Implementado local: decisión de curación con notas privadas y revisión concurrente; bloquea publicación sensible sin aprobación, revoca al devolver a borrador. E2E aprobado; no sustituye aprobación jurídica institucional.
 - [ ] **A04 — Usuarios, roles e integraciones DOI/OIDC/correo**. Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID.
 - [x] **A05 — Estado almacenamiento/fixity, auditoría/reportes operativos**. Implementado local: consola autorizada con volumen local, inventario técnico/fixity, veinte auditorías e informe JSON fechado. Tests/E2E aprobados; no sustituye monitorización y backup institucional.
@@ -145,3 +145,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Seguridad declarada diferenciada JWT/público/token revisor; esquemas tipados, binarios, citas autenticadas y tombstone410.
 - Gate contra JAR aislado:22 rutas y140 referencias locales resolubles. No reemplaza comportamiento, todos los endpoints o clientes institucionales.
 - Regresión50suites495pruebas0fallos/errores/omitidas; después, tres tests contractuales aprobados incluyendo estabilidad por orden. E2EPG18SMTPChrome/restauración completo aprobado; axe53estados0 e historial de ambos catálogos aprobado. `docs/SCIENTIFIC_API_CONTRACT.md`.
+
+### Gobernanza de vocabularios
+- Registro LICENSE/DISCIPLINE con propuesta separada de lista aprobada, revisión optimista, motivo/actor/fecha y modales admin. Conserva valores heredados sin modificar; no cambia publicados ni strict-vocabulary.
+- Regresión51suites499pruebas0fallos/errores/omitidas; E2EPG18SMTPChrome/restauración aprobado, migración doble y vocabulario aprobado conservado. Axe57estados0.
+- `docs/VOCABULARY_ADMINISTRATION.md`; perfiles permanecen independientes y pendientes.

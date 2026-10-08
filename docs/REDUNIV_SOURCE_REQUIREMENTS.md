@@ -89,7 +89,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | ID | Requisito | Estado / evidencia / siguiente acción |
 |---|---|---|
 | A01 | Cola y validación de metadatos/archivos | Base local: Curación/calidad; validación bibliotecaria/formatos real pendiente. |
-| A02 | Control de identificadores, vocabularios y perfiles | Parcial: listas configurables e identidad; administración de perfiles/vocabularios y aprobación no acreditadas. |
+| A02 | Control de identificadores, vocabularios y perfiles | Parcial: registro persistente de vocabularios con propuestas/aprobación administrativa explícita y revisión concurrente verificado localmente (regresión/E2E/restauración). Perfiles de metadatos y aprobación institucional pendientes. |
 | A03 | Licencias, privacidad y datos sensibles en curación | Implementado local: revisión privada con control concurrente, aprobación obligatoria y revocación al devolver borrador; tests y E2E aprobados. Validación institucional pendiente. |
 | A04 | Usuarios, roles e integraciones DOI/OIDC/correo | Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID. |
 | A05 | Estado almacenamiento/fixity, auditoría/reportes operativos | Implementado local: consola CURATOR/ADMIN de volumen local, inventario técnico/fixity y veinte auditorías con informe JSON fechado; tests/E2E aprobados. No equivale a monitorización/backup institucional. |

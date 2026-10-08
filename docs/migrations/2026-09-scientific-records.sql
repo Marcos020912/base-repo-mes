@@ -236,3 +236,19 @@ COMMIT;
 ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS production_description VARCHAR(5000);
 ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS processing_description VARCHAR(5000);
 ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS processing_tools VARCHAR(2000);
+
+-- Vocabulary governance: a pending proposal never replaces the approved list.
+CREATE TABLE IF NOT EXISTS scientific_vocabulary_registry (
+ kind varchar(20) PRIMARY KEY, revision bigint NOT NULL DEFAULT 0,
+ approved boolean NOT NULL DEFAULT false,
+ proposal_note varchar(1000), proposed_by varchar(80), approved_by varchar(80),
+ proposed_at timestamp(6) with time zone, approved_at timestamp(6) with time zone
+);
+CREATE TABLE IF NOT EXISTS scientific_vocabulary_approved (
+ kind varchar(20) NOT NULL REFERENCES scientific_vocabulary_registry(kind),
+ position integer NOT NULL, value varchar(255) NOT NULL, PRIMARY KEY(kind,position)
+);
+CREATE TABLE IF NOT EXISTS scientific_vocabulary_proposed (
+ kind varchar(20) NOT NULL REFERENCES scientific_vocabulary_registry(kind),
+ position integer NOT NULL, value varchar(255) NOT NULL, PRIMARY KEY(kind,position)
+);

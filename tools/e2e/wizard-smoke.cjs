@@ -578,6 +578,34 @@ async function publicDownloads(base, resource) {
     process.stdout.write('Descargas públicas anónimas OK: CSV, ZIP con descripción, BibTeX y CSV directo a disco (OPFS).\n');
   } finally { await context.close(); }
 }
+async function vocabularyFlow(page,base) {
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  const endpoint=base+'/api/v1/scientific/vocabularies/administration';
+  if(verifiedAccount)assert((await fetch(endpoint,{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===403,'Usuario no administrador gestionó vocabularios.');
+  assert((await fetch(endpoint)).status===401,'Anónimo gestionó vocabularios.');
+  const before=await (await fetch(base+'/api/v1/scientific/vocabularies',{headers})).json();
+  const administratorList=await fetch(endpoint,{headers});assert(administratorList.ok,'Administrador no pudo consultar vocabularios.');assert((await administratorList.json()).length===2,'Registro no incluye ambas listas.');
+  await page.goto(base+'/vocabulary-admin.html',{waitUntil:'load'});
+  try{await page.waitForFunction(()=>document.querySelectorAll('#vocabulary-lists section').length===2);}catch(error){throw Error('No cargó UI vocabularios: '+await page.evaluate(()=>location.pathname+' · '+(document.querySelector('#vocabulary-status')?.textContent||'sin panel'))+' · '+error.message);}
+  await page.click('#vocabulary-lists section:first-child button');
+  await page.waitForSelector('#vocabulary-modal[open] textarea',{visible:true});
+  await page.$eval('#vocabulary-form [name=values]',(input,values)=>input.value=values.join('\n'),[...before.licenses,'Institutional-test']);
+  await page.type('#vocabulary-form [name=note]','Propuesta administrativa sintética; no es aprobación institucional.');
+  const saved=observeResponse(page,r=>r.request().method()==='PUT'&&r.url().endsWith('/administration/LICENSE'));
+  await page.click('#vocabulary-form [type=submit]');assert((await saved).ok(),'No guardó propuesta de vocabulario.');
+  const pending=await (await fetch(endpoint,{headers})).json();const entry=pending.find(value=>value.kind==='LICENSE');
+  assert(entry.proposedValues.includes('Institutional-test'),'No conservó propuesta.');
+  const unchanged=await (await fetch(base+'/api/v1/scientific/vocabularies',{headers})).json();assert(JSON.stringify(unchanged.licenses)===JSON.stringify(before.licenses),'Propuesta pendiente reemplazó lista activa.');
+  assert((await fetch(endpoint+'/LICENSE/approve',{method:'POST',headers,body:JSON.stringify({revision:entry.revision+1})})).status===409,'Aprobó revisión obsoleta.');
+  await page.waitForFunction(()=>[...document.querySelectorAll('#vocabulary-lists button')].some(button=>button.textContent==='Revisar y aprobar'));
+  await page.evaluate(()=>[...document.querySelectorAll('#vocabulary-lists button')].find(button=>button.textContent==='Revisar y aprobar').click());
+  await page.waitForSelector('#vocabulary-approval-modal[open]',{visible:true});
+  const approved=observeResponse(page,r=>r.request().method()==='POST'&&r.url().endsWith('/LICENSE/approve'));
+  await page.click('#vocabulary-approval-form [type=submit]');assert((await approved).ok(),'No aprobó propuesta.');
+  const after=await (await fetch(base+'/api/v1/scientific/vocabularies',{headers})).json();assert(after.licenses.includes('Institutional-test'),'Aprobación no activó vocabulario.');
+  process.stdout.write('Vocabularios OK: permisos, modales, propuesta no activa, conflicto de revisión y aprobación explícita.\n');
+}
 async function privacyFlow(page,base,draft) {
   const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
@@ -652,7 +680,8 @@ async function collectionsFlow(page, base, published, draft) {
   await page.reload({waitUntil:'load'});await page.waitForFunction(()=>!document.querySelector('#delete-collection').disabled);
   await page.click('#delete-collection');await page.waitForSelector('#collection-confirm[open]');
   const removal=observeResponse(page, r=>r.request().method()==='DELETE'&&r.url().endsWith('/api/v1/collections/'+collection.id));
-  await page.click('#confirm-action');assert((await removal).status()===204,'Eliminar colección falló.');
+  const returnToList=page.waitForNavigation({waitUntil:'load'});returnToList.catch(()=>{});
+  await page.click('#confirm-action');assert((await removal).status()===204,'Eliminar colección falló.');await returnToList;
   assert((await fetch(base+'/api/v1/public/resources/'+published.id)).ok,'Eliminar colección eliminó dataset.');
   assert((await fetch(base+'/api/v1/public/collections/'+collection.id)).status===404,'Colección eliminada sigue pública.');
   process.stdout.write('Colecciones OK: formularios, privado/público, membresía única, borradores ocultos y eliminación sin borrar datasets.\n');
@@ -785,6 +814,8 @@ async function restorePostgresFixture(page, base, files, published) {
   await login(page,base);
   assert(await page.evaluate(() => localStorage.getItem('base-repo-token')) !== staleToken,
     'El nuevo login no sustituyó la sesión inválida después del reinicio.');
+  const restoredVocabulary=await page.evaluate(async()=>await (await fetch('/api/v1/scientific/vocabularies',{headers:auth.headers()})).json());
+  assert(restoredVocabulary.licenses.includes('Institutional-test'),'Restauración perdió vocabulario aprobado.');
   const response = await fetch(`${base}/api/v1/public/resources/${encodeURIComponent(published.id)}`);
   assert(response.ok, 'El recurso publicado no sobrevivió a la restauración.');
   const restored=await response.json();
@@ -928,6 +959,7 @@ async function main() {
     await publicVersionHistory(base,markdown,newVersionId,await page.evaluate(()=>localStorage.getItem('base-repo-token')));
     await publicDownloads(base, markdown);
     await collectionsFlow(page, base, markdown, packaged);
+    await vocabularyFlow(page,base);
     await verifyMultiuserAccess(page,base,markdown,newVersionId);
     await restorePostgresFixture(page,base,files,markdown);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);

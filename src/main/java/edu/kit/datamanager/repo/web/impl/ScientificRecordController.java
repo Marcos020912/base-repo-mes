@@ -90,7 +90,7 @@ public class ScientificRecordController {
             record.setConceptualDoi(validDoi(input.conceptualDoi()));
         }
         String license = clean(input.licenseId(), 100);
-        if (vocabularies != null && !vocabularies.validLicense(license))
+        if (vocabularies != null && !vocabularies.validLicense(license, record.getLicenseId()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La licencia no pertenece al vocabulario configurado.");
         record.setLicenseId(license);
         String access = clean(input.accessLevel(), 30);
@@ -103,7 +103,7 @@ public class ScientificRecordController {
         }
         record.setLanguage(clean(input.language(), 16));
         String discipline = clean(input.discipline(), 255);
-        if (vocabularies != null && !vocabularies.validDiscipline(discipline))
+        if (vocabularies != null && !vocabularies.validDiscipline(discipline, record.getDiscipline()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La disciplina no pertenece al vocabulario configurado.");
         record.setDiscipline(discipline);
         record.setKeywords(clean(input.keywords(), 2000));
