@@ -33,7 +33,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **C02 — Facetas: área, institución, autor, año, tipo, licencia**. Base local: API catálogo/facetas y vistas; pruebas de combinaciones/volumen pendientes.
 - [ ] **C03 — Facetas: acceso, formato, proyecto/financiador, DOI, idioma**. Base local: API/funding; comprobar todas visibles y utilizables en catálogo público.
 - [ ] **C04 — Búsqueda, orden y paginación en servidor**. Base local: catálogo; no sustituir por filtro de 200 registros en cliente.
-- [ ] **C05 — Filtros, página y orden reproducibles en URL**. Base local: scripts catálogo; comprobar enlaces compartidos y back/forward.
+- [x] **C05 — Filtros, página y orden reproducibles en URL**. Implementado local: pushState/replace inicial, popstate restaurando valores ausentes, filtro/orden/página y cancelando debounce. Test Chrome de ambos catálogos aprobado (API fixture, no prueba de búsqueda backend).
 - [ ] **C06 — Distinguir vacío, cero coincidencias, permisos y caída**. Base local: estados catálogo; comprobar mensajes y acciones diferentes por caso.
 - [x] **C07 — Colecciones temáticas e institucionales**. Implementado local: colecciones temáticas/institucionales persistentes, gestión curador/admin con modales y catálogo público paginado solo PUBLISHED. Cuatro pruebas JPA y E2E PostgreSQL/SMTP/Chrome/restauración aprobados; no duplica ni elimina datasets.
 - [ ] **C08 — Políticas, ayuda y guía de citación**. Parcial: nueva `help.html` ofrece guía y condiciones técnicas; políticas institucionales formales aún no aprobadas.
@@ -123,3 +123,7 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - E2E PG18SMTPChrome/restauración: consulta y exportJSON con esquema/fecha, permisos USER403/anónimo401 y no-store; aprobado. Axe53estados0.
 - `docs/OPERATIONS_CONSOLE.md` distingue inventario técnico/últimos estados de verificación de métricas públicas y backups.
 - Regresión operaciones:48 suites487 pruebas0fallos/errores/omitidas; E2E completo y restauración aprobados.
+
+### Historial reproducible de catálogo
+- `node tools/e2e/catalog-history.cjs`: ambos catálogos, URL inicial, búsqueda, página, orden, Atrás/Adelante, valores ausentes, facetas y recarga aprobados. API/auth fixture; no reemplaza integración de seguridad/búsqueda.
+- Build JAR aprobado; axe53estados0. Última regresión backend sin cambios Java:48 suites487pruebas aprobadas en bloque operaciones.

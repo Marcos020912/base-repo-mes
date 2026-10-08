@@ -16,13 +16,18 @@ facetResults.append(results, pagination);
 facetLayout.append(facetPanel, facetResults);
 let authorFilter = '', yearFilter = '', licenseFilter = '', mimeFilter = '', funderFilter = '', projectFilter = '', doiFilter = '';
 let pendingRequest = 0;
-const params = new URLSearchParams(location.search);
-q.value = params.get('q') || ''; type.value = params.get('type') || '';
-for (const [key, control] of [['discipline',discipline],['institution',institution],['language',language],['format',format],['access',access],['sort',sort]]) if(params.has(key)) control.value=params.get(key);
-state.page = Math.max(0, Number.parseInt(params.get('page') || '0', 10) || 0);
-authorFilter = params.get('author') || ''; yearFilter = params.get('year') || ''; licenseFilter = params.get('license') || ''; mimeFilter = params.get('mimeType') || '';
-funderFilter = params.get('funder') || ''; projectFilter = params.get('project') || '';
-doiFilter = params.get('hasDoi') === 'true' ? 'true' : params.get('withoutDoi') === 'true' ? 'false' : '';
+const defaultSort=sort.value;
+function restorePublicFilters() {
+  const params=new URLSearchParams(location.search);
+  q.value=params.get('q')||'';type.value=params.get('type')||'';
+  for(const [key,control] of [['discipline',discipline],['institution',institution],['language',language],['format',format],['access',access]])control.value=params.get(key)||'';
+  sort.value=params.get('sort')||defaultSort;
+  state.page=Math.max(0,Number.parseInt(params.get('page')||'0',10)||0);
+  authorFilter=params.get('author')||'';yearFilter=params.get('year')||'';licenseFilter=params.get('license')||'';mimeFilter=params.get('mimeType')||'';
+  funderFilter=params.get('funder')||'';projectFilter=params.get('project')||'';
+  doiFilter=params.get('hasDoi')==='true'?'true':params.get('withoutDoi')==='true'?'false':'';
+}
+restorePublicFilters();
 function text(tag, value, className) { const node = document.createElement(tag); node.textContent = value; if (className) node.className = className; return node; }
 const facetNames = {type:'Tipo',author:'Autoría',access:'Acceso',year:'Año',license:'Licencia',discipline:'Disciplina',institution:'Institución',language:'Idioma',mimeType:'Formato',funder:'Financiador',project:'Proyecto',hasDoi:'DOI'};
 const facetLabels = {OPEN:'Abierto',RESTRICTED:'Restringido',EMBARGOED:'Embargo',true:'Con DOI',false:'Sin DOI'};
@@ -64,7 +69,7 @@ function renderFacets(data) {
     facetPanel.append(group);
   }
 }
-async function load() {
+async function load({historyMode='push'}={}) {
   const requestId = ++pendingRequest;
   const search = new URLSearchParams({ q: q.value.trim(), author:authorFilter, type: type.value, year:yearFilter, license:licenseFilter,
     discipline: discipline.value.trim(), institution: institution.value.trim(), language: language.value.trim(),
@@ -72,7 +77,9 @@ async function load() {
     access: access.value, hasDoi:String(doiFilter === 'true'),
     withoutDoi:String(doiFilter === 'false'), sort: sort.value,
     page: String(state.page), size: '20' });
-  history.replaceState(null, '', `${location.pathname}?${search}`);
+  const target=`${location.pathname}?${search}${location.hash}`;
+  if(historyMode==='replace')history.replaceState(null,'',target);
+  else if(historyMode==='push'&&target!==`${location.pathname}${location.search}${location.hash}`)history.pushState(null,'',target);
   status.textContent = 'Buscando…';
   try {
     const response = await fetch(`/api/v1/public/catalog?${search}`);
@@ -116,7 +123,9 @@ async function load() {
 }
 let timer; q.addEventListener('input', () => { state.page = 0; clearTimeout(timer); timer = setTimeout(load, 300); });
 for(const control of [discipline,institution,language,format]) control.addEventListener('input', () => { state.page=0; clearTimeout(timer); timer=setTimeout(load,300); });
-for(const control of [type,access,sort]) control.addEventListener('change', () => { state.page=0; load(); }); load();
+for(const control of [type,access,sort]) control.addEventListener('change', () => { state.page=0; load(); });
+window.addEventListener('popstate',()=>{clearTimeout(timer);restorePublicFilters();load({historyMode:'none'});});
+load({historyMode:'replace'});
 
 async function loadPublicMetrics() {
   const notice=document.querySelector('#metrics-status');
