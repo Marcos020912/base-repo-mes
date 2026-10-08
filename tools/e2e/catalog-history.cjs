@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 /* Isolated browser UI history test. API/auth are fixtures, not security or search-backend tests. */
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
-const puppeteer=require('../a11y/node_modules/puppeteer-core');
+const puppeteer=require('../a11y/node_modules/puppeteer-core');const axe=require('../a11y/node_modules/axe-core');
 const root=path.resolve(__dirname,'../../src/main/resources/static');
-let catalogResponseMode='normal';
+let catalogResponseMode='normal',apiRequests=0;
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://localhost');
   if(url.pathname==='/auth.js'){res.setHeader('Content-Type','application/javascript');res.end("window.auth={requireLogin(){},user(){return {username:'fixture',role:'USER'}},headers(v){return v},logout(){}};window.toast={error(){}};");return;}
   if(url.pathname.startsWith('/api/')){
+    apiRequests++;
     res.setHeader('Content-Type','application/json');
-    if(url.pathname.endsWith('/facets'))return res.end(JSON.stringify({author:[{value:'Ada',count:60}]}));
+    if(url.pathname.endsWith('/facets'))return res.end(JSON.stringify({author:[{value:'Ada',count:60},{value:'OPEN',count:1}],access:[{value:'OPEN',count:60}]}));
     if(url.pathname.endsWith('/metrics'))return res.end(JSON.stringify({publishedVersions:60,openPolicyVersions:60,publishedCollections:0,measuredAt:new Date().toISOString(),definitions:{}}));
     if(catalogResponseMode==='forbidden'){res.writeHead(403);return res.end('{}');}
     if(catalogResponseMode==='unavailable'){res.writeHead(503);return res.end('{}');}
@@ -24,7 +25,7 @@ function assert(value,message){if(!value)throw Error(message);}
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+server.address().port;
   browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
   for(const mode of ['public','private']){
-    const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+    const page=await browser.newPage(),errors=[];await page.evaluateOnNewDocument(()=>localStorage.removeItem('reduniv-ui-locale'));page.on('pageerror',e=>errors.push(e.message));
     const route=mode==='public'?'public.html':'index.html',input=mode==='public'?'#public-q':'#filter',sort=mode==='public'?'#public-sort':'#sort-order',cards=mode==='public'?'#public-results':'#resource-list';
     await page.goto(base+'/'+route+'?q=initial&author=Ada&type=IMAGE&page=1&sort=oldest',{waitUntil:'networkidle0'});
     assert(await page.$eval(input,n=>n.value)==='initial','Consulta inicial no restaurada');
@@ -54,6 +55,21 @@ function assert(value,message){if(!value)throw Error(message);}
     catalogResponseMode='unavailable';await page.reload({waitUntil:'networkidle0'});assert(await page.$eval(statusSelector,n=>n.textContent.includes('no está disponible')),'Caída no distinguida');
     assert(await page.$$eval(cards+' button',nodes=>nodes.some(n=>n.textContent==='Reintentar búsqueda')),'Caída no permite reintentar');
     catalogResponseMode='normal';await page.$$eval(cards+' button',nodes=>nodes.find(n=>n.textContent==='Reintentar búsqueda').click());await page.waitForFunction(selector=>document.querySelector(selector+' .resource-card'),{},cards);
+    const beforeLocaleRequests=apiRequests,beforeLocaleUrl=page.url();
+    const originalTitle=await page.$eval(cards+' h2',n=>n.textContent);
+    await page.select('[data-ui-locale]','en');
+    assert(await page.$eval(input,n=>n.value)==='no-matches','Idioma cambió consulta');
+    assert(await page.$eval(cards+' h2',n=>n.textContent)===originalTitle,'Idioma cambió título de autor');
+    assert(await page.$eval(cards+' .card-author',n=>n.textContent)==='Ada','Idioma cambió autor');
+    assert(await page.$eval(mode==='public'?'#public-status':'#status-text',n=>n.textContent).then(v=>v.includes(mode==='public'?'published resources':'resources')),'Total no traducido');
+    assert(await page.$eval(mode==='public'?'#public-pagination':'#pagination',n=>n.textContent).then(v=>v.includes('Page 1 of 3')),'Paginación no traducida');
+    if(mode==='public'){
+      assert(await page.$$eval('.public-facet-group',nodes=>nodes.some(n=>n.querySelector('h3').textContent==='Authorship'&&n.textContent.includes('OPEN (1)'))),'Faceta de autor tratada como estado traducible');
+      assert(await page.$eval('#metrics-status',n=>n.textContent).then(v=>v.startsWith('Updated:')&&!v.includes('Invalid')),'Fecha inventario inválida/no traducida');
+    }else assert(await page.$eval('#author-filter',n=>n.placeholder)==='Author name','Placeholder no traducido');
+    await new Promise(resolve=>setTimeout(resolve,350));assert(apiRequests===beforeLocaleRequests,'Idioma hizo otra consulta');assert(page.url()===beforeLocaleUrl,'Idioma cambió historial');
+    await page.setViewport({width:320,height:900});await page.addScriptTag({content:axe.source});const audit=await page.evaluate(()=>axe.run());assert(!audit.violations.length,'English catalogue axe: '+audit.violations.map(v=>v.id).join(', '));assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'English catalogue overflow');
+    await page.select('[data-ui-locale]','es');
     assert(!errors.length,'Errores JS: '+errors.join('; '));await page.close();console.log('Historial '+mode+' OK: filtros, orden, página, Atrás/Adelante, valores ausentes, recarga y estados vacío/sin coincidencias/permiso/caída.');
   }
 }catch(e){console.error(e.stack);process.exitCode=1;}finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}})();

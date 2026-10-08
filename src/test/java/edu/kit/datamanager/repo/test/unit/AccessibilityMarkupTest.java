@@ -21,7 +21,8 @@ public class AccessibilityMarkupTest {
             assertTrue(page + " has no skip link", html.contains("href=\"#main-content\""));
             assertTrue(page + " has no focusable main", Pattern.compile("<main\\b[^>]*>").matcher(html).results()
                     .anyMatch(tag -> tag.group().contains("id=\"main-content\"") && tag.group().contains("tabindex=\"-1\"")));
-            assertTrue(page + " has no language", html.contains("<html lang=\"es\""));
+            assertTrue(page + " has no language", Pattern.compile("<html\\b[^>]*>").matcher(html).results()
+                    .anyMatch(tag -> tag.group().contains("lang=\"es\"")));
         }
     }
 

@@ -8,20 +8,20 @@ const transfers = (() => {
   toggle.setAttribute('aria-expanded', 'false');
   const panel = document.createElement('section');
   panel.id = 'transfer-panel'; panel.className = 'transfer-panel'; panel.hidden = true;
-  panel.setAttribute('aria-label', 'Subidas y descargas');
+  uiI18n.attribute(panel,'aria-label','transfer.panel');
   panel.tabIndex = -1;
   const heading = document.createElement('div'); heading.className = 'transfer-heading';
-  const title = document.createElement('h2'); title.textContent = 'Transferencias';
-  const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'link-button'; clear.textContent = 'Limpiar finalizadas';
+  const title = document.createElement('h2'); uiI18n.set(title,'transfer.title');
+  const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'link-button'; uiI18n.set(clear,'transfer.clear');
   const close = document.createElement('button'); close.type = 'button'; close.className = 'link-button transfer-close';
-  close.textContent = 'Cerrar'; close.setAttribute('aria-label', 'Cerrar monitor de transferencias');
+  uiI18n.set(close,'transfer.close'); uiI18n.attribute(close,'aria-label','transfer.closeLabel');
   const list = document.createElement('ol'); list.className = 'transfer-list';
   heading.append(title, clear, close); panel.append(heading);
   const diskMode = document.createElement('input'); diskMode.type = 'checkbox';
   diskMode.id = 'transfer-disk-mode';
   if (typeof window.showSaveFilePicker === 'function' && window.isSecureContext) {
     const diskLabel = document.createElement('label'); diskLabel.className = 'transfer-disk-option';
-    diskLabel.append(diskMode, ' Guardar descargas directamente al disco (archivos grandes)');
+    const caption=document.createElement('span');uiI18n.set(caption,'transfer.disk');diskLabel.append(diskMode,document.createTextNode(' '),caption);
     panel.append(diskLabel);
   }
   panel.append(list); document.body.append(panel);
@@ -29,15 +29,15 @@ const transfers = (() => {
 
   function refreshToggle() {
     const active = tasks.filter(task => task.active).length;
-    toggle.textContent = active ? `⇅ Transferencias (${active})` : '⇅ Transferencias';
+    uiI18n.set(toggle,active?'transfer.activeToggle':'transfer.toggle',{count:active});
   }
   function add(label, direction) {
     const item = document.createElement('li'); item.className = 'transfer-item';
     const name = document.createElement('strong'); name.textContent = `${direction === 'upload' ? '↑' : '↓'} ${label}`;
-    const status = document.createElement('span'); status.textContent = 'Iniciando…'; status.setAttribute('role', 'status');
+    const status = document.createElement('span'); uiI18n.set(status,'transfer.starting'); status.setAttribute('role', 'status');
     const progress = document.createElement('progress'); progress.max = 100; progress.removeAttribute('value');
-    progress.setAttribute('aria-label', `Progreso de ${label}`);
-    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'link-button'; cancel.textContent = 'Cancelar';
+    uiI18n.attribute(progress,'aria-label','transfer.progressLabel',{name:label});
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'link-button'; uiI18n.set(cancel,'transfer.cancel');
     item.append(name, status, progress, cancel); list.prepend(item);
     const task = {item, status, progress, cancel, active:true};
     tasks.push(task); refreshToggle();
@@ -49,17 +49,18 @@ const transfers = (() => {
     return task;
   }
   function setProgress(task, loaded, total) {
+    task.phase='progress';task.loaded=loaded;task.total=total;
     if (total > 0) {
       const percent = Math.min(100, Math.round(loaded / total * 100));
       task.progress.value = percent;
-      task.status.textContent = `${percent} % · ${loaded.toLocaleString('es')} de ${total.toLocaleString('es')} bytes`;
+      uiI18n.set(task.status,'transfer.progress',{percent,loaded:loaded.toLocaleString(uiI18n.locale),total:total.toLocaleString(uiI18n.locale)});
     } else {
       task.progress.removeAttribute('value');
-      task.status.textContent = `${loaded.toLocaleString('es')} bytes · tamaño total no informado`;
+      uiI18n.set(task.status,'transfer.unknownTotal',{loaded:loaded.toLocaleString(uiI18n.locale)});
     }
   }
-  function finish(task, text, success = true) {
-    task.active = false; task.status.textContent = text;
+  function finish(task, key, success = true) {
+    task.phase='finished';task.active = false;uiI18n.set(task.status,key);
     task.progress.value = 100; task.progress.hidden = !success; task.cancel.hidden = true; refreshToggle();
   }
   function closePanel() {
@@ -99,7 +100,7 @@ const transfers = (() => {
         // All bytes sent is not confirmation of validation or durable storage.
         if (!task.active) return;
         task.progress.removeAttribute('value');
-        task.status.textContent = 'Archivo enviado · esperando confirmación del servidor…';
+        task.phase='waiting';uiI18n.set(task.status,'transfer.waiting');
       }
       xhr.upload.onprogress = event => {
         if (event.lengthComputable && event.loaded >= event.total) waitingForServer();
@@ -107,26 +108,26 @@ const transfers = (() => {
       };
       xhr.upload.onload = waitingForServer;
       xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) { finish(task, 'Subida completada'); resolve(); return; }
-        let detail = 'No se pudo completar la subida.';
+        if (xhr.status >= 200 && xhr.status < 300) { finish(task, 'transfer.uploadComplete'); resolve(); return; }
+        let failure=uiI18n.error('transfer.uploadFailed');
         if ((xhr.getResponseHeader('Content-Type') || '').includes('json')) {
           try {
             const body = JSON.parse(xhr.responseText);
             const message = body.detail || body.message;
-            if (typeof message === 'string' && message.trim()) detail = message;
+            if (typeof message === 'string' && message.trim()) failure = new Error(message);
           } catch { /* Invalid error body: keep the user-facing fallback. */ }
         }
-        finish(task, 'Error en la subida', false); reject(new Error(detail));
+        finish(task, 'transfer.uploadError', false); reject(failure);
       };
-      xhr.onerror = () => { finish(task, 'Error de red', false); reject(new Error('Se interrumpió la conexión durante la subida.')); };
-      xhr.onabort = () => { finish(task, 'Subida cancelada', false); reject(new Error('Subida cancelada.')); };
+      xhr.onerror = () => { finish(task, 'transfer.networkError', false); reject(uiI18n.error('transfer.uploadConnectionLost')); };
+      xhr.onabort = () => { finish(task, 'transfer.uploadCancelled', false); reject(uiI18n.error('transfer.uploadCancelledError')); };
       const body = new FormData(); body.append('file', file); xhr.send(body);
     });
   }
 
   async function download(url, filename, label = filename, options = {}) {
     if (new URL(url, location.href).origin !== location.origin)
-      throw new Error('Solo se permiten descargas desde este servidor.');
+      throw uiI18n.error('transfer.sameServer');
     const task = add(label, 'download');
     const controller = new AbortController();
     task.cancel.addEventListener('click', () => controller.abort());
@@ -134,25 +135,25 @@ const transfers = (() => {
     try {
       let fileHandle;
       if (diskMode.checked) {
-        task.status.textContent = 'Selecciona dónde guardar el archivo…';
+        task.phase='choose-location';uiI18n.set(task.status,'transfer.chooseLocation');
         fileHandle = await window.showSaveFilePicker({suggestedName:filename});
         controller.signal.throwIfAborted();
       }
       const response = await fetch(url, {headers:options.headers || headers(), cache:options.cache || 'default', redirect:'error', signal:controller.signal});
       if (!response.ok) {
-        let message = options.errorMessage || 'No se pudo descargar el archivo.';
+        let failure=options.errorMessage?new Error(options.errorMessage):uiI18n.error('transfer.downloadFailed');
         if (!options.errorMessage && (response.headers.get('Content-Type') || '').includes('json')) {
           try {
             const problem = await response.json();
             const detail = problem.detail || problem.message;
-            if (typeof detail === 'string' && detail.trim()) message = detail;
+            if (typeof detail === 'string' && detail.trim()) failure = new Error(detail);
           } catch { /* Keep the generic message for invalid error bodies. */ }
         }
-        throw new Error(message);
+        throw failure;
       }
       const total = Number(response.headers.get('Content-Length')) || 0;
       if (fileHandle) {
-        if (!response.body) throw new Error('El navegador no permite guardar esta descarga por streaming.');
+        if (!response.body) throw uiI18n.error('transfer.noStreaming');
         writable = await fileHandle.createWritable();
         controller.signal.throwIfAborted();
       }
@@ -174,16 +175,16 @@ const transfers = (() => {
       controller.signal.throwIfAborted();
       if (writable) {
         task.cancel.disabled = true;
-        task.status.textContent = 'Finalizando guardado…';
+        task.phase='finalizing';uiI18n.set(task.status,'transfer.finalizing');
         await writable.close(); writable = null;
-        finish(task, 'Archivo guardado'); return {savedToDisk:true};
+        finish(task, 'transfer.saved'); return {savedToDisk:true};
       }
       const blob = new Blob(chunks, {type:response.headers.get('Content-Type') || 'application/octet-stream'});
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a'); link.href = blobUrl; link.download = filename;
       document.body.append(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-      finish(task, 'Descarga preparada'); return {savedToDisk:false};
+      finish(task, 'transfer.downloadReady'); return {savedToDisk:false};
     } catch (error) {
       const cancelled = controller.signal.aborted || error.name === 'AbortError';
       // A local write failure must stop the HTTP stream too; classify it before aborting.
@@ -191,10 +192,11 @@ const transfers = (() => {
       if (writable) {
         try { await writable.abort(); } catch { /* Preserve the original download error. */ }
       }
-      finish(task, cancelled ? 'Descarga cancelada' : 'Error en la descarga', false);
+      finish(task, cancelled ? 'transfer.downloadCancelled' : 'transfer.downloadError', false);
       throw error;
     }
   }
+  window.addEventListener('ui-locale-changed',()=>{refreshToggle();for(const task of tasks)if(task.active&&task.phase==='progress')setProgress(task,task.loaded,task.total);});
   refreshToggle();
   return {upload, download};
 })();

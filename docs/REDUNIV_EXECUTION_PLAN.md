@@ -55,7 +55,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **A04 — Usuarios, roles e integraciones DOI/OIDC/correo**. Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID.
 - [x] **A05 — Estado almacenamiento/fixity, auditoría/reportes operativos**. Implementado local: consola autorizada con volumen local, inventario técnico/fixity, veinte auditorías e informe JSON fechado. Tests/E2E aprobados; no sustituye monitorización y backup institucional.
 - [x] **A06 — Metadatos multilingües**. Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI.
-- [ ] **A07 — Internacionalización sin textos incrustados en JS**. Parcial: catálogos fuente JSON es/en y acceso/login/registro/verificación/cuenta y navegación compartida migrados, selector persistente sin borrar formularios. Chrome/catálogos/axe aprobados; demás vistas pendientes.
+- [ ] **A07 — Internacionalización sin textos incrustados en JS**. Parcial: catálogos fuente JSON es/en y acceso/login/registro/verificación/cuenta, catálogos público/privado, Mis depósitos/tareas, asistente de nueve etapas y módulos científicos compartidos, usuarios/operaciones y navegación compartida migrados, selector persistente sin borrar formularios. Chrome/catálogos/axe aprobados; demás vistas pendientes.
 - [ ] **A08 — Paquetes OAIS SIP/AIP/DIP**. Parcial: BagIt/paquete curatorial/ZIP público; perfiles institucionales completos no acreditados.
 - [x] **A09 — RO-Crate y W3C PROV**. Implementado local: declaración científica y eventos técnicos separados, manifiestos/paquetes probados; no inventa actividades ni fechas. Tests/E2E aprobados. Validación externa de perfiles pendiente.
 - [ ] **A10 — Auditorías periódicas SHA-256 verificables**. Base local: manual/programada opcional y alertas; política/volumen/buzón real pendientes.
@@ -200,3 +200,16 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Parámetros de traducción interpolados solo como texto, nunca HTML; bindings siguen siendo explícitos y de nodos hoja.
 - Cuatro pruebas de catálogo, fixture Chrome de usuarios (formularios conservados, confirmación con nombre especial, una sola consulta), regresión de autenticación y axe66estados0 aprobados.
 - Pendiente: contenido completo de catálogo, depósito, fichas y restantes pantallas administrativas. A07 no se considera terminado. Sin cambios de backend ni publicación.
+
+### A07 — Catálogos, depósito y operaciones
+
+- Catálogos público/privado: filtros, placeholders, tipos conocidos, facetas por ámbito, paginación, estados de vacío/permiso/caída e inventario es/en. Conservan consultas/historial, valores de filtros y contenido de autores. Autor llamado OPEN no se convierte en un estado de acceso.
+- Mis depósitos/tareas: estados, acciones, comprobaciones por código y reglas de perfil conocidas traducidos sin volver a consultar al cambiar idioma.
+- Operaciones: snapshot y JSON exportado originales separados de presentación; fechas/números locales, fallo no muestra cifras anteriores como actuales.
+- Asistente de nueve etapas: controles, validación, autosave, perfil, metadatos declarados, preflight, vista previa/cita, confirmación y subida es/en. Markdown y declaraciones originales no se traducen. Confirmación específica precede al mensaje genérico; no se envía sin aceptación.
+- Módulos compartidos de privacidad, traducciones declaradas, perfiles congelados y transferencias migrados. Cambiar idioma no consulta APIs ni reinicia subidas. Perfiles fallidos mantienen su fallo, transferencias esperan confirmación del servidor.
+- 629 claves es/en, seis pruebas Python; Chrome fixtures usuarios/catálogos/historial/Mis depósitos/operaciones/asistente aprobados, inglés320px sin desbordamiento e infracciones automáticas en ámbitos comprobados. Axe estático66estados0. Detectados y corregidos objetivo de filtros y contraste de descartar autosave condicional.
+- Regresión Java21:52suites504tests0fallos/errores/omitidas tras corregir guard HTML dependiente del orden de atributos. Los fixtures no sustituyen seguridad/backend ni auditoría manual WCAG.
+- Pendiente A07: fichas públicas/privadas y módulos de autores/financiación/relaciones/versiones/DOI, curación, vocabularios/perfiles administrativos, colecciones, ayuda y acceso de revisión. No se anuncia plataforma completa bilingüe ni se cierra A07.
+
+- E2E integrado detectó consumidor de transferencias con ruta absoluta sin runtime i18n (revisión temporal/público). Corregido orden de assets y añadido guard para rutas relativas/absolutas; no se modificaron permisos ni se ampliaron timeouts. Nueva validación integrada aprobada con JAR actual: PostgreSQL18/SMTP/Chrome, seguridad multiusuario, descargas públicas/revisor revocado y restauración con migración doble. Veinticuatro assets estáticos modificados comparados byte a byte con el JAR, sin discrepancias.

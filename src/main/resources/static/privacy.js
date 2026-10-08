@@ -3,7 +3,7 @@ window.scientificPrivacy = (() => {
   async function request(path,options={}) {
     const response=await fetch(path,{...options,headers:auth.headers({'Content-Type':'application/json',...options.headers})});
     const body=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(body.detail||body.message||'No se pudo completar la evaluación de privacidad.');
+    if(!response.ok){if(body.detail||body.message)throw new Error(body.detail||body.message);throw uiI18n.error('privacy.failed');}
     return body;
   }
   function protectNote(select,note) {const update=()=>note.required=Boolean(select.value&&select.value!=='NONE');select.addEventListener('change',update);update();return update;}
@@ -13,8 +13,8 @@ window.scientificPrivacy = (() => {
     protectNote(select,wizard.elements.namedItem('privacyNote'));
     request('/api/v1/scientific/privacy-policy').then(policy=>{
       select.required=policy.required!==false;
-      document.querySelector('#privacy-policy-status').textContent=select.required?'La evaluación es obligatoria antes de enviar a revisión.':'La evaluación es recomendada; las declaraciones sensibles siempre requieren revisión y acceso restringido.';
-    }).catch(()=>document.querySelector('#privacy-policy-status').textContent='No se pudo consultar la política; complete la evaluación para continuar con seguridad.');
+      uiI18n.set(document.querySelector('#privacy-policy-status'),select.required?'privacy.required':'privacy.recommended');
+    }).catch(()=>uiI18n.set(document.querySelector('#privacy-policy-status'),'privacy.policyFailed'));
   }
   const form=document.querySelector('#privacy-form');
   if(form) {
@@ -26,22 +26,22 @@ window.scientificPrivacy = (() => {
       try {
         const [assessment,metadata]=await Promise.all([request(`/api/v1/scientific/${encodeURIComponent(id)}/privacy`),request(`/api/v1/scientific/${encodeURIComponent(id)}`)]);
         current=assessment;panel.hidden=false;open.hidden=metadata.status!=='DRAFT';
-        document.querySelector('#privacy-status').textContent=assessment.classification?`Clasificación: ${assessment.classification} · Revisión: ${assessment.reviewState}`:'Todavía no se ha declarado la evaluación de privacidad.';
-        document.querySelector('#privacy-notes').textContent=[assessment.assessmentNote,assessment.reviewNote,assessment.reviewedBy?`Revisó: ${assessment.reviewedBy}`:''].filter(Boolean).join('\n');
+        uiI18n.set(document.querySelector('#privacy-status'),assessment.classification?'privacy.status':'privacy.unassessed',{classification:assessment.classification,reviewState:assessment.reviewState});
+        const notes=document.querySelector('#privacy-notes');notes.replaceChildren();for(const note of [assessment.assessmentNote,assessment.reviewNote].filter(Boolean))notes.append(document.createTextNode(note+'\n'));if(assessment.reviewedBy){const reviewer=document.createElement('span');uiI18n.set(reviewer,'privacy.reviewedBy',{username:assessment.reviewedBy});notes.append(reviewer);}
       } catch {panel.hidden=true;}
     }
     open.onclick=()=>{form.elements.classification.value=current?.classification||'';form.elements.assessmentNote.value=current?.assessmentNote||'';update();dialog.showModal();};
     form.addEventListener('submit',async event=>{
       event.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;
-      try {await request(`/api/v1/scientific/${encodeURIComponent(id)}/privacy`,{method:'PUT',body:JSON.stringify({classification:form.elements.classification.value,assessmentNote:form.elements.assessmentNote.value,revision:current?.revision??null})});dialog.close();toast.success('Evaluación de privacidad guardada.');await load();}
-      catch(error){toast.error(error.message);}finally{button.disabled=false;}
+      try {await request(`/api/v1/scientific/${encodeURIComponent(id)}/privacy`,{method:'PUT',body:JSON.stringify({classification:form.elements.classification.value,assessmentNote:form.elements.assessmentNote.value,revision:current?.revision??null})});dialog.close();toast.successKey('privacy.saved');await load();}
+      catch(error){toast.errorObject(error);}finally{button.disabled=false;}
     });load();
   }
   const reviewForm=document.querySelector('#privacy-review-form');
   if(reviewForm)reviewForm.addEventListener('submit',async event=>{
     event.preventDefault();const button=reviewForm.querySelector('[type=submit]');button.disabled=true;
-    try {await request(`/api/v1/scientific/${encodeURIComponent(reviewForm.elements.resourceId.value)}/privacy/review`,{method:'POST',body:JSON.stringify({approved:reviewForm.elements.decision.value==='APPROVED',reviewNote:reviewForm.elements.reviewNote.value,revision:Number(reviewForm.elements.revision.value)})});document.querySelector('#privacy-review-modal').close();toast.success('Revisión de privacidad registrada.');document.querySelector('#refresh-reviews').click();}
-    catch(error){toast.error(error.message);}finally{button.disabled=false;}
+    try {await request(`/api/v1/scientific/${encodeURIComponent(reviewForm.elements.resourceId.value)}/privacy/review`,{method:'POST',body:JSON.stringify({approved:reviewForm.elements.decision.value==='APPROVED',reviewNote:reviewForm.elements.reviewNote.value,revision:Number(reviewForm.elements.revision.value)})});document.querySelector('#privacy-review-modal').close();toast.successKey('privacy.reviewSaved');document.querySelector('#refresh-reviews').click();}
+    catch(error){toast.errorObject(error);}finally{button.disabled=false;}
   });
   document.querySelectorAll('[data-close-privacy]').forEach(button=>button.onclick=()=>button.closest('dialog').close());
   return {

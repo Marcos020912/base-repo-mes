@@ -7,20 +7,20 @@ const auth = {
 };
 
 const toast = {
-  show(kind, text, key) {
+  show(kind, text, key, params={}) {
     let container = document.querySelector('#toast-container');
     if (!container) { container = document.createElement('div'); container.id = 'toast-container'; container.setAttribute('aria-live', 'polite'); document.body.append(container); }
     const item = document.createElement('div'); item.className = `toast ${kind}`;
     const icon = document.createElement('span'); icon.className = 'toast-icon'; icon.textContent = kind === 'success' ? '✓' : '×';
-    const label = document.createElement('span'); if(key)uiI18n.set(label,key);else label.textContent = String(text);
+    const label = document.createElement('span'); if(key)uiI18n.set(label,key,params);else label.textContent = String(text);
     item.append(icon, label);
     container.append(item); setTimeout(() => item.remove(), 5500);
   },
   success: (text) => toast.show('success', text),
   error: (text) => toast.show('error', text),
-  successKey: key=>toast.show('success',null,key),
-  errorKey: key=>toast.show('error',null,key),
-  errorObject: error=>error.i18nKey?toast.errorKey(error.i18nKey):toast.error(error.message)
+  successKey: (key,params)=>toast.show('success',null,key,params),
+  errorKey: (key,params)=>toast.show('error',null,key,params),
+  errorObject: error=>error.i18nKey?toast.errorKey(error.i18nKey,error.i18nParams):toast.error(error.message)
 };
 
 document.querySelectorAll('.brand').forEach((brand) => {
