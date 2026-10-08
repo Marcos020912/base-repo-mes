@@ -245,6 +245,60 @@ async function recoverInterruptedUpload(page, base, files) {
   await page.waitForFunction(() => document.querySelector('#publication-status')?.textContent.includes('En revisión'));
   return title;
 }
+async function deriveNewVersion(page, base, files, previous) {
+  const token = await page.evaluate(() => localStorage.getItem('base-repo-token'));
+  async function request(method, endpoint, body) {
+    const response = await fetch(base + endpoint, {method,
+      headers:{Authorization:`Bearer ${token}`, ...(body ? {'Content-Type':'application/json'} : {})},
+      ...(body ? {body:JSON.stringify(body)} : {})});
+    const text = await response.text();
+    assert(response.ok, `${method} ${endpoint} falló: HTTP ${response.status} ${text}`);
+    return text ? JSON.parse(text) : null;
+  }
+  const versionDoi = `10.99999/reduniv-local-${Date.now()}`;
+  await request('PUT', `/api/v1/scientific/${previous.id}`, {
+    versionLabel:'1.0', versionDoi, conceptualDoi:`10.99999/reduniv-concept-local-${Date.now()}`,
+    licenseId:'CC-BY-4.0', institution:'RedUniv', methodology:'Metodología de prueba local.', accessLevel:'OPEN'
+  });
+  await request('POST', `/api/v1/scientific/${previous.id}/submit`);
+  // Synthetic DOI approval is confined to the throwaway H2 instance.
+  await request('POST', `/api/v1/scientific/${previous.id}/publish`, {doiRegisteredExternally:true});
+  await page.goto(`${base}/resource.html?id=${encodeURIComponent(previous.id)}`, {waitUntil:'load'});
+  await page.waitForSelector('#new-version:not([hidden])');
+  await page.click('#new-version');
+  await page.waitForFunction(id => location.pathname.endsWith('/create.html') && new URLSearchParams(location.search).get('basedOn') === id,
+    {}, previous.id);
+  await page.waitForFunction(title => document.querySelector('input[name=title]')?.value === title,
+    {}, previous.title);
+  await page.click('#wizard-next');
+  await page.waitForSelector('.wizard-panel[data-step="1"]:not([hidden])');
+  await page.$eval('input[name=versionLabel]', input => {input.value='2.0';input.dispatchEvent(new Event('input',{bubbles:true}));});
+  await page.type('input[name=licenseId]', 'CC-BY-4.0');
+  await page.type('input[name=institution]', 'RedUniv');
+  await page.type('textarea[name=methodology]', 'Segunda versión de prueba.');
+  await page.click('#wizard-next');
+  await page.waitForSelector('.wizard-panel[data-step="2"]:not([hidden])');
+  await (await page.$('#description-file')).uploadFile(files.description);
+  await (await page.$('#dataset-files')).uploadFile(files.csv2);
+  await page.click('#wizard-next');
+  await page.waitForFunction(() => !document.querySelector('#save-draft').disabled);
+  assert((await page.$eval('#preview-content', node => node.textContent)).includes(`Nueva versión de ${previous.id}`),
+    'La vista previa no muestra el vínculo con la versión anterior.');
+  await page.click('#save-draft');
+  await page.waitForFunction(() => location.pathname.endsWith('/resource.html'), {timeout:30000});
+  const id = new URLSearchParams(new URL(page.url()).search).get('id');
+  const next = await request('GET', `/api/v1/scientific/${id}`);
+  assert(next.status === 'DRAFT' && next.previousResourceId === previous.id && next.versionLabel === '2.0',
+    `La segunda versión no quedó vinculada como borrador: ${JSON.stringify({status:next.status, previousResourceId:next.previousResourceId, versionLabel:next.versionLabel})}`);
+  await page.waitForFunction(() => document.querySelector('#download-list')?.textContent.includes('datos-dos.csv'));
+  const listing = await page.$eval('#download-list', node => node.textContent);
+  assert(!listing.includes('datos-uno.csv'), 'La versión nueva heredó archivos sin confirmación del autor.');
+  const original = await request('GET', `/api/v1/scientific/${previous.id}`);
+  assert(original.status === 'PUBLISHED', 'Crear la nueva versión alteró la publicación anterior.');
+  assert(next.conceptualDoi === original.conceptualDoi,
+    'La nueva versión no conservó el DOI conceptual del conjunto.');
+  return id;
+}
 async function cleanup() {
   if (browser) await browser.close().catch(() => {});
   if (app && app.exitCode === null) {
@@ -289,8 +343,9 @@ async function main() {
     });
     assert(submitted === 'IN_REVIEW', `El depósito no llegó a revisión: ${submitted}`);
     const recovered = await recoverInterruptedUpload(page, base, files);
+    const newVersionId = await deriveNewVersion(page, base, files, markdown);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);
-    process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered} (subida interrumpida y recuperada).\n`);
+    process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered}; nueva versión ${newVersionId}.\n`);
   } catch (error) {
     process.stderr.write(`${error.stack || error}\n`);
     const log = path.join(temp, 'application.log');

@@ -57,7 +57,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       imagen, rechazo de ZIP sin descripción o con extensión incorrecta y
       envío del paquete a revisión tras la vista previa real. También simula
       una carga de datos interrumpida: conserva el borrador, permite repararlo
-      desde su ficha y enviarlo después.
+      desde su ficha y enviarlo después. Una versión publicada sintética en
+      H2 permite probar «Crear nueva versión»: vínculo, DOI conceptual heredado
+      y archivos seleccionados de nuevo; no registra un DOI real.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
 - [x] Ítem 7 (curación/preservación): auditorías SHA-256 manuales y programadas
@@ -158,10 +160,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       aprobada antes de activar las descargas restringidas por ruta.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Completar pruebas del asistente con usuarios en staging: fallos de red o
-      almacenamiento reales a mitad de subida, nueva versión y
+      almacenamiento reales a mitad de subida, nueva versión con datos reales y
       comportamiento con PostgreSQL/HAProxy. La prueba local automatizada con
-      Chrome y H2 ya cubre cargas Markdown/ZIP, validación, envío y reparación
-      de un fallo de red simulado.
+      Chrome y H2 ya cubre cargas Markdown/ZIP, validación, envío, reparación
+      de un fallo de red simulado y derivación de versión sintética.
 - [ ] Rotar credenciales/JWT de producción y revisar logs históricos; pruebas
       de seguridad y de carga del limitador con varias instancias y HAProxy
       realmente desplegado. Restringir acceso directo al backend.
