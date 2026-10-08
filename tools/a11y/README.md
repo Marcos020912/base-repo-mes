@@ -10,6 +10,8 @@ Sirve `src/main/resources/static` por HTTP local, bloquea los scripts de la app
 para no llamar a APIs ni necesitar cuentas, y ejecuta las reglas automáticas
 WCAG A/AA de axe-core en las trece páginas, diálogos y pasos del asistente.
 Repite las trece páginas a 320 px y rechaza el desbordamiento horizontal.
+Simula una ficha publicada abierta y otra restringida para comprobar el enlace
+de descarga completa y los controles renderizados sin datos reales.
 También comprueba que el primer Tab alcanza el enlace de salto y que Enter
 transfiere el foco a `<main>`. Devuelve código 1 ante una infracción. No envía
 datos a servicios externos.

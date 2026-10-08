@@ -44,7 +44,9 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   huella histórica con la actual. Incluye una proyección W3C PROV-O de las
   cargas/eliminaciones registradas, sin inferir historial ausente. El ZIP
   contiene una estructura BagIt 1.0 con manifiestos actuales separados de
-  las huellas históricas. Falta
+  las huellas históricas. La landing pública ofrece un ZIP de distribución
+  separado, sin metadatos curatoriales, únicamente para versiones publicadas
+  de acceso abierto o embargo vencido. Falta
   validación externa del paquete, cobertura de cargas legadas y perfiles OAIS.
 - Historial editorial persistente de cambios de ficha, envío, devolución, publicación, retirada y derivación, visible para autor y curación; los DOI públicos se presentan como enlaces resolubles.
 - Integración DataCite opt-in con reserva Draft conceptual/versión, estado e
@@ -88,7 +90,8 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   visible y reducción de movimiento; se corrigió el espaciado del formulario
   de autenticación y el nombre de botones de cierre. Esto es una línea base,
   no una declaración de conformidad WCAG 2.2 AA. `tools/a11y` permite repetir
-  una auditoría automática de 39 estados en Chrome sin backend (incluye 320 px);
+  una auditoría automática de 41 estados en Chrome sin backend (incluye 320 px
+  y dos fichas públicas simuladas);
   pasó sin infracciones después de corregir el contraste de revisión privada,
   el primer foco en login/registro y el desbordamiento de Curación. Quedan
   pruebas manuales de teclado, lectores de pantalla y contenido real.
@@ -98,7 +101,7 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID, RO-Crate, PROV-O, BagIt y marcadores básicos de accesibilidad pasan. La suite completa pasó con 437 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`, con procesos de prueba reiniciados cada cinco clases para evitar falta de memoria local); el JAR también compila sin red. El RO-Crate generado sigue pasando los requisitos obligatorios de `roc-validator`; un artefacto BagIt con nombre simple fue validado por `bagit-python` 1.9.0. Esto no sustituye las pruebas funcionales, de accesibilidad, de seguridad ni la aprobación para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID, RO-Crate, PROV-O, BagIt, ZIP público y marcadores básicos de accesibilidad pasan. El 8 de octubre de 2026 se verificaron **439 pruebas sin fallos** con JDK 21 y perfil `complete`, reiniciando procesos cada cinco clases; se excluyeron temporalmente los dos métodos heredados `testVariousContentDownload` de las variantes `DataResourceControllerTestWithoutVersioning`, que solicitan `www.heise.de` y pueden bloquearse sin acceso externo. La prueba focalizada del ZIP público pasó también por separado y el JAR compila sin red. No se afirma que las 441 pruebas hayan pasado en esa ejecución. El RO-Crate generado sigue pasando los requisitos obligatorios de `roc-validator`; un artefacto BagIt con nombre simple fue validado por `bagit-python` 1.9.0. Esto no sustituye las pruebas funcionales, de accesibilidad, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
 [`REDUNIV_IMPLEMENTATION_CHECKLIST.md`](REDUNIV_IMPLEMENTATION_CHECKLIST.md).

@@ -1,6 +1,10 @@
 const id = new URLSearchParams(location.search).get('id') || (location.pathname.startsWith('/datasets/') ? decodeURIComponent(location.pathname.slice('/datasets/'.length)) : null);
 const status = document.querySelector('#status');
 let detail;
+function canDownloadContent() {
+  return detail && (detail.accessLevel === 'OPEN' ||
+    (detail.accessLevel === 'EMBARGOED' && detail.embargoUntil && Date.now() >= new Date(detail.embargoUntil).getTime()));
+}
 function node(tag, value, className) { const item = document.createElement(tag); item.textContent = value; if (className) item.className = className; return item; }
 function field(label, value) { if (!value) return; const list = document.querySelector('#identity'); list.append(node('dt', label), node('dd', value)); }
 function doiField(label, value) {
@@ -101,9 +105,7 @@ async function loadFiles(page = 0) {
       verified.className = file.fixityStatus === 'MATCH' ? 'quality-ok' : 'quality-missing'; info.append(verified);
     } else info.append(node('small', 'Integridad aún no comprobada'));
     const link = document.createElement('a'); link.className = 'secondary'; link.textContent = 'Descargar'; link.href = `/api/v1/public/resources/${encodeURIComponent(id)}/file?path=${encodeURIComponent(file.path)}`;
-    const canDownload = detail.accessLevel === 'OPEN' ||
-      (detail.accessLevel === 'EMBARGOED' && detail.embargoUntil && Date.now() >= new Date(detail.embargoUntil).getTime());
-    row.append(info, canDownload ? link : node('span', 'Acceso restringido', 'muted')); list.append(row);
+    row.append(info, canDownloadContent() ? link : node('span', 'Acceso restringido', 'muted')); list.append(row);
   }
   const pager = document.querySelector('#files-pagination'); pager.replaceChildren();
   if (data.pages > 1) {
@@ -120,6 +122,9 @@ async function load() {
     if (response.status === 410) { document.querySelector('#title').textContent = data.title || 'Recurso retirado'; status.textContent = `Este recurso fue retirado. Motivo: ${data.reason || 'No informado'}`; return; }
     if (!response.ok) throw new Error('El recurso no está publicado o no está disponible.');
     detail = data; document.querySelector('#landing').hidden = false;
+    const archive = document.querySelector('#download-archive');
+    archive.hidden = !canDownloadContent();
+    if (!archive.hidden) archive.href = `/api/v1/public/resources/${encodeURIComponent(id)}/archive`;
     document.querySelector('#title').textContent = data.title;
     document.querySelector('#subtitle').textContent = `${data.authors?.join(', ') || 'Autoría no informada'} · ${data.year || 's. f.'}`;
     document.querySelector('#version').textContent = `Versión ${data.version || 'no informada'}`;

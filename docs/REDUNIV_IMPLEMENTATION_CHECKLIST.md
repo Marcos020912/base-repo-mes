@@ -65,6 +65,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       comprueba todas las rutas y huellas del ZIP real; `bagit-python` 1.9.0
       valida el artefacto con nombre simple, pero no decodifica `%25` de un
       nombre con `%` como exige RFC 8493 (issue #157 del proyecto).
+- [x] ZIP público de distribución de una versión publicada en
+      `GET /api/v1/public/resources/{id}/archive`: entrega descripción y
+      archivos originales sin historial ni metadatos internos de curación,
+      solo para acceso abierto o embargo vencido. La ficha pública muestra
+      el enlace cuando procede. Es una base DIP, no un perfil OAIS acordado.
 - [x] Relaciones científicas tipadas DOI/URL con semántica DataCite,
       editables solo por el autor mientras el depósito sea borrador,
       visibles en la ficha pública y enviadas al DOI de versión.
@@ -107,7 +112,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       Se eliminó el `autofocus` que saltaba el primer enlace en login/registro;
       el auditor comprueba primer Tab y activación con Enter en las 13 páginas.
       Una segunda pasada a 320 px detectó y corrigió desbordamiento horizontal
-      de Curación; total 39 estados sin infracciones automáticas.
+      de Curación; dos estados dinámicos simulados de la ficha pública verifican
+      que el ZIP completo solo se ofrece con acceso abierto. Total 41 estados
+      sin infracciones automáticas.
       La revisión manual y de contenido real permanece pendiente.
 - [x] Limitación distribuida de intentos de inicio de sesión, registro,
       verificación, reenvío y cambio de contraseña mediante PostgreSQL:
@@ -118,6 +125,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 
 ## Pendiente o sujeto a validación
 
+- [ ] Sustituir por un servidor HTTP local las solicitudes a `www.heise.de`
+      de dos pruebas heredadas `testVariousContentDownload`; la verificación
+      sin Internet ejecutó 439 pruebas y excluyó temporalmente esas dos.
 - [ ] Validar migración/retroceso con copia de PostgreSQL y archivos en entorno de prueba.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Probar el nuevo asistente en un navegador conectado a una instancia de

@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '../../src/main/resources/static');
 const browserPath = process.env.CHROME_BIN || '/usr/bin/google-chrome';
 const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const mime = {'.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8',
+  '.js':'application/javascript; charset=utf-8',
   '.png':'image/png', '.svg':'image/svg+xml', '.jpg':'image/jpeg', '.jpeg':'image/jpeg'};
 
 const server = http.createServer((request, response) => {
@@ -28,6 +29,40 @@ async function audit(page, label) {
     for (const item of violation.nodes) console.error(`  ${item.target.join(' ')}`);
   }
   return report.violations.length;
+}
+
+async function auditPublicResource(browser, base, accessLevel) {
+  const page = await browser.newPage();
+  try {
+    await page.setViewport({width:1280, height:800});
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      const url = new URL(request.url());
+      if (url.pathname === '/api/v1/public/resources/fixture') {
+        const body = {id:'fixture',title:'Dataset de prueba',authors:['Ada Ejemplo'],publisher:'RedUniv',
+          year:'2026',type:'DATASET',version:'1.0',doi:'10.1234/fixture',license:'CC-BY-4.0',
+          accessLevel,markdown:'# Descripción de prueba',authorIdentities:[],funding:[],relations:[]};
+        request.respond({status:200,contentType:'application/json',body:JSON.stringify(body)});
+      } else if (url.pathname === '/api/v1/public/resources/fixture/files') {
+        const body = {files:[{path:'datos.csv',size:12,mediaType:'text/csv'}],total:1,page:0,pages:1};
+        request.respond({status:200,contentType:'application/json',body:JSON.stringify(body)});
+      } else request.continue();
+    });
+    await page.goto(base + 'public-resource.html?id=fixture', {waitUntil:'load'});
+    await page.waitForSelector('#files .file-row');
+    const archive = await page.evaluate(() => {
+      const link = document.querySelector('#download-archive');
+      return {hidden:link.hidden, href:link.getAttribute('href')};
+    });
+    const shouldDownload = accessLevel === 'OPEN';
+    let failures = 0;
+    if (archive.hidden === shouldDownload || (shouldDownload && archive.href !== '/api/v1/public/resources/fixture/archive')) {
+      console.error(`public-resource.html (${accessLevel}): enlace de ZIP público incorrecto`); failures++;
+    }
+    await page.evaluate(axe.source);
+    failures += await audit(page, `public-resource.html (${accessLevel})`);
+    return failures;
+  } finally { await page.close(); }
 }
 
 async function main() {
@@ -71,6 +106,8 @@ async function main() {
         failures += await audit(page, `${name}@320`); states++;
       } finally { await page.close(); }
     }
+    failures += await auditPublicResource(browser, base, 'OPEN'); states++;
+    failures += await auditPublicResource(browser, base, 'RESTRICTED'); states++;
   } finally { await browser.close(); server.close(); }
   console.log(`Axe: ${states} estados revisados, ${failures} infracciones automáticas.`);
   if (failures) process.exitCode = 1;
