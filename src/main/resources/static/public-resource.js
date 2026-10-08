@@ -42,6 +42,26 @@ function renderRelations(relations) {
   }
   document.querySelector('#landing').append(section);
 }
+function renderAuthors(authors) {
+  if (!authors?.length) return;
+  const section = document.createElement('section'); section.className = 'panel';
+  section.append(node('h2', 'Autores e instituciones'));
+  for (const author of authors) {
+    const row = document.createElement('p'); row.className = 'author-identity';
+    row.append(node('strong', [author.givenName, author.familyName].filter(Boolean).join(' ') || 'Autor sin nombre'));
+    if (author.orcid) {
+      const link = document.createElement('a'); link.href = `https://orcid.org/${author.orcid.replace(/^https:\/\/orcid\.org\//, '')}`;
+      link.textContent = `ORCID ${author.orcid}`; link.rel = 'noopener noreferrer'; row.append(' · ', link);
+    }
+    if (author.institution) row.append(node('span', ` · ${author.institution}`));
+    if (author.ror) {
+      const link = document.createElement('a'); link.href = `https://ror.org/${author.ror.replace(/^https:\/\/ror\.org\//, '')}`;
+      link.textContent = `ROR ${author.ror}`; link.rel = 'noopener noreferrer'; row.append(' · ', link);
+    }
+    section.append(row);
+  }
+  document.querySelector('#description').closest('.panel').before(section);
+}
 async function loadFiles(page = 0) {
   const response = await fetch(`/api/v1/public/resources/${encodeURIComponent(id)}/files?page=${page}&size=50`);
   if (!response.ok) throw new Error('No se pudieron consultar los archivos.');
@@ -82,7 +102,9 @@ async function load() {
     doiField('DOI', data.doi); doiField('DOI conceptual', data.conceptualDoi); field('Licencia', data.license);
     field('Acceso', ({OPEN:'Abierto',RESTRICTED:'Restringido',EMBARGOED:'Embargo'})[data.accessLevel] || data.accessLevel);
     field('Fin del embargo', data.embargoUntil ? new Date(data.embargoUntil).toLocaleString('es') : null);
-    field('Institución', data.institution); field('ORCID', data.orcid); field('ROR', data.ror);
+    field('Institución', data.institution);
+    if (!data.authorIdentities?.some(item => item.orcid)) field('ORCID', data.orcid);
+    if (!data.authorIdentities?.some(item => item.ror)) field('ROR', data.ror);
     field('Idioma', data.language); field('Disciplina', data.discipline); field('Palabras clave', data.keywords);
     field('Métodos', data.methodology); field('Publicaciones relacionadas', data.relatedPublications);
     field('Publicado', data.publishedAt ? new Date(data.publishedAt).toLocaleDateString('es') : null);
@@ -97,7 +119,7 @@ async function load() {
       newer.textContent = 'Ver la versión posterior'; warning.append(newer);
       document.querySelector('#version-links').append(warning);
     }
-    renderMarkdown(data.markdown || ''); renderRelations(data.relations); await loadFiles(); status.textContent = '';
+    renderAuthors(data.authorIdentities); renderMarkdown(data.markdown || ''); renderRelations(data.relations); await loadFiles(); status.textContent = '';
     const citation = `${data.authors?.join(', ') || 'Autor no informado'} (${data.year || 's. f.'}). ${data.title} (versión ${data.version}) [${data.type || 'Recurso'}]. ${data.publisher || 'Editorial no informada'}. https://doi.org/${data.doi}`;
     document.querySelector('#citation').textContent = citation;
     document.querySelector('#copy-citation').onclick = async () => { try { await navigator.clipboard.writeText(citation); status.textContent = 'Cita copiada.'; } catch { status.textContent = 'No se pudo copiar la cita.'; } };

@@ -2,6 +2,7 @@ package edu.kit.datamanager.repo.service;
 
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
+import edu.kit.datamanager.repo.domain.ScientificCreator;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
@@ -13,16 +14,42 @@ import org.springframework.stereotype.Component;
 @Component
 public class DataCiteMetadataMapper {
     public Map<String, Object> version(DataResource resource, ScientificRecord science, URI landingPage) {
+        return version(resource, science, landingPage, List.of());
+    }
+
+    public Map<String, Object> version(DataResource resource, ScientificRecord science, URI landingPage,
+            List<ScientificCreator> creatorDetails) {
         if (!"https".equalsIgnoreCase(landingPage.getScheme()) || landingPage.getHost() == null)
             throw new IllegalArgumentException("La landing page del DOI debe usar HTTPS.");
         String title = resource.getTitles() == null ? null : resource.getTitles().stream()
                 .map(item -> item.getValue()).filter(DataCiteMetadataMapper::hasText).findFirst().orElse(null);
+        Map<Long, ScientificCreator> identities = new java.util.HashMap<>();
+        if (creatorDetails != null) creatorDetails.forEach(item -> identities.put(item.getCreatorId(), item));
         List<Map<String, Object>> creators = resource.getCreators() == null ? List.of() : resource.getCreators().stream()
-                .map(item -> String.join(" ", item.getGivenName() == null ? "" : item.getGivenName(),
-                        item.getFamilyName() == null ? "" : item.getFamilyName()).trim())
-                .filter(DataCiteMetadataMapper::hasText).map(name -> {
+                .filter(item -> hasText(item.getGivenName()) || hasText(item.getFamilyName())).map(item -> {
+                    String name = String.join(" ", item.getGivenName() == null ? "" : item.getGivenName(),
+                            item.getFamilyName() == null ? "" : item.getFamilyName()).trim();
                     Map<String, Object> creator = new LinkedHashMap<>();
                     creator.put("name", name);
+                    ScientificCreator identity = identities.get(item.getId());
+                    if (identity != null) {
+                        if (hasText(identity.getOrcid())) {
+                            String orcid = identity.getOrcid().replaceFirst("^https://orcid.org/", "");
+                            creator.put("nameIdentifiers", List.of(Map.of("nameIdentifier", "https://orcid.org/" + orcid,
+                                    "nameIdentifierScheme", "ORCID", "schemeUri", "https://orcid.org/")));
+                        }
+                        if (hasText(identity.getInstitution())) {
+                            Map<String, Object> affiliation = new LinkedHashMap<>();
+                            affiliation.put("name", identity.getInstitution());
+                            if (hasText(identity.getRor())) {
+                                String ror = identity.getRor().replaceFirst("^https://ror.org/", "");
+                                affiliation.put("affiliationIdentifier", "https://ror.org/" + ror);
+                                affiliation.put("affiliationIdentifierScheme", "ROR");
+                                affiliation.put("schemeUri", "https://ror.org/");
+                            }
+                            creator.put("affiliation", List.of(affiliation));
+                        }
+                    }
                     return creator;
                 }).toList();
         String publisher = resource.getPublisher();
@@ -39,7 +66,7 @@ public class DataCiteMetadataMapper {
         attributes.put("url", landingPage.toString());
         if (hasText(science.getVersionLabel())) attributes.put("version", science.getVersionLabel());
         // A single ORCID field cannot be attributed safely when there are multiple creators.
-        if (creators.size() == 1 && hasText(science.getOrcid())) {
+        if (creators.size() == 1 && (creatorDetails == null || creatorDetails.isEmpty()) && hasText(science.getOrcid())) {
             String orcid = science.getOrcid().replaceFirst("^https://orcid.org/", "");
             creators.get(0).put("nameIdentifiers", List.of(Map.of("nameIdentifier", "https://orcid.org/" + orcid,
                     "nameIdentifierScheme", "ORCID", "schemeUri", "https://orcid.org/")));

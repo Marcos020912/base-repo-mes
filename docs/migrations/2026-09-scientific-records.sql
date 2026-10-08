@@ -88,6 +88,18 @@ CREATE TABLE IF NOT EXISTS scientific_relations (
 );
 CREATE INDEX IF NOT EXISTS idx_scientific_relations_resource ON scientific_relations(resource_id);
 
+-- Scientific identity is per creator, not a single ORCID shared by the dataset.
+CREATE TABLE IF NOT EXISTS scientific_creators (
+    id BIGSERIAL PRIMARY KEY,
+    resource_id VARCHAR(255) NOT NULL,
+    creator_id BIGINT NOT NULL,
+    orcid VARCHAR(255),
+    institution VARCHAR(255),
+    ror VARCHAR(255),
+    CONSTRAINT uq_scientific_creator UNIQUE (resource_id, creator_id)
+);
+CREATE INDEX IF NOT EXISTS idx_scientific_creators_resource ON scientific_creators(resource_id);
+
 CREATE TABLE IF NOT EXISTS doi_registrations (
     registration_key varchar(260) PRIMARY KEY,
     revision bigint NOT NULL DEFAULT 0,

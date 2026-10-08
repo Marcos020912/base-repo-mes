@@ -6,6 +6,7 @@ import edu.kit.datamanager.repo.domain.ContentInformation;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.service.ScientificQualityService;
+import edu.kit.datamanager.repo.repository.ScientificCreatorRepository;
 import java.util.Optional;
 import org.junit.Test;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,8 @@ public class ScientificQualityServiceTest {
     @Test public void missingDocumentationAndDataBlockReview() {
         IDataResourceDao resources = mock(IDataResourceDao.class);
         IContentInformationDao contents = mock(IContentInformationDao.class);
+        ScientificCreatorRepository creators = mock(ScientificCreatorRepository.class);
+        when(creators.findByResourceId("r1")).thenReturn(java.util.List.of());
         DataResource resource = new DataResource();
         when(resources.findById("r1")).thenReturn(Optional.of(resource));
         when(contents.findByParentResourceAndRelativePath(resource, "description.md")).thenReturn(Optional.empty());
@@ -27,7 +30,7 @@ public class ScientificQualityServiceTest {
         ScientificRecord science = new ScientificRecord("r1");
         science.setVersionLabel("1.0"); science.setLicenseId("CC-BY-4.0");
         science.setInstitution("Universidad"); science.setMethodology("Medición");
-        var report = new ScientificQualityService(resources, contents).inspect(science);
+        var report = new ScientificQualityService(resources, contents, creators).inspect(science);
         assertTrue(report.blockers().contains("description.md"));
         assertTrue(report.blockers().contains("Al menos un archivo de datos"));
         assertTrue(report.completionPercent() < 100);

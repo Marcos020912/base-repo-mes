@@ -45,6 +45,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [x] Relaciones científicas tipadas DOI/URL con semántica DataCite,
       editables solo por el autor mientras el depósito sea borrador,
       visibles en la ficha pública y enviadas al DOI de versión.
+- [x] Identidad científica por autor: cada creador del recurso puede tener su
+      propio ORCID, institución y ROR; se presenta en la ficha pública y se
+      asigna al autor correcto al generar metadatos DataCite. Se conserva el
+      campo heredado para registros anteriores. La edición general ya no
+      elimina los coautores al guardar.
 
 ## Pendiente o sujeto a validación
 
@@ -57,7 +62,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Validar el flujo DOI real con cuenta Repository, prefijo y credenciales
       de DataCite Test/Production; probar resolución pública y conciliar DOI
       manuales existentes antes de activar el modo automático en producción.
-- [ ] Verificar ORCID/ROR y admitir múltiples autores e instituciones.
+- [ ] Integrar búsqueda/verificación en vivo ORCID/ROR y, si se requiere,
+      múltiples afiliaciones por un mismo autor; la captura actual valida el
+      formato y permite una institución por autor.
 - [ ] Aprobar vocabularios institucionales de licencia/disciplinas y activar
       `repo.scientific.strict-vocabulary=true` después de migrar valores
       heredados; las listas actuales no son un catálogo institucional aprobado.

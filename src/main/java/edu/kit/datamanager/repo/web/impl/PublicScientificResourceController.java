@@ -9,6 +9,7 @@ import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.repository.FileFixityStateRepository;
 import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
+import edu.kit.datamanager.repo.repository.ScientificCreatorRepository;
 import edu.kit.datamanager.repo.domain.ScientificRelation;
 import edu.kit.datamanager.repo.domain.FileFixityState;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,14 +41,17 @@ public class PublicScientificResourceController {
     private final IContentInformationDao contents;
     private final FileFixityStateRepository fixityStates;
     private final ScientificRelationRepository relations;
+    private final ScientificCreatorRepository creators;
 
     public PublicScientificResourceController(IDataResourceDao resources, ScientificRecordRepository records, IContentInformationDao contents,
-                                              FileFixityStateRepository fixityStates, ScientificRelationRepository relations) {
+                                              FileFixityStateRepository fixityStates, ScientificRelationRepository relations,
+                                              ScientificCreatorRepository creators) {
         this.resources = resources;
         this.records = records;
         this.contents = contents;
         this.fixityStates = fixityStates;
         this.relations = relations;
+        this.creators = creators;
     }
 
     @GetMapping("/{id}")
@@ -64,6 +68,15 @@ public class PublicScientificResourceController {
         List<String> authors = resource.getCreators().stream().map(item -> String.join(" ",
                 item.getGivenName() == null ? "" : item.getGivenName(),
                 item.getFamilyName() == null ? "" : item.getFamilyName()).trim()).toList();
+        var details = creators.findByResourceId(id).stream().collect(java.util.stream.Collectors.toMap(
+                edu.kit.datamanager.repo.domain.ScientificCreator::getCreatorId, item -> item));
+        List<AuthorIdentity> authorIdentities = resource.getCreators().stream().map(item -> {
+            var identity = details.get(item.getId());
+            return new AuthorIdentity(item.getGivenName(), item.getFamilyName(),
+                    identity == null ? null : identity.getOrcid(),
+                    identity == null ? null : identity.getInstitution(),
+                    identity == null ? null : identity.getRor());
+        }).toList();
         String markdown = contents.findByParentResourceAndRelativePath(resource, "description.md")
                 .map(info -> {
                     try {
@@ -79,7 +92,7 @@ public class PublicScientificResourceController {
                 science.getInstitution(), science.getOrcid(), science.getRor(), science.getLanguage(), science.getDiscipline(),
                 science.getKeywords(), science.getRelatedPublications(), science.getMethodology(), science.getPublishedAt(), markdown,
                 science.getPreviousResourceId(), newerVersionId, science.getAccessLevel(), science.getEmbargoUntil(),
-                relations.findByResourceIdOrderByIdAsc(id)));
+                relations.findByResourceIdOrderByIdAsc(id), authorIdentities));
     }
 
     @GetMapping("/{id}/files")
@@ -142,7 +155,8 @@ public class PublicScientificResourceController {
                                String orcid, String ror, String language, String discipline, String keywords,
                                String relatedPublications, String methodology, java.time.Instant publishedAt, String markdown,
                                String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil,
-                               List<ScientificRelation> relations) {}
+                               List<ScientificRelation> relations, List<AuthorIdentity> authorIdentities) {}
+    public record AuthorIdentity(String givenName, String familyName, String orcid, String institution, String ror) {}
     public record FileItem(String path, long size, String mediaType, String sha256, String fixityStatus, java.time.Instant fixityCheckedAt) {}
     public record PublicFiles(List<FileItem> files, long total, int page, int pages) {}
 }

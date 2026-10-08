@@ -11,6 +11,7 @@ import edu.kit.datamanager.repo.repository.DoiSyncEventRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordEventRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
+import edu.kit.datamanager.repo.repository.ScientificCreatorRepository;
 import edu.kit.datamanager.repo.service.DataCiteMetadataMapper;
 import edu.kit.datamanager.repo.service.DataCiteService;
 import edu.kit.datamanager.repo.service.DoiWorkflowService;
@@ -38,6 +39,7 @@ public class DoiWorkflowServiceTest {
     private final IDataResourceDao resources = mock(IDataResourceDao.class);
     private final ScientificQualityService quality = mock(ScientificQualityService.class);
     private final ScientificRelationRepository relations = mock(ScientificRelationRepository.class);
+    private final ScientificCreatorRepository creators = mock(ScientificCreatorRepository.class);
     private final PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
     private final Map<String, DoiRegistration> local = new HashMap<>();
     private final Map<String, String> remote = new HashMap<>();
@@ -73,14 +75,15 @@ public class DoiWorkflowServiceTest {
         when(datacite.updateMetadata(anyString(), anyMap())).thenAnswer(call -> {
             String doi = call.getArgument(0); return new DataCiteService.DoiResponse(doi, "findable");
         });
-        when(mapper.version(any(), any(), any())).thenAnswer(call -> Map.of("url", call.getArgument(2).toString()));
+        when(mapper.version(any(), any(), any(), any())).thenAnswer(call -> Map.of("url", call.getArgument(2).toString()));
         when(quality.inspect(any())).thenReturn(new ScientificQualityService.QualityReport(100, java.util.List.of(), java.util.List.of()));
         when(records.findByConceptualDoiIgnoreCaseAndStatusOrderByPublishedAtDesc(anyString(), eq(PublicationStatus.PUBLISHED)))
                 .thenReturn(java.util.List.of());
         when(records.findByConceptualDoiIgnoreCase(anyString())).thenReturn(java.util.List.of());
         when(relations.findByResourceIdOrderByIdAsc(anyString())).thenReturn(java.util.List.of());
+        when(creators.findByResourceId(anyString())).thenReturn(java.util.List.of());
         workflow = new DoiWorkflowService(datacite, mapper, registrations, syncEvents, records, editorial,
-                resources, quality, relations, manager, "https://datos.reduniv.edu.cu");
+                resources, quality, relations, creators, manager, "https://datos.reduniv.edu.cu");
     }
 
     @Test
@@ -156,7 +159,7 @@ public class DoiWorkflowServiceTest {
     @Test
     public void invalidPublicUrlFailsBeforeCreatingAnyDoi() {
         var invalid = new DoiWorkflowService(datacite, mapper, registrations, syncEvents, records, editorial,
-                resources, quality, relations, manager, "http://localhost:8090");
+                resources, quality, relations, creators, manager, "http://localhost:8090");
         assertThrows(ResponseStatusException.class, () -> invalid.reserve("r1"));
         verify(datacite, never()).reserveDraft(anyString());
         assertTrue(local.isEmpty());

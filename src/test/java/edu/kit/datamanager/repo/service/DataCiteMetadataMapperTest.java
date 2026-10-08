@@ -4,6 +4,7 @@ import edu.kit.datamanager.repo.domain.Agent;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
+import edu.kit.datamanager.repo.domain.ScientificCreator;
 import edu.kit.datamanager.repo.domain.Title;
 import java.net.URI;
 import java.util.Set;
@@ -77,5 +78,36 @@ public class DataCiteMetadataMapperTest {
         var creators = (java.util.List<java.util.Map<String, Object>>) mapped.get("creators");
         assertEquals(2, creators.size());
         assertTrue(creators.stream().noneMatch(creator -> creator.containsKey("nameIdentifiers")));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void mapsEachCreatorsOwnOrcidAndRorAffiliation() {
+        DataResource resource = mock(DataResource.class);
+        Title title = mock(Title.class);
+        Agent first = mock(Agent.class);
+        Agent second = mock(Agent.class);
+        when(title.getValue()).thenReturn("Datos");
+        when(first.getId()).thenReturn(1L);
+        when(first.getGivenName()).thenReturn("Ana");
+        when(second.getId()).thenReturn(2L);
+        when(second.getGivenName()).thenReturn("Luis");
+        when(resource.getTitles()).thenReturn(Set.of(title));
+        when(resource.getCreators()).thenReturn(Set.of(first, second));
+        when(resource.getPublisher()).thenReturn("RedUniv");
+        when(resource.getPublicationYear()).thenReturn("2026");
+        var mapped = new DataCiteMetadataMapper().version(resource, new ScientificRecord("r1"),
+                URI.create("https://datos.reduniv.edu.cu/datasets/r1"), java.util.List.of(
+                        new ScientificCreator("r1", 1L, "0000-0003-2804-688X", "Universidad A", "03yrm5c26"),
+                        new ScientificCreator("r1", 2L, "0000-0001-5109-3700", "Universidad B", null)));
+        var creators = (java.util.List<java.util.Map<String, Object>>) mapped.get("creators");
+        assertEquals(2, creators.size());
+        var ana = creators.stream().filter(item -> "Ana".equals(item.get("name"))).findFirst().orElseThrow();
+        var luis = creators.stream().filter(item -> "Luis".equals(item.get("name"))).findFirst().orElseThrow();
+        assertEquals("https://orcid.org/0000-0003-2804-688X",
+                ((java.util.List<java.util.Map<String, String>>) ana.get("nameIdentifiers")).get(0).get("nameIdentifier"));
+        assertEquals("https://ror.org/03yrm5c26",
+                ((java.util.List<java.util.Map<String, String>>) ana.get("affiliation")).get(0).get("affiliationIdentifier"));
+        assertEquals("Universidad B", ((java.util.List<java.util.Map<String, String>>) luis.get("affiliation")).get(0).get("name"));
     }
 }
