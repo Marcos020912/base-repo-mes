@@ -226,3 +226,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Fallos de paginado capturados y lista de archivos limpiada; respuestas anteriores no reemplazan una consulta más reciente.
 - [x] Fixture Chrome `node tools/e2e/review-access-i18n.cjs`: eliminación del token del historial, no persistencia en localStorage, cabecera conservada, fallo/revocación, ausencia de token y cambio de idioma sin consultas adicionales. Es evidencia UI aislada, no sustituye seguridad real del backend.
 - [ ] Internacionalización de fichas principales y demás áreas pendientes; el objetivo global sigue sin cerrar.
+
+### Ficha pública bilingüe — avance A07 (2026-10-08)
+- [x] Ficha publicada es/en: navegación, etiquetas de metadatos, autores, financiación, integridad, traducciones declaradas y acciones de descarga/compartir/exportar. Cita y declaraciones originales no se traducen automáticamente.
+- [x] Fixture Chrome `node tools/e2e/public-record-i18n.cjs`: cambios es/en preservan título, Markdown, cita, archivos y selección de idioma de metadatos; sin consultas adicionales. Catálogos y fixtures de revisión temporal/editores aprobados.
+- [ ] Pruebas integradas JAR y verificación completa de paginado/fallos; ficha privada y administración restantes. A07 y objetivo global continúan abiertos.
