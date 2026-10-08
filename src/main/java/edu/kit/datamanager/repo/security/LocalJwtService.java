@@ -33,7 +33,8 @@ public class LocalJwtService {
             Instant now = Instant.now();
             JWTClaimsSet claims = new JWTClaimsSet.Builder().subject(user.getUsername()).issuer("base-repo")
                     .issueTime(Date.from(now)).expirationTime(Date.from(now.plusSeconds(validityMinutes * 60)))
-                    .claim("roles", List.of(user.getRole().authority())).build();
+                    .claim("roles", List.of(user.getRole().authority()))
+                    .claim("passwordVersion", user.getPasswordChangedAt() == null ? 0L : user.getPasswordChangedAt().toEpochMilli()).build();
             SignedJWT jwt = new SignedJWT(new com.nimbusds.jose.JWSHeader(JWSAlgorithm.HS256), claims);
             jwt.sign(new MACSigner(secret));
             return jwt.serialize();

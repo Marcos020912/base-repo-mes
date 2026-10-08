@@ -46,7 +46,12 @@ public class LocalJwtAuthenticationFilter extends OncePerRequestFilter {
                 if (user == null || !user.isEnabled() || !user.isVerified()) {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Account unavailable"); return;
                 }
-                if (user.getPasswordChangedAt() != null && (claims.getIssueTime() == null ||
+                Long passwordVersion = claims.getLongClaim("passwordVersion");
+                long currentVersion = user.getPasswordChangedAt() == null ? 0L : user.getPasswordChangedAt().toEpochMilli();
+                // JWT iat has second precision; compare signed credential version for new tokens.
+                // Tokens issued before this claim existed retain the conservative timestamp check.
+                if (passwordVersion != null ? passwordVersion.longValue() != currentVersion :
+                        user.getPasswordChangedAt() != null && (claims.getIssueTime() == null ||
                         claims.getIssueTime().toInstant().isBefore(user.getPasswordChangedAt()))) {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Session expired after password change"); return;
                 }

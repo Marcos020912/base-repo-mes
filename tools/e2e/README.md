@@ -185,3 +185,6 @@ El modo correo verifica además permisos multiusuario contra el backend:
 el usuario verificado ve el dataset compartido de otro autor, no puede listar
 usuarios ni editar un borrador ajeno; tras suspensión administrativa, su token
 ya emitido queda bloqueado y el login devuelve ACCOUNT_RESTRICTED.
+El escenario multiusuario cambia también la contraseña propia: el token anterior
+debe dejar de servir y un login inmediato con la nueva contraseña debe producir
+una sesión utilizable, antes de comprobar la suspensión administrativa.

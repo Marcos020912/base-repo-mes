@@ -494,7 +494,7 @@ async function publicDownloads(base, resource) {
 }
 async function verifyMultiuserAccess(page, base, published, otherDraft) {
   if (!verifiedAccount) return;
-  const userHeaders={Authorization:`Bearer ${verifiedAccount.token}`};
+  let userHeaders={Authorization:`Bearer ${verifiedAccount.token}`};
   const catalogue=await fetch(base+'/api/v1/catalog?q='+encodeURIComponent(published.title), {headers:userHeaders});
   assert(catalogue.ok && (await catalogue.json()).items.some(item=>item.id===published.id),
     'El usuario verificado no ve el dataset compartido de otro autor.');
@@ -504,6 +504,24 @@ async function verifyMultiuserAccess(page, base, published, otherDraft) {
     method:'PUT',headers:{...userHeaders,'Content-Type':'application/json'},body:JSON.stringify({versionLabel:'unauthorized-change'})
   });
   assert(edit.status===403, 'Un Usuario editó un depósito ajeno.');
+  const nextPassword=crypto.randomBytes(16).toString('hex');
+  const changed=await fetch(base+'/api/v1/auth/change-password',{
+    method:'POST',headers:{...userHeaders,'Content-Type':'application/json'},
+    body:JSON.stringify({currentPassword:verifiedAccount.password,newPassword:nextPassword})
+  });
+  assert(changed.ok,'El usuario no pudo cambiar su propia contraseña.');
+  assert((await fetch(base+'/api/v1/catalog',{headers:userHeaders})).status===401,
+    'El token antiguo sobrevivió al cambio de contraseña.');
+  const freshLogin=await fetch(base+'/api/v1/auth/login',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:verifiedAccount.user.username,password:nextPassword})
+  });
+  assert(freshLogin.ok,'No se pudo iniciar sesión tras cambiar contraseña.');
+  const fresh=await freshLogin.json();
+  verifiedAccount.token=fresh.token; verifiedAccount.password=nextPassword;
+  userHeaders={Authorization:`Bearer ${fresh.token}`};
+  assert((await fetch(base+'/api/v1/catalog',{headers:userHeaders})).ok,
+    'La nueva sesión fue rechazada tras el cambio de contraseña.');
   const adminToken=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
   const suspended=await fetch(`${base}/api/v1/users/${verifiedAccount.user.id}`, {
     method:'PUT',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},
