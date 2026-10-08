@@ -142,3 +142,6 @@ arrancarlo se compara por cada tabla del esquema public el recuento de filas y
 una huella MD5 del JSON de filas ordenado, entre origen migrado y restauración.
 Esta huella es un control del fixture, no un mecanismo criptográfico de
 preservación ni una prueba de upgrade desde todos los esquemas históricos.
+La restauración exporta además content_information como CSV y ejecuta el
+inventario de rutas --strict contra el árbol temporal: no debe estar vacío ni
+tener URI inválidas, archivos ausentes o rutas fuera de repo.basepath.

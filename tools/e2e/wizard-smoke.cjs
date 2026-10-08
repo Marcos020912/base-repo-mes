@@ -441,6 +441,13 @@ async function restorePostgresFixture(page, base, files, published) {
   pg('pg_restore',['--no-owner','--no-acl','--exit-on-error','-d','reduniv_restored',dump]);
   assert(JSON.stringify(dataFingerprints('reduniv_restored')) === JSON.stringify(originalData),
     'La restauración alteró filas o perdió tablas del fixture.');
+  const inventory = pg('psql',['-X','-d','reduniv_restored','-c',
+    'COPY (SELECT id, parent_resource_id, relative_path, content_uri FROM content_information ORDER BY id) TO STDOUT WITH CSV HEADER']).stdout;
+  const pathAudit = spawnSync('python3', [path.join(root,'tools/storage/audit_content_paths.py'),
+    '--basepath',files.data,'--strict'], {encoding:'utf8',input:inventory});
+  assert(pathAudit.status === 0, `Inventario de rutas restauradas detectó anomalías: ${pathAudit.stdout} ${pathAudit.stderr}`);
+  assert(!pathAudit.stdout.includes('Registros: 0.'), 'El inventario restaurado estaba vacío.');
+  process.stdout.write('Inventario de contentUri PostgreSQL restaurado OK (sin modificar datos).\n');
   postgres.database='reduniv_restored'; postgres.restored=true;
   await startApp(new URL(base).port,files);
   await page.evaluate(() => localStorage.clear());

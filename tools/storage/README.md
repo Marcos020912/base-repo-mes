@@ -40,3 +40,14 @@ Pruebas locales sin PostgreSQL:
 ```bash
 python3 -m unittest discover -s tools/storage -p 'test_*.py'
 ```
+
+Integración local con datos generados por la app y PostgreSQL real:
+
+```bash
+E2E_POSTGRES=1 E2E_POSTGRES_RESTORE=1 node tools/e2e/wizard-smoke.cjs
+```
+
+El ensayo exporta content_information de la base temporal restaurada y ejecuta
+este inventario con --strict sobre sus archivos. Exige registros no vacíos y
+cero anomalías sin crear informe ni modificar datos. No reemplaza el inventario
+de URI heredadas de una copia de staging.
