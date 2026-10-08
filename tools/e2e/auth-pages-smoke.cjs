@@ -10,12 +10,23 @@ const root = path.resolve(__dirname, '../../src/main/resources/static');
 const allowed = new Set(['login.html','register.html','auth.js','login.js','register.js','verify.html','verify.js','styles.css','login.css']);
 let requests = 0;
 let resends = 0;
+let registrations = 0;
 const server = http.createServer((request,response) => {
   if (request.url === '/api/v1/auth/login') {
     requests++;
     request.resume();
-    response.writeHead(401, {'Content-Type':'application/json; charset=utf-8'});
-    response.end(JSON.stringify({message:'Credenciales no válidas.'})); return;
+    const attempt=requests;
+    setTimeout(() => {
+      response.writeHead(attempt===1 ? 401 : 502, {'Content-Type':attempt===1 ? 'application/json; charset=utf-8' : 'text/html'});
+      response.end(attempt===1 ? JSON.stringify({message:'Credenciales no válidas.'}) : '<h1>Proxy unavailable</h1>');
+    },200); return;
+  }
+  if (request.url === '/api/v1/auth/register') {
+    registrations++; request.resume();
+    setTimeout(() => {
+      response.writeHead(503, {'Content-Type':'application/json; charset=utf-8'});
+      response.end(JSON.stringify({code:'VERIFICATION_MAIL_UNAVAILABLE',message:'La cuenta se creó, pero no pudimos enviar el código.'}));
+    },200); return;
   }
   if (request.url === '/api/v1/auth/resend-verification') {
     resends++; request.resume();
@@ -62,10 +73,25 @@ const server = http.createServer((request,response) => {
     await page.type('input[name=username]','fixture');
     await page.type('input[name=password]',password);
     await page.click('#login-form button');
+    assert.equal(await page.$eval('#login-form button',el=>el.disabled),true);
+    await page.evaluate(()=>document.querySelector('#login-form').requestSubmit());
     await page.waitForFunction(()=>document.querySelector('#login-message').textContent==='Credenciales no válidas.');
     assert.equal(requests,1);
     assert.equal(new URL(page.url()).pathname,'/login.html');
-    await page.goto(base+'/verify.html?email=fixture%40example.invalid&mailPending=1');
+    await page.click('#login-form button');
+    await page.waitForFunction(()=>document.querySelector('#login-message').textContent==='No se pudo iniciar sesión.');
+    assert.equal(requests,2,'Login duplicó solicitudes pendientes.');
+    await page.goto(base+'/register.html');
+    for (const [name,value] of Object.entries({username:'fixture',email:'fixture@example.invalid',password,confirmation:password}))
+      await page.type(`input[name=${name}]`,value);
+    await page.click('#register-form button');
+    assert.equal(await page.$eval('#register-form button',el=>el.disabled),true);
+    await page.evaluate(()=>document.querySelector('#register-form').requestSubmit());
+    await page.waitForFunction(()=>location.pathname==='/verify.html');
+    assert.equal(registrations,1,'Registro duplicó solicitudes pendientes.');
+    assert.equal(new URL(page.url()).searchParams.get('mailPending'),'1');
+    assert((await page.$eval('#verify-message',el=>el.textContent)).includes('cuenta fue creada'));
+
     assert.equal(await page.$eval('input[name=email]', el=>el.value),'fixture@example.invalid');
     await page.click('#resend');
     assert.equal(await page.$eval('#verify-form button',el=>el.disabled),true);

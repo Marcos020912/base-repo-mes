@@ -199,3 +199,7 @@ La compatibilidad de tokens locales anteriores sin passwordVersion se prueba
 en LocalJwtPasswordVersionTest: se aceptan si se emitieron después del último
 cambio de contraseña y se rechazan si lo preceden. No se habilitan JWT de
 emisores externos ni se desactiva la validación de firma.
+Login/registro también bloquean envíos mientras están pendientes: la prueba
+invoca requestSubmit de nuevo y exige una sola petición. Un rechazo HTML del
+proxy produce mensaje genérico legible; registro503 recuperable conserva el
+aviso y redirige a verificación con correo y mailPending.
