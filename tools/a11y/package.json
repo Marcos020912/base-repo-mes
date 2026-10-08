@@ -1,0 +1,12 @@
+{
+  "name": "reduniv-accessibility-audit",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Auditoría local de páginas estáticas con axe-core y Chrome",
+  "engines": { "node": ">=22" },
+  "scripts": { "audit": "node audit.cjs" },
+  "devDependencies": {
+    "axe-core": "4.14.0",
+    "puppeteer-core": "25.13.0"
+  }
+}

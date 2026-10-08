@@ -100,6 +100,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       indicador de foco de dos colores y respeto de movimiento reducido.
       **No equivale a conformidad WCAG**; quedan pruebas con tecnologías de
       asistencia y revisión de formularios, contraste y componentes dinámicos.
+- [x] Auditoría automática reproducible (`tools/a11y`): axe-core en Chrome por
+      HTTP local revisa las 13 páginas, diálogos y cuatro pasos del asistente
+      sin backend ni cuentas. Detectó y se corrigió contraste 1.88:1 de la
+      marca en revisión privada; ahora 26 estados sin infracciones automáticas.
+      La revisión manual y de contenido real permanece pendiente.
 - [x] Limitación distribuida de intentos de inicio de sesión, registro,
       verificación, reenvío y cambio de contraseña mediante PostgreSQL:
       ventanas por cuenta+IP y por IP, claves HMAC en vez de datos personales,

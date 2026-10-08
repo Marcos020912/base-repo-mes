@@ -66,6 +66,7 @@ body { margin:0; background:var(--soft); color:var(--ink); font-family:Inter,ui-
 .public-shell { min-height:100vh; }
 .public-nav { display:flex; justify-content:space-between; align-items:center; gap:18px; background:#004a98; padding:18px clamp(16px,4vw,48px); }
 .public-nav a { color:#fff; font-weight:750; text-decoration:none; }
+.public-nav .public-brand { color:#fff; }
 .public-brand { font-size:20px; letter-spacing:.01em; }
 .public-main { max-width:1320px; margin:0 auto; padding:32px clamp(16px,4vw,48px) 70px; }
 .public-main > section .panel { margin-bottom:18px; }

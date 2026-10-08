@@ -87,7 +87,10 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 - Las páginas comparten un enlace de salto al contenido, foco de teclado
   visible y reducción de movimiento; se corrigió el espaciado del formulario
   de autenticación y el nombre de botones de cierre. Esto es una línea base,
-  no una auditoría ni una declaración de conformidad WCAG 2.2 AA.
+  no una declaración de conformidad WCAG 2.2 AA. `tools/a11y` permite repetir
+  una auditoría automática de 26 estados en Chrome sin backend; pasó sin
+  infracciones después de corregir el contraste de revisión privada. Quedan
+  pruebas manuales de teclado, lectores de pantalla y contenido real.
 
 ### Migración y pruebas
 
