@@ -24,3 +24,9 @@ Los mensajes arbitrarios del servidor conservan su texto original: no se traduce
 Cuatro pruebas de coherencia, protección de controles y orden de assets de catálogos/bindings; prueba Chrome real de cambio sin perder campos, persistencia entre páginas, selección en memoria con localStorage bloqueado, errores locales actualizados y ausencia de solicitudes de autenticación por cambiar idioma. Auditoría axe del login y la cuenta en inglés a320px y del baseline español; no acredita revisión WCAG manual.
 
 Los bindings de texto se colocan únicamente en nodos hoja. Una etiqueta que contiene un input debe tener un span separado con `data-i18n`; el guard de HTML rechaza bindings que borrarían controles o markup. Para atributos, usar `data-i18n-aria-label`/`data-i18n-alt`.
+
+## Contenido de autores y propiedad de bindings
+
+El runtime registra nodos declarativos únicamente durante la carga inicial del HTML estático de confianza. Los nodos dinámicos de la interfaz deben registrarse mediante `uiI18n.set`/`attribute`; no se vuelve a escanear el DOM al cambiar de idioma. Un atributo `data-i18n` dentro de Markdown o contenido añadido después no activa traducción. Los nodos retirados se podan del registro para no acumular toasts.
+
+`uiI18n.plain` desregistra un mensaje antes de colocar texto externo. Los mensajes mixtos deben desregistrar el contenedor y usar spans hoja traducibles, manteniendo intactos enlaces (por ejemplo, contacto de soporte para cuenta restringida). Solo se admiten atributos traducibles `alt` y `aria-label`, nunca destinos de enlaces, rutas, identificadores o datos científicos.

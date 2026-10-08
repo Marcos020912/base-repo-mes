@@ -186,3 +186,10 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Solo páginas totalmente migradas cambian idioma del documento. Otras conservan español; nodos traducidos declaran idioma propio. Metadatos de autor no se traducen.
 - Guard impide bindings de texto en etiquetas con controles/markup: cuatro pruebas Python; Chrome cuenta en inglés320px sin infracciones axe/desbordamiento, preserva contraseña al cambiar idioma. Authfixture e historial de ambos catálogos aprobados.
 - RegresiónJava2152suites504tests0fallos/errores/omitidas; JAR y E2E PostgreSQL/SMTP/Chrome/restauración completo aprobados. No implica traducción completa ni revisión WCAG manual.
+
+### Propiedad de bindings de traducción
+
+- Traducción registrada solo desde HTML estático de confianza o helpers explícitos. Contenido tardío de autores con data-i18n no se traduce ni dispara errores de claves.
+- Mensajes externos se desregistran; aviso de cuenta restringida conserva enlace de soporte al cambiar idioma. Guard runtime hoja y poda de nodos retirados.
+- Fixture Chrome confirma marcador tardío intacto y enlace de cuenta restringida con respuesta API simulada; auth, historial público/privado y axe66estados0 aprobados. No sustituye prueba de autorización backend.
+- JAR reconstruido y E2E PostgreSQL/SMTP/Chrome/restauración completo aprobado después del registro de propiedad. No se modificaron servicios/productivo ni se publicaron ramas.

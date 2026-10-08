@@ -72,8 +72,10 @@ const server = http.createServer((request,response) => {
     const errors=[]; page.on('pageerror',error=>errors.push(error.message));
     await page.goto(base+'/login.html');
     await page.type('input[name=username]','kept-local-input');
+    await page.evaluate(()=>{const author=document.createElement('p');author.id='author-content-fixture';author.dataset.i18n='untrusted-key-not-in-catalogue';author.textContent='Author content must remain unchanged';document.querySelector('main').append(author);});
     await page.select('[data-ui-locale]','en');
     assert.equal(await page.$eval('h1',node=>node.textContent),'Sign in');
+    assert.equal(await page.$eval('#author-content-fixture',node=>node.textContent),'Author content must remain unchanged');
     assert.equal(await page.$eval('input[name=username]',node=>node.value),'kept-local-input');
     assert.equal(await page.$eval('html',node=>node.lang),'en');
     await page.setViewport({width:320,height:700});await page.evaluate(axe.source);
@@ -185,6 +187,12 @@ const server = http.createServer((request,response) => {
     await page.waitForFunction(()=>location.pathname==='/login.html');
     assert.equal(passwordChanges,2,'Cambio de contraseña duplicó solicitudes.');
     assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-token')),null);
+    const restricted=await browser.newPage();restricted.on('pageerror',error=>errors.push(error.message));
+    await restricted.setRequestInterception(true);restricted.on('request',request=>{if(new URL(request.url()).pathname==='/api/v1/auth/login')request.respond({status:403,contentType:'application/json',body:JSON.stringify({code:'ACCOUNT_RESTRICTED'})});else request.continue();});
+    await restricted.goto(base+'/login.html');await restricted.type('input[name=username]','fixture');await restricted.type('input[name=password]',password);await restricted.click('#login-form button');
+    await restricted.waitForSelector('#login-message a[href="mailto:soporte@mes.gob.cu"]');await restricted.select('[data-ui-locale]','en');
+    assert((await restricted.$eval('#login-message',node=>node.textContent)).includes('Your account has been restricted.'));
+    assert.equal(await restricted.$eval('#login-message a',node=>node.getAttribute('href')),'mailto:soporte@mes.gob.cu');await restricted.close();
     const blocked=await browser.newPage();blocked.on('pageerror',error=>errors.push(error.message));
     await blocked.evaluateOnNewDocument(()=>Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Storage disabled','SecurityError');}}));
     await blocked.goto(base+'/login.html');await blocked.type('input[name=username]','kept-without-storage');

@@ -26,7 +26,7 @@ const toast = {
 document.querySelectorAll('.brand').forEach((brand) => {
   const logo = document.createElement('img');
   logo.src = 'logo%20mes.png';
-  logo.lang=uiI18n.locale;logo.dataset.i18nAlt='brand.alt';logo.alt=uiI18n.t('brand.alt');
+  uiI18n.attribute(logo,'alt','brand.alt');
   const name = document.createElement('span');
   name.textContent = 'Datos RedUniv';
   brand.replaceChildren(logo, name);
@@ -66,6 +66,5 @@ if(auth.user()?.role==='ADMINISTRATOR')document.querySelectorAll('.sidebar nav')
 
 // Keys are selected by stable navigation routes, never by visible text or user data.
 const sharedNavKeys={'index.html':'nav.catalog','my-datasets.html':'nav.mine','account.html':'nav.account','users.html':'nav.users','reviews.html':'nav.reviews','collections.html?manage=true':'nav.collections','operations.html':'nav.operations','vocabulary-admin.html':'nav.vocabularies','metadata-profiles-admin.html':'nav.profiles'};
-document.querySelectorAll('.sidebar nav').forEach(nav=>{nav.lang=uiI18n.locale;nav.dataset.i18nAriaLabel='nav.main';nav.setAttribute('aria-label',uiI18n.t('nav.main'));nav.querySelectorAll('a').forEach(link=>{const key=sharedNavKeys[link.getAttribute('href')];if(key)uiI18n.set(link,key);});});
+document.querySelectorAll('.sidebar nav').forEach(nav=>{uiI18n.attribute(nav,'aria-label','nav.main');nav.querySelectorAll('a').forEach(link=>{const key=sharedNavKeys[link.getAttribute('href')];if(key)uiI18n.set(link,key);});});
 document.querySelectorAll('[data-logout]').forEach(button=>uiI18n.set(button,'nav.logout'));
-window.addEventListener('ui-locale-changed',()=>document.querySelectorAll('.sidebar nav').forEach(nav=>nav.setAttribute('aria-label',uiI18n.t('nav.main'))));

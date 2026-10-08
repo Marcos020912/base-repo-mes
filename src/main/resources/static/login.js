@@ -20,7 +20,7 @@ loginForm.addEventListener('submit', async event => {
       if (body.code === 'ACCOUNT_RESTRICTED') {
         loginMessage.className = 'message error';
         const link = document.createElement('a'); link.href = 'mailto:soporte@mes.gob.cu'; link.textContent = 'soporte@mes.gob.cu';
-        delete loginMessage.dataset.i18n;const explanation=document.createElement('span');uiI18n.set(explanation,'login.restricted');loginMessage.replaceChildren(explanation, link, '.'); return;
+        uiI18n.plain(loginMessage,'');const explanation=document.createElement('span');uiI18n.set(explanation,'login.restricted');loginMessage.replaceChildren(explanation, link, '.'); return;
       }
       throw body.message?new Error(body.message):uiI18n.error('login.failed');
     }
