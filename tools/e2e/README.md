@@ -68,3 +68,6 @@ cancelar una petición activa: no simula almacenamiento ni garantiza rollback.
 El test del monitor verifica además el foco al abrir, cierre con Escape y botón
 Cerrar, estado aria-expanded y retorno al activador. El panel es no modal:
 permite seguir navegando por el resto de la página.
+Cuando termina de enviar los bytes y el servidor aún no responde, se comprueba
+el estado «esperando confirmación del servidor» y que siga siendo cancelable.
+El fixture HTTP declara UTF-8 explícitamente para validar mensajes en español.

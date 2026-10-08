@@ -87,7 +87,17 @@ const transfers = (() => {
       task.cancel.addEventListener('click', () => xhr.abort());
       xhr.open('POST', url);
       for (const [name, value] of Object.entries(headers({Accept:'application/json'}))) xhr.setRequestHeader(name, value);
-      xhr.upload.onprogress = event => setProgress(task, event.loaded, event.lengthComputable ? event.total : 0);
+      function waitingForServer() {
+        // All bytes sent is not confirmation of validation or durable storage.
+        if (!task.active) return;
+        task.progress.removeAttribute('value');
+        task.status.textContent = 'Archivo enviado · esperando confirmación del servidor…';
+      }
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable && event.loaded >= event.total) waitingForServer();
+        else setProgress(task, event.loaded, event.lengthComputable ? event.total : 0);
+      };
+      xhr.upload.onload = waitingForServer;
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) { finish(task, 'Subida completada'); resolve(); return; }
         let detail = xhr.responseText || 'No se pudo completar la subida.';

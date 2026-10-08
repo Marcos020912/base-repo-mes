@@ -14,10 +14,10 @@ let unauthorizedHeader = false;
 const server = http.createServer((request, response) => {
   unauthorizedHeader ||= Boolean(request.headers.authorization);
   if (request.url === '/') {
-    response.setHeader('Content-Type', 'text/html');
+    response.setHeader('Content-Type', 'text/html; charset=utf-8');
     response.end('<header class="page-header"></header><script src="/transfers.js"></script>');
   } else if (request.url === '/transfers.js') {
-    response.setHeader('Content-Type', 'application/javascript'); response.end(script);
+    response.setHeader('Content-Type', 'application/javascript; charset=utf-8'); response.end(script);
   } else if (request.url === '/upload') {
     request.on('data', chunk => uploaded += chunk.length);
     request.on('end', () => { response.writeHead(201); response.end('{}'); });
@@ -95,6 +95,11 @@ const server = http.createServer((request, response) => {
     await page.waitForFunction(() => document.querySelector('.transfer-item strong').textContent.includes('slow.csv'));
     for (let i=0; i<40 && !uploadStarted; i++) await new Promise(resolve => setTimeout(resolve, 50));
     assert(uploadStarted, 'La subida no llegó al servidor antes de probar cancelación.');
+    await page.waitForFunction(() => document.querySelector('.transfer-item span').textContent.includes('esperando confirmación del servidor'), {timeout:5000}).catch(async error => { throw new Error(error.message + ': ' + await page.$eval('.transfer-item', el => el.textContent)); });
+    assert.equal(await page.$eval('.transfer-item progress', el => el.hasAttribute('value')), false,
+      'La espera del servidor no debe mostrar 100 % como operación completada.');
+    assert.equal(await page.$eval('.transfer-item button', el => el.hidden), false,
+      'La petición debe poder cancelarse mientras espera al servidor.');
     await page.click('.transfer-item button');
     await page.waitForFunction(() => window.uploadResult === 'Subida cancelada.');
     for (let i=0; i<20 && !uploadClosed; i++) await new Promise(resolve => setTimeout(resolve, 50));
