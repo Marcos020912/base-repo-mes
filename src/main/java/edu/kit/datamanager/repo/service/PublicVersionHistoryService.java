@@ -17,7 +17,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class PublicVersionHistoryService {
     private final ScientificRecordRepository records;private final IDataResourceDao resources;
     public PublicVersionHistoryService(ScientificRecordRepository records,IDataResourceDao resources){this.records=records;this.resources=resources;}
+    @io.swagger.v3.oas.annotations.media.Schema(name="PublicScientificVersion")
     public record Version(String id,String version,String doi,String conceptualDoi,PublicationStatus status,Instant publishedAt,boolean current){}
+    @io.swagger.v3.oas.annotations.media.Schema(name="PublicVersionHistoryPage")
     public record History(List<Version> items,int page,int size,long total,int pages,String latestPublishedId,boolean newerPublicationAvailable){}
     private boolean visible(ScientificRecord record){return (record.getStatus()==PublicationStatus.PUBLISHED||record.getStatus()==PublicationStatus.WITHDRAWN)&&resources.existsById(record.getResourceId());}
     public History list(String id,int page,int size){

@@ -65,6 +65,7 @@ public class PublicScientificResourceController {
         this.fileAccess = fileAccess;
     }
 
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode="200",description="Ficha pública de una versión publicada.",content=@io.swagger.v3.oas.annotations.media.Content(mediaType="application/json",schema=@io.swagger.v3.oas.annotations.media.Schema(implementation=PublicDetail.class)))
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public ResponseEntity<?> detail(@PathVariable String id) throws IOException {
@@ -167,6 +168,7 @@ public class PublicScientificResourceController {
         }
     }
 
+    @io.swagger.v3.oas.annotations.media.Schema(name="PublicScientificResource")
     public record PublicDetail(String id, String title, List<String> authors, String publisher, String year, String type,
                                String version, String doi, String conceptualDoi, String license, String institution,
                                String orcid, String ror, String language, String discipline, String keywords,

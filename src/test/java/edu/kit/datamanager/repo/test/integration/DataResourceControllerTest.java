@@ -1810,7 +1810,7 @@ public class DataResourceControllerTest {
         this.mockMvc.perform(get("/v3/api-docs"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.info.title", Matchers.startsWith("Repository")));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.info.title", Matchers.equalTo("Datos RedUniv - API HTTP v1")));
     }
 
 //  @Test

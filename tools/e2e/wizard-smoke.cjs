@@ -7,6 +7,7 @@ const net = require('node:net');
 const crypto = require('node:crypto');
 const {spawn, spawnSync} = require('node:child_process');
 const puppeteer = require('../a11y/node_modules/puppeteer-core');
+const {validate:validateOpenApi}=require('../contract/openapi-check.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const jar = path.join(root, 'build/libs/base-repo.jar');
@@ -24,6 +25,13 @@ let rejectSmtp = false;
 let verifiedAccount;
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
+function observeResponse(page, predicate) {
+  const pending=page.waitForResponse(predicate);
+  // Keep failures observable to the awaiting assertion, but avoid unhandled rejection
+  // when a preceding click fails and cleanup closes the browser first.
+  pending.catch(()=>{});
+  return pending;
+}
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -534,13 +542,13 @@ async function publicDownloads(base, resource) {
     const exported=await page.evaluate(()=>window.exportedPublicMetadata);
     assert(exported.schema==='reduniv.public-metadata.v1' && exported.metadata.id===resource.id && exported.metadata.lastUpdate,'Exportación general incompleta.');
     await page.evaluate(()=>{URL.createObjectURL=window.originalCreateObjectURL;});
-    const fileResponse = page.waitForResponse(response => response.url().includes('/file?path='));
+    const fileResponse = observeResponse(page, response => response.url().includes('/file?path='));
     await page.click('#files .file-row a');
     const file = await fileResponse;
     assert(file.ok(), 'Descarga pública individual rechazada.');
     assert((await file.text()).includes('nombre,valor'), 'Contenido público individual incorrecto.');
     await page.waitForFunction(() => document.querySelector('.transfer-list')?.textContent.includes('Descarga preparada'));
-    const archiveResponse = page.waitForResponse(response => response.url().endsWith('/archive'));
+    const archiveResponse = observeResponse(page, response => response.url().endsWith('/archive'));
     await page.click('#download-archive');
     const archive = await archiveResponse;
     assert(archive.ok(), 'ZIP público rechazado.');
@@ -552,7 +560,7 @@ async function publicDownloads(base, resource) {
     assert(inspected.status === 0, `ZIP público incompleto: ${inspected.stderr}`);
     await page.waitForFunction(() => [...document.querySelectorAll('.transfer-item span')].filter(node => node.textContent === 'Descarga preparada').length === 2);
     await page.select('#format', 'bibtex');
-    const citationResponse = page.waitForResponse(response => response.url().includes('/citation?format=bibtex'));
+    const citationResponse = observeResponse(page, response => response.url().includes('/citation?format=bibtex'));
     await page.click('#export');
     const citation = await citationResponse;
     assert(citation.ok() && (await citation.text()).includes('@'), 'Exportación pública BibTeX inválida.');
@@ -574,10 +582,10 @@ async function privacyFlow(page,base,draft) {
   const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
   await page.goto(base+'/resource.html?id='+draft.id,{waitUntil:'load'});
-  await page.waitForSelector('#edit-privacy:not([hidden])');
-  await page.click('#edit-privacy');await page.select('#privacy-form select','PERSONAL');
+  await page.waitForSelector('#edit-privacy:not([hidden])',{visible:true});
+  await page.click('#edit-privacy');await page.waitForSelector('#privacy-modal[open] #privacy-form [type=submit]',{visible:true});await page.select('#privacy-form select','PERSONAL');
   await page.type('#privacy-form textarea','PRIVATE_ASSESSMENT_SENTINEL protection measures');
-  const declaration=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/privacy'));
+  const declaration=observeResponse(page, r=>r.request().method()==='PUT'&&r.url().endsWith('/privacy'));
   await page.click('#privacy-form [type=submit]');assert((await declaration).ok(),'Modal de declaración rechazado.');
   const policy=await (await fetch(base+'/api/v1/scientific/privacy-policy',{headers})).json();assert(typeof policy.required==='boolean','Política de privacidad inválida.');
   const science=await (await fetch(base+'/api/v1/scientific/'+draft.id,{headers})).json();
@@ -592,7 +600,7 @@ async function privacyFlow(page,base,draft) {
   await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='Revisar privacidad'));
   await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>b.textContent==='Revisar privacidad').click());
   await page.select('#privacy-review-form select','APPROVED');await page.type('#privacy-review-form textarea','PRIVATE_REVIEW_SENTINEL checked access.');
-  const approval=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/privacy/review'));
+  const approval=observeResponse(page, r=>r.request().method()==='POST'&&r.url().endsWith('/privacy/review'));
   await page.click('#privacy-review-form [type=submit]');assert((await approval).ok(),'Modal de revisión de privacidad rechazado.');
   assert((await fetch(base+'/api/v1/scientific/'+draft.id+'/publish',{method:'POST',headers,body:'{"doiRegisteredExternally":true}'})).ok,'No publicó después de aprobación privada y restricción.');
   const publicMetadata=await fetch(base+'/api/v1/public/resources/'+draft.id);assert(publicMetadata.ok,'Metadatos restringidos no consultables.');
@@ -608,7 +616,7 @@ async function collectionsFlow(page, base, published, draft) {
   await page.click('#new-collection');
   await page.type('#collection-form [name=title]','Colección E2E '+Date.now());
   await page.type('#collection-form [name=description]','Agrupación real local');
-  const creation=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/api/v1/collections'));
+  const creation=observeResponse(page, r=>r.request().method()==='POST'&&r.url().endsWith('/api/v1/collections'));
   await page.click('#collection-form [type=submit]');
   const response=await creation;assert(response.status()===201,'No se pudo crear colección por formulario.');
   const collection=await response.json();
@@ -616,7 +624,7 @@ async function collectionsFlow(page, base, published, draft) {
   await page.goto(base+'/collections.html?manage=true&id='+collection.id,{waitUntil:'load'});
   await page.waitForFunction(()=>!document.querySelector('#member-form').hidden);
   await page.type('#member-form input',published.id);
-  const membership=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().includes('/datasets/'));
+  const membership=observeResponse(page, r=>r.request().method()==='PUT'&&r.url().includes('/datasets/'));
   await page.click('#member-form button');
   assert((await membership).status()===204,'No se pudo agregar miembro por formulario.');
   assert((await fetch(base+'/api/v1/collections/'+collection.id+'/datasets/'+draft.id,{method:'PUT',headers})).status===204,'No se pudo agregar borrador.');
@@ -625,7 +633,7 @@ async function collectionsFlow(page, base, published, draft) {
   await page.reload({waitUntil:'load'});
   await page.waitForFunction(()=>!document.querySelector('#edit-collection').disabled);
   await page.click('#edit-collection');await page.click('#collection-form [name=published]');
-  const updated=page.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/api/v1/collections/'+collection.id));
+  const updated=observeResponse(page, r=>r.request().method()==='PUT'&&r.url().endsWith('/api/v1/collections/'+collection.id));
   await page.click('#collection-form [type=submit]');assert((await updated).ok(),'No se pudo publicar colección.');
   const stale=await fetch(base+'/api/v1/collections/'+collection.id,{method:'PUT',headers,body:JSON.stringify({...collection,title:'Edición obsoleta'})});
   assert(stale.status===409,'Edición obsoleta no fue rechazada.');
@@ -643,7 +651,7 @@ async function collectionsFlow(page, base, published, draft) {
   assert((await fetch(base+'/api/v1/public/resources/'+published.id)).ok,'Quitar miembro eliminó dataset.');
   await page.reload({waitUntil:'load'});await page.waitForFunction(()=>!document.querySelector('#delete-collection').disabled);
   await page.click('#delete-collection');await page.waitForSelector('#collection-confirm[open]');
-  const removal=page.waitForResponse(r=>r.request().method()==='DELETE'&&r.url().endsWith('/api/v1/collections/'+collection.id));
+  const removal=observeResponse(page, r=>r.request().method()==='DELETE'&&r.url().endsWith('/api/v1/collections/'+collection.id));
   await page.click('#confirm-action');assert((await removal).status()===204,'Eliminar colección falló.');
   assert((await fetch(base+'/api/v1/public/resources/'+published.id)).ok,'Eliminar colección eliminó dataset.');
   assert((await fetch(base+'/api/v1/public/collections/'+collection.id)).status===404,'Colección eliminada sigue pública.');
@@ -819,6 +827,8 @@ async function main() {
     const pageErrors = [];
     page.on('pageerror', error => pageErrors.push(error.message));
     const base = `http://127.0.0.1:${port}`;
+    const apiDocs=await fetch(base+'/v3/api-docs');assert(apiDocs.ok,'No se pudo generar OpenAPI local.');
+    const contract=validateOpenApi(await apiDocs.json());process.stdout.write(`Contrato OpenAPI OK: ${contract.paths} rutas científicas y ${contract.localReferences} referencias locales.\n`);
     await login(page, base);
     const markdown = await deposit(page, base, files, 'md');
     const zipped = await deposit(page, base, files, 'zip');
@@ -852,7 +862,7 @@ async function main() {
     await page.waitForFunction(() => document.querySelector('#reviews-list').textContent.includes('Requisitos automáticos completos.'));
     await page.evaluate(() => [...document.querySelectorAll('.review-files button')].find(button => button.textContent === 'Descargar').click());
     await page.waitForFunction(() => document.querySelector('.transfer-list')?.textContent.includes('Descarga preparada'));
-    const preservationResponse = page.waitForResponse(response => response.url().includes('/preservation/') && response.url().endsWith('/package'));
+    const preservationResponse = observeResponse(page, response => response.url().includes('/preservation/') && response.url().endsWith('/package'));
     await page.evaluate(() => [...document.querySelectorAll('#reviews-list button')].find(button => button.textContent === 'Descargar paquete de preservación').click());
     const preservation = await preservationResponse;
     assert(preservation.ok(), 'El paquete de preservación fue rechazado.');
@@ -889,7 +899,7 @@ async function main() {
       await reviewer.waitForSelector('#review-files button');
       assert(new URL(reviewer.url()).hash === '', 'El token permaneció en la URL del revisor.');
       assert(await reviewer.evaluate(() => localStorage.getItem('base-repo-token')) === null, 'Revisor heredó autenticación.');
-      const privateResponse = reviewer.waitForResponse(response => response.url().includes('/api/v1/reviewer/file?'));
+      const privateResponse = observeResponse(reviewer, response => response.url().includes('/api/v1/reviewer/file?'));
       await reviewer.click('#review-files button');
       const privateFile = await privateResponse;
       assert(privateFile.ok(), 'El archivo privado fue rechazado antes de revocar.');
@@ -902,7 +912,7 @@ async function main() {
         return response.status;
       }, {id:packaged.id,linkId:reviewerLink.id});
       assert(revoked === 204, 'No se pudo revocar el enlace privado.');
-      const deniedResponse = reviewer.waitForResponse(response => response.url().includes('/api/v1/reviewer/file?'));
+      const deniedResponse = observeResponse(reviewer, response => response.url().includes('/api/v1/reviewer/file?'));
       await reviewer.click('#review-files button');
       const denied = await deniedResponse;
       assert(!denied.ok(), 'El enlace revocado todavía permite descargar.');

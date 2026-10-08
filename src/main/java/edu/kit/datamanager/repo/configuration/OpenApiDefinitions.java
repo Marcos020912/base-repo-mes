@@ -35,14 +35,13 @@ public class OpenApiDefinitions{
   public OpenAPI customOpenAPI(){
     return new OpenAPI()
             .components(new Components())
-            .info(new Info().title("Repository Microservice - RESTful API").
-                    description("This webpage describes the RESTful interface of the KIT Data Manager Repository Microservice.").
-                    version("1.5.0").
+            .info(new Info().title("Datos RedUniv - API HTTP v1").
+                    description("Contrato HTTP v1 de Datos RedUniv, construido sobre KIT Data Manager. Las operaciones privadas requieren una cuenta verificada y permisos de autor/curación/administración; el catálogo público y los enlaces temporales de revisión tienen reglas separadas.").
+                    version("1").
                     contact(
                             new Contact().
-                                    name("KIT Data Manager Support").
-                                    url("https://github.com/kit-data-manager").
-                                    email("support@datamanager.kit.edu")).
+                                    name("Soporte Datos RedUniv").
+                                    email("soporte@mes.gob.cu")).
                     license(
                             new License().
                                     name("Apache 2.0").

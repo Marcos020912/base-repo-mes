@@ -100,7 +100,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | A10 | Auditorías periódicas SHA-256 verificables | Base local: manual/programada opcional y alertas; política/volumen/buzón real pendientes. |
 | A11 | Métricas COUNTER/DataCite cuando corresponda | Pendiente: no confundir contadores locales con conformidad COUNTER o integración de eventos DataCite. |
 | A12 | Autoevaluación CoreTrustSeal | Pendiente: requiere expediente y evidencia organizativa/técnica; no afirmar certificación. |
-| A13 | OpenAPI como contrato y pruebas de compatibilidad | Parcial: infraestructura OpenAPI existente; cobertura contractual de endpoints nuevos y compatibilidad pendientes de auditoría. |
+| A13 | OpenAPI como contrato y pruebas de compatibilidad | Parcial: contrato científico tipado, seguridad y binarios explícitos; gate estructural de 22 rutas y referencias locales integrado en E2E. Compatibilidad de clientes institucionales y auditoría del resto de endpoints pendientes. |
 | A14 | WCAG2.2AA, teclado, foco, contraste, etiquetas, errores, lectores | Parcial: axe y teclado automatizados; revisión manual de recorridos/lectores pendiente. |
 | A15 | Diseño desde360px y estados no solo por color | Base local: pruebas320px y etiquetas; revisar cada flujo dinámico real. |
 | A16 | Prueba con investigadores, curadores, bibliotecarios y soporte | Institucional: organizar evaluación funcional sin sustituirla por smoke automatizado. |

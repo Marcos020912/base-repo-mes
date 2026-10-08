@@ -303,6 +303,7 @@ public class ScientificRecordController {
         return result;
     }
 
+    @io.swagger.v3.oas.annotations.media.Schema(name="ScientificRecordUpdate")
     public record UpdateRequest(String versionLabel, String versionDoi, String conceptualDoi, String licenseId,
                                 String accessLevel, String embargoUntil, String language, String discipline, String keywords,
                                 String orcid, String institution, String ror, String relatedPublications,

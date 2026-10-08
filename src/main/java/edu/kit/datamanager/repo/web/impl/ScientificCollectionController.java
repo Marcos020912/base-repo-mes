@@ -13,10 +13,10 @@ public class ScientificCollectionController {
     private final ScientificCollectionService service;
     public ScientificCollectionController(ScientificCollectionService service) {this.service=service;}
     public record CollectionRequest(@NotBlank @Size(max=200) String title,@Size(max=2000) String description,@NotNull ScientificCollection.Kind kind,boolean published,Long revision) {}
-    @GetMapping public Object list(@RequestParam(defaultValue="") String kind,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) {return service.list(false,kind,page,size);}
-    @GetMapping("/{id}") public Object detail(@PathVariable String id,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) {return service.datasets(id,false,page,size);}
-    @PostMapping public ResponseEntity<?> create(@Valid @RequestBody CollectionRequest r) {return ResponseEntity.status(201).body(service.create(r.title(),r.description(),r.kind(),r.published()));}
-    @PutMapping("/{id}") public Object update(@PathVariable String id,@Valid @RequestBody CollectionRequest r) {
+    @GetMapping public ScientificCollectionService.CollectionPage list(@RequestParam(defaultValue="") String kind,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) {return service.list(false,kind,page,size);}
+    @GetMapping("/{id}") public ScientificCollectionService.DatasetPage detail(@PathVariable String id,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) {return service.datasets(id,false,page,size);}
+    @PostMapping @ResponseStatus(HttpStatus.CREATED) public ResponseEntity<ScientificCollectionService.CollectionView> create(@Valid @RequestBody CollectionRequest r) {return ResponseEntity.status(201).body(service.create(r.title(),r.description(),r.kind(),r.published()));}
+    @PutMapping("/{id}") public ScientificCollectionService.CollectionView update(@PathVariable String id,@Valid @RequestBody CollectionRequest r) {
         if(r.revision()==null) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,"Actualiza la colección antes de editar.");
         return service.update(id,r.revision(),r.title(),r.description(),r.kind(),r.published());
     }

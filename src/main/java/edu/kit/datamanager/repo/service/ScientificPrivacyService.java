@@ -25,6 +25,7 @@ public class ScientificPrivacyService {
         this.assessments=assessments;this.records=records;this.resources=resources;this.owners=owners;this.events=events;this.required=required;
     }
     public boolean isRequired() {return required;}
+    @io.swagger.v3.oas.annotations.media.Schema(name="PrivatePrivacyAssessment")
     public record Assessment(String resourceId,Long revision,ScientificPrivacyAssessment.Classification classification,
             String assessmentNote,String reviewState,Instant updatedAt,Instant reviewedAt,String reviewedBy,String reviewNote) {}
     private ScientificRecord resource(String id) {

@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.*;
 public class ScientificPrivacyController {
     private final ScientificPrivacyService privacy;
     public ScientificPrivacyController(ScientificPrivacyService privacy) {this.privacy=privacy;}
-    public record Declaration(ScientificPrivacyAssessment.Classification classification,String assessmentNote,Long revision) {}
-    public record Review(boolean approved,String reviewNote,Long revision) {}
+    @io.swagger.v3.oas.annotations.media.Schema(name="PrivacyDeclaration")
+    public record Declaration(@io.swagger.v3.oas.annotations.media.Schema(requiredMode=io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) ScientificPrivacyAssessment.Classification classification,@io.swagger.v3.oas.annotations.media.Schema(maxLength=2000,description="Medidas privadas de protección, obligatorias para PERSONAL/CONFIDENTIAL; no incluir datos personales.") String assessmentNote,@io.swagger.v3.oas.annotations.media.Schema(description="Revisión esperada obligatoria al reemplazar una evaluación existente.") Long revision) {}
+    @io.swagger.v3.oas.annotations.media.Schema(name="PrivacyReview")
+    public record Review(boolean approved,@io.swagger.v3.oas.annotations.media.Schema(requiredMode=io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED,minLength=1,maxLength=1000) String reviewNote,@io.swagger.v3.oas.annotations.media.Schema(requiredMode=io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) Long revision) {}
     @GetMapping public ScientificPrivacyService.Assessment read(@PathVariable String id) {return privacy.read(id);}
     @PutMapping public ScientificPrivacyService.Assessment save(@PathVariable String id,@RequestBody Declaration declaration) {
         return privacy.save(id,declaration.classification(),declaration.assessmentNote(),declaration.revision());

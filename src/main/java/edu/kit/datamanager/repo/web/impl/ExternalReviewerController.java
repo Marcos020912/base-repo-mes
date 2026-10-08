@@ -101,6 +101,8 @@ public class ExternalReviewerController {
     }
 
     public record ReviewMetadata(String id, String title, List<String> authors, String publisher, String year, String markdown) {}
+    @io.swagger.v3.oas.annotations.media.Schema(name="ExternalReviewFile")
     public record ReviewFile(String path, long size, String mediaType, String sha256) {}
+    @io.swagger.v3.oas.annotations.media.Schema(name="ExternalReviewFiles")
     public record ReviewFiles(List<ReviewFile> files, int pages, int page) {}
 }

@@ -23,7 +23,9 @@ public class DepositTaskService {
     public DepositTaskService(ResourceOwnershipRepository ownership,IDataResourceDao resources,ScientificRecordRepository records,ScientificQualityService quality) {
         this.ownership=ownership;this.resources=resources;this.records=records;this.quality=quality;
     }
+    @io.swagger.v3.oas.annotations.media.Schema(name="DepositTask")
     public record Task(String resourceId,String title,PublicationStatus status,int completionPercent,List<String> blockers,List<ScientificQualityService.QualityCheck> pending,String nextAction) {}
+    @io.swagger.v3.oas.annotations.media.Schema(name="DepositTasksPage")
     public record Tasks(List<Task> items,int page,int size,long total,int pages) {}
     public Tasks mine(int page,int size) {
         if(page<0||size<1||size>50)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Paginación no válida.");

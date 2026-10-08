@@ -61,7 +61,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **A10 — Auditorías periódicas SHA-256 verificables**. Base local: manual/programada opcional y alertas; política/volumen/buzón real pendientes.
 - [ ] **A11 — Métricas COUNTER/DataCite cuando corresponda**. Pendiente: no confundir contadores locales con conformidad COUNTER o integración de eventos DataCite.
 - [ ] **A12 — Autoevaluación CoreTrustSeal**. Pendiente: requiere expediente y evidencia organizativa/técnica; no afirmar certificación.
-- [ ] **A13 — OpenAPI como contrato y pruebas de compatibilidad**. Parcial: infraestructura OpenAPI existente; cobertura contractual de endpoints nuevos y compatibilidad pendientes de auditoría.
+- [ ] **A13 — OpenAPI como contrato y pruebas de compatibilidad**. Contrato científico tipado y gate estructural de 22 rutas implementados; compatibilidad de clientes institucionales y auditoría del resto pendientes.
 - [ ] **A14 — WCAG2.2AA, teclado, foco, contraste, etiquetas, errores, lectores**. Parcial: axe y teclado automatizados; revisión manual de recorridos/lectores pendiente.
 - [ ] **A15 — Diseño desde360px y estados no solo por color**. Base local: pruebas320px y etiquetas; revisar cada flujo dinámico real.
 - [ ] **A16 — Prueba con investigadores, curadores, bibliotecarios y soporte**. Institucional: organizar evaluación funcional sin sustituirla por smoke automatizado.
@@ -140,3 +140,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Tres tests: padres/hijas/hermanas, ciclo, paginación, retiradas, borradores/huérfanos excluidos y ausencia de agrupación por coincidencia DOI. No inventa anterioridad con fechas ausentes/empatadas.
 - E2E PG18/SMTP/Chrome/restauración: borrador no visible, publicación sintética de sucesora, aviso con enlace correcto, retirada conservada en familia pública y ficha permanente.
 - Regresión49suites493pruebas0fallos/errores/omitidas; JAR y axe53estados0. `docs/PUBLIC_VERSION_HISTORY.md`.
+
+### Contrato científico HTTP v1
+- Seguridad declarada diferenciada JWT/público/token revisor; esquemas tipados, binarios, citas autenticadas y tombstone410.
+- Gate contra JAR aislado:22 rutas y140 referencias locales resolubles. No reemplaza comportamiento, todos los endpoints o clientes institucionales.
+- Regresión50suites495pruebas0fallos/errores/omitidas; después, tres tests contractuales aprobados incluyendo estabilidad por orden. E2EPG18SMTPChrome/restauración completo aprobado; axe53estados0 e historial de ambos catálogos aprobado. `docs/SCIENTIFIC_API_CONTRACT.md`.
