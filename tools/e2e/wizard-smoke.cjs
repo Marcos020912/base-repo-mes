@@ -18,6 +18,8 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'reduniv-wizard-'));
 let app;
 let browser;
 let postgres;
+let smtp;
+const verificationMessages = [];
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -78,6 +80,68 @@ function setupFiles() {
     descriptionHtmlZip:crafted('descripcion-html.zip','description-html'),
     fullTraversalZip:crafted('deposito-ruta-invalida.zip','package-traversal')};
 }
+async function smtpProperties() {
+  if (process.env.E2E_MAIL !== '1') return [];
+  if (!smtp) {
+    smtp = net.createServer(socket => {
+      socket.setEncoding('utf8'); socket.write('220 localhost fixture SMTP\r\n');
+      let buffer='', data=false, message=[];
+      socket.on('data', chunk => {
+        buffer += chunk;
+        while (buffer.includes('\n')) {
+          const end=buffer.indexOf('\n'), line=buffer.slice(0,end).replace(/\r$/, '');
+          buffer=buffer.slice(end+1);
+          if (data) {
+            if (line==='.') { verificationMessages.push(message.join('\n')); message=[]; data=false; socket.write('250 accepted\r\n'); }
+            else message.push(line);
+          } else if (/^(EHLO|HELO)/i.test(line)) socket.write('250 localhost\r\n');
+          else if (/^MAIL FROM:/i.test(line)) socket.write('250 sender accepted\r\n');
+          else if (/^RCPT TO:/i.test(line)) socket.write(/@example\.invalid>/i.test(line) ? '250 recipient accepted\r\n' : '550 only test recipients\r\n');
+          else if (/^DATA$/i.test(line)) { data=true; socket.write('354 send data\r\n'); }
+          else if (/^QUIT$/i.test(line)) socket.end('221 bye\r\n');
+          else if (/^RSET$/i.test(line)) { data=false;message=[];socket.write('250 reset\r\n'); }
+          else socket.write('502 unsupported\r\n');
+        }
+      });
+      socket.on('error', () => {});
+    });
+    await new Promise(resolve => smtp.listen(0,'127.0.0.1',resolve));
+  }
+  return ['spring.mail.host=127.0.0.1', `spring.mail.port=${smtp.address().port}`,
+    'spring.mail.username=', 'spring.mail.password=', 'repo.mail.from=fixture@example.invalid',
+    'spring.mail.properties.mail.smtp.auth=false',
+    'spring.mail.properties.mail.smtp.starttls.enable=false',
+    'spring.mail.properties.mail.smtp.starttls.required=false',
+    'spring.mail.properties.mail.smtp.ssl.enable=false',
+    'spring.mail.properties.mail.smtp.connectiontimeout=5000',
+    'spring.mail.properties.mail.smtp.timeout=5000'];
+}
+async function verificationFlow(base) {
+  if (!smtp) return;
+  const email='verification@example.invalid', name='verification-fixture';
+  const secret=crypto.randomBytes(16).toString('hex');
+  async function post(endpoint, body) {
+    const response=await fetch(base+'/api/v1/auth/'+endpoint, {
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+    });
+    return {status:response.status, body:await response.json()};
+  }
+  const created=await post('register',{username:name,email,password:secret});
+  assert(created.status===201, 'El registro con SMTP local no completó.');
+  assert(verificationMessages.length===1, 'No llegó exactamente un mensaje al SMTP local.');
+  const code=verificationMessages[0].match(/es: ([0-9]{6})/)?.[1];
+  assert(code, 'El correo local no contiene código de seis dígitos.');
+  const blocked=await post('login',{username:name,password:secret});
+  assert(blocked.body.code==='EMAIL_NOT_VERIFIED' && !blocked.body.token, 'Una cuenta sin verificar obtuvo acceso.');
+  const verified=await post('verify',{email,code});
+  assert(verified.status===200, 'El código enviado por SMTP no verificó la cuenta.');
+  const logged=await post('login',{username:name,password:secret});
+  assert(logged.status===200 && logged.body.token && logged.body.user.role==='USER',
+    'La cuenta verificada no inició sesión como Usuario.');
+  const replay=await post('verify',{email,code});
+  assert(replay.status===400, 'El código ya consumido se pudo reutilizar.');
+  process.stdout.write('Correo local OK: registro, envío SMTP, bloqueo previo, verificación, login Usuario y código de un uso.\n');
+}
 async function databaseProperties() {
   if (process.env.E2E_POSTGRES !== '1') return [
     'spring.datasource.driver-class-name=org.h2.Driver',
@@ -114,6 +178,7 @@ async function startApp(port, files) {
   fs.writeFileSync(config, [
     `server.port=${port}`, 'server.address=127.0.0.1',
     ...await databaseProperties(),
+    ...await smtpProperties(),
     `spring.jpa.hibernate.ddl-auto=${postgres?.restored ? 'validate' : 'update'}`,
     `repo.basepath=${pathToFileUrl(files.data)}`,
     'repo.auth.enabled=true',
@@ -480,6 +545,7 @@ async function cleanup() {
     const stopped = spawnSync(path.join(postgres.bin, 'pg_ctl'), ['-D', postgres.data, '-m', 'immediate', '-w', 'stop'], {encoding:'utf8'});
     assert(stopped.status === 0, 'No se pudo detener el PostgreSQL efímero; revise el directorio temporal.');
   }
+  if (smtp) await new Promise(resolve => smtp.close(resolve));
   fs.rmSync(temp, {recursive:true, force:true});
 }
 async function main() {
@@ -487,6 +553,7 @@ async function main() {
     const files = setupFiles();
     const port = await freePort();
     await startApp(port, files);
+    await verificationFlow(`http://127.0.0.1:${port}`);
     browser = await puppeteer.launch({executablePath:chrome, headless:true,
       args:['--no-sandbox', '--disable-dev-shm-usage']});
     const page = await browser.newPage();

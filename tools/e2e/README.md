@@ -163,3 +163,16 @@ verificar/reenviar quedan bloqueados mientras espera, el doble click no duplica
 peticiones y el éxito elimina el estilo de error. Simula verificación exitosa
 y comprueba bloqueo hasta navegar al login. No valida entrega real de correo
 ni la validez de un código contra la base de datos.
+
+## Registro y verificación con SMTP local
+
+```bash
+E2E_POSTGRES=1 E2E_MAIL=1 node tools/e2e/wizard-smoke.cjs
+```
+
+Inicia un receptor SMTP de prueba en 127.0.0.1 con puerto libre. No reenvía correo
+y solo acepta destinatarios example.invalid. El mensaje se mantiene en memoria
+y no imprime el código. Prueba JavaMail real: registro 201, código de seis
+dígitos, login bloqueado antes de verificar, verificación, login con rol USER
+y rechazo de reutilizar el código consumido. El SMTP efímero no autentica ni
+usa TLS; no certifica STARTTLS, credenciales ni entrega del correo institucional.
