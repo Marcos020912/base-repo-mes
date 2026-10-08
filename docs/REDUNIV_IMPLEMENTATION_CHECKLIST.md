@@ -104,6 +104,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       HTTP local revisa las 13 páginas, diálogos y cuatro pasos del asistente
       sin backend ni cuentas. Detectó y se corrigió contraste 1.88:1 de la
       marca en revisión privada; ahora 26 estados sin infracciones automáticas.
+      Se eliminó el `autofocus` que saltaba el primer enlace en login/registro;
+      el auditor comprueba primer Tab y activación con Enter en las 13 páginas.
       La revisión manual y de contenido real permanece pendiente.
 - [x] Limitación distribuida de intentos de inicio de sesión, registro,
       verificación, reenvío y cambio de contraseña mediante PostgreSQL:

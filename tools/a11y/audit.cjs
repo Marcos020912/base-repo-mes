@@ -46,6 +46,14 @@ async function main() {
         await page.setRequestInterception(true);
         page.on('request', request => request.url().endsWith('.js') ? request.abort() : request.continue());
         await page.goto(base + name, {waitUntil:'load'});
+        await page.keyboard.press('Tab');
+        const firstStop = await page.evaluate(() => document.activeElement.classList.contains('skip-link'));
+        if (!firstStop) { console.error(`${name}: el primer Tab no alcanza el enlace para saltar al contenido`); failures++; }
+        if (firstStop) {
+          await page.keyboard.press('Enter');
+          const skipTarget = await page.evaluate(() => document.activeElement.id === 'main-content');
+          if (!skipTarget) { console.error(`${name}: el enlace no transfiere el foco al contenido`); failures++; }
+        }
         await page.evaluate(axe.source);
         failures += await audit(page, name); states++;
         const variants = await page.evaluate(() => Array.from(document.querySelectorAll('dialog[id],section[data-step]'))
