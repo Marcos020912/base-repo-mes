@@ -110,12 +110,14 @@ const transfers = (() => {
     });
   }
 
-  async function download(url, filename, label = filename) {
+  async function download(url, filename, label = filename, options = {}) {
+    if (new URL(url, location.href).origin !== location.origin)
+      throw new Error('Solo se permiten descargas desde este servidor.');
     const task = add(label, 'download');
     const controller = new AbortController();
     task.cancel.addEventListener('click', () => controller.abort());
     try {
-      const response = await fetch(url, {headers:headers(), signal:controller.signal});
+      const response = await fetch(url, {headers:options.headers || headers(), cache:options.cache || 'default', redirect:'error', signal:controller.signal});
       if (!response.ok) throw new Error('No se pudo descargar el archivo.');
       const total = Number(response.headers.get('Content-Length')) || 0;
       const chunks = []; let loaded = 0;

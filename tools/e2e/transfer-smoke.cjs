@@ -109,6 +109,11 @@ const server = http.createServer((request, response) => {
     await page.click('.transfer-close');
     assert.equal(await page.$eval('#transfer-panel', el => el.hidden), true);
     assert.equal(await page.evaluate(() => document.activeElement.className), 'transfer-toggle');
+    const external = await page.evaluate(async () => {
+      try { await transfers.download('https://example.invalid/file', 'file.csv', 'file', {headers:{'X-Review-Token':'test-only'}}); return null; }
+      catch (error) { return error.message; }
+    });
+    assert.equal(external, 'Solo se permiten descargas desde este servidor.');
     assert.deepEqual(errors, []);
     console.log('Transferencias OK: stream sin tamaño, cancelación HTTP, éxito, error y limpieza anónimos; subida multipart, rechazo y cancelación HTTP.');
   } finally {

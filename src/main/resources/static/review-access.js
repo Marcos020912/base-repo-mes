@@ -20,10 +20,9 @@ async function files(page = 0) {
     button.onclick = async () => {
       button.disabled = true;
       try {
-        const blob = await request(`/api/v1/reviewer/file?path=${encodeURIComponent(file.path)}`, true);
-        const url = URL.createObjectURL(blob); const link = document.createElement('a');
-        link.href = url; link.download = file.path.split('/').pop(); link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-      } catch (error) { status.textContent = error.message; } finally { button.disabled = false; }
+        await transfers.download(`/api/v1/reviewer/file?path=${encodeURIComponent(file.path)}`, file.path.split('/').pop(), file.path, {headers, cache:'no-store'});
+        status.textContent = 'Descarga preparada.';
+      } catch (error) { status.textContent = error.name === 'AbortError' ? 'Descarga cancelada.' : error.message; } finally { button.disabled = false; }
     };
     row.append(info, button); list.append(row);
   }

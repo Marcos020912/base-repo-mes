@@ -77,3 +77,8 @@ un depósito completo (blockers puede omitirse en JSON) y descargar un archivo
 mediante el monitor autenticado. También descarga el paquete de preservación desde Curación y verifica ZIP,
 datos/descripción, declaración BagIt 1.0, JSON y hashes payload/tag contra
 los bytes incluidos. Esto no sustituye validación externa RO-Crate/OAIS.
+
+Se crea un enlace temporal de revisión en el backend efímero y se abre en un
+contexto sin sesión: verifica retirada del token del fragmento de URL y descarga
+con monitor. El monitor conserva no-store, rechaza destinos de otro origen y
+no sigue redirecciones; no se prueba el HAProxy institucional.

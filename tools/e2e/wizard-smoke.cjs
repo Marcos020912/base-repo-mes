@@ -444,6 +444,25 @@ async function main() {
     assert(verifiedPackage.status === 0, `Paquete preservación inválido: ${verifiedPackage.stderr}`);
     await page.waitForFunction(() => [...document.querySelectorAll('.transfer-item span')].filter(node => node.textContent === 'Descarga preparada').length === 2);
     process.stdout.write('Curación OK: vista previa, archivo y paquete de preservación con manifiestos verificados.\n');
+    const reviewerLink = await page.evaluate(async id => {
+      const response = await fetch(`/api/v1/scientific/${encodeURIComponent(id)}/review-links`, {
+        method:'POST', headers:{Authorization:`Bearer ${localStorage.getItem('base-repo-token')}`, 'Content-Type':'application/json'},
+        body:JSON.stringify({hours:1})
+      });
+      if (!response.ok) throw new Error('No se pudo crear enlace local de revisión.');
+      return (await response.json()).relativeUrl;
+    }, packaged.id);
+    const reviewerContext = await browser.createBrowserContext();
+    try {
+      const reviewer = await reviewerContext.newPage();
+      await reviewer.goto(new URL(reviewerLink, base).href, {waitUntil:'load'});
+      await reviewer.waitForSelector('#review-files button');
+      assert(new URL(reviewer.url()).hash === '', 'El token permaneció en la URL del revisor.');
+      assert(await reviewer.evaluate(() => localStorage.getItem('base-repo-token')) === null, 'Revisor heredó autenticación.');
+      await reviewer.click('#review-files button');
+      await reviewer.waitForFunction(() => document.querySelector('.transfer-list')?.textContent.includes('Descarga preparada'));
+      process.stdout.write('Revisor externo local OK: enlace temporal sin sesión y descarga monitorizada.\n');
+    } finally { await reviewerContext.close(); }
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
     await publicDownloads(base, markdown);
