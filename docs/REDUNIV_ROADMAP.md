@@ -57,6 +57,9 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   bajo `repo.basepath`, incluso si el `contentUri` usa un symlink. Antes del
   despliegue deben inventariarse y corregirse referencias heredadas a archivos
   externos, porque ahora se rechazan en vez de exponer rutas del servidor.
+  `tools/storage/audit_content_paths.py` prepara un inventario CSV de solo
+  lectura con informe privado y pruebas locales, pero todavía necesita una
+  copia real de PostgreSQL y archivos de staging para ejecutar ese control.
 - Historial editorial persistente de cambios de ficha, envío, devolución, publicación, retirada y derivación, visible para autor y curación; los DOI públicos se presentan como enlaces resolubles.
 - Integración DataCite opt-in con reserva Draft conceptual/versión, estado e
   historial persistentes, publicación Findable por curador, reconciliación y

@@ -103,6 +103,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       revisión externa/interna y ZIPs resuelven symlinks y rechazan un
       `contentUri` que salga del árbol real del repositorio, antes de enviar
       bytes. Revisar archivos heredados fuera de esa ruta antes de desplegar.
+- [x] Herramienta de inventario de solo lectura `tools/storage/audit_content_paths.py`
+      para exportación CSV de `content_information`: compara rutas reales con
+      `repo.basepath`, identifica symlinks externos, referencias remotas y
+      archivos faltantes, y puede generar informe privado `0600`. Probada con
+      fixture local; aún falta ejecutarla sobre copia real de staging.
 - [x] Relaciones científicas tipadas DOI/URL con semántica DataCite,
       editables solo por el autor mientras el depósito sea borrador,
       visibles en la ficha pública y enviadas al DOI de versión.
@@ -161,8 +166,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 - [ ] Validar migración/retroceso con copia **real** de PostgreSQL y archivos
       de staging, medir tiempos y arrancar la aplicación restaurada.
 - [ ] Inventariar `contentUri` heredados que apunten fuera de `repo.basepath`
-      y migrar los archivos o documentar una solución de almacenamiento
-      aprobada antes de activar las descargas restringidas por ruta.
+      ejecutando la herramienta sobre copia real de staging; migrar archivos o
+      documentar una solución de almacenamiento aprobada antes de activar las
+      descargas restringidas por ruta.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Completar pruebas del asistente con usuarios en staging: fallos de red o
       almacenamiento reales a mitad de subida, nueva versión con datos reales y

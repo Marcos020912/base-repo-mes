@@ -13,3 +13,4 @@
 
 .releases/
 .update.lock
+content-path-anomalies*.csv
