@@ -158,3 +158,8 @@ Servidor HTTP loopback con archivos reales y un rechazo de login controlado.
 Comprueba que login y registro permanecen accesibles con token viejo, que la
 confirmación incorrecta de contraseña no envía solicitud y que un fallo de
 login muestra mensaje legible. No crea cuentas ni prueba correo/verificación.
+La prueba de acceso también simula un reenvío fallido y posterior éxito:
+verificar/reenviar quedan bloqueados mientras espera, el doble click no duplica
+peticiones y el éxito elimina el estilo de error. Simula verificación exitosa
+y comprueba bloqueo hasta navegar al login. No valida entrega real de correo
+ni la validez de un código contra la base de datos.
