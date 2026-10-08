@@ -12,11 +12,11 @@ import edu.kit.datamanager.repo.repository.FixityAuditRunRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.service.BagItManifestBuilder;
 import edu.kit.datamanager.repo.service.PreservationAuditService;
+import edu.kit.datamanager.repo.service.RepositoryFileAccess;
 import edu.kit.datamanager.repo.service.RoCrateMetadataBuilder;
 import edu.kit.datamanager.repo.service.W3cProvExporter;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -57,13 +57,16 @@ public class PreservationController {
     private final IContentInformationDao contents;
     private final FileProvenanceEventRepository provenance;
     private final ObjectMapper mapper;
+    private final RepositoryFileAccess fileAccess;
 
     public PreservationController(PreservationAuditService audits, FixityAuditRunRepository runs,
             FileFixityStateRepository fixityStates, ScientificRecordRepository records,
             IDataResourceDao resources, IContentInformationDao contents,
-            FileProvenanceEventRepository provenance, ObjectMapper mapper) {
+            FileProvenanceEventRepository provenance, ObjectMapper mapper,
+            RepositoryFileAccess fileAccess) {
         this.audits = audits; this.runs = runs; this.fixityStates = fixityStates; this.records = records;
         this.resources = resources; this.contents = contents; this.provenance = provenance; this.mapper = mapper;
+        this.fileAccess = fileAccess;
     }
 
     @PostMapping("/audits")
@@ -93,7 +96,7 @@ public class PreservationController {
         var record = records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         var resource = resources.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         // Preflight the entire content inventory before writing the first byte of the response.
-        List<ContentInformation> files = new ArrayList<>();
+        List<PackageFile> files = new ArrayList<>();
         Set<String> names = new HashSet<>();
         int page = 0;
         while (true) {
@@ -103,13 +106,10 @@ public class PreservationController {
                 if (!safeRelativePath(relative) || !names.add(relative)) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Ruta de contenido no apta para el paquete.");
                 }
-                if (file.getContentUri() == null || !file.getContentUri().startsWith("file:"))
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "El paquete contiene almacenamiento no local.");
                 Path path;
-                try { path = Path.of(URI.create(file.getContentUri())); }
-                catch (IllegalArgumentException ex) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Ruta de almacenamiento inválida."); }
-                if (!Files.isRegularFile(path)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Falta un archivo del paquete.");
-                files.add(file);
+                try { path = fileAccess.resolve(file); }
+                catch (IOException ex) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Ruta de almacenamiento fuera del repositorio o inválida."); }
+                files.add(new PackageFile(file, path));
             }
             if (!batch.hasNext()) break;
         }
@@ -133,14 +133,15 @@ public class PreservationController {
             write(zip, "preservation/prov.jsonld", prov);
             packaged.add(packagedBytes("preservation/prov.jsonld", "application/ld+json", prov));
             StringBuilder manifest = new StringBuilder("# SHA-256 al ingreso; no implica comprobación actual\n");
-            for (var file : files) {
+            for (var packagedFile : files) {
+                var file = packagedFile.info();
                 String hash = file.getMetadata() == null ? null : file.getMetadata().get("sha256");
                 if (hash != null && hash.matches("(?i)[0-9a-f]{64}"))
                     manifest.append(hash).append("  ").append(file.getRelativePath()).append('\n');
                 zip.putNextEntry(new ZipEntry("data/" + file.getRelativePath()));
                 MessageDigest digest = sha256();
                 long size;
-                try (var input = new DigestInputStream(Files.newInputStream(Path.of(URI.create(file.getContentUri()))), digest)) {
+                try (var input = new DigestInputStream(Files.newInputStream(packagedFile.path()), digest)) {
                     size = input.transferTo(zip);
                 }
                 zip.closeEntry();
@@ -167,6 +168,8 @@ public class PreservationController {
     private static void write(ZipOutputStream zip, String name, byte[] data) throws IOException {
         zip.putNextEntry(new ZipEntry(name)); zip.write(data); zip.closeEntry();
     }
+
+    private record PackageFile(ContentInformation info, Path path) {}
 
     private static RoCrateMetadataBuilder.PackagedFile packagedBytes(String path, String mediaType, byte[] bytes) {
         return new RoCrateMetadataBuilder.PackagedFile(path, bytes.length, mediaType,

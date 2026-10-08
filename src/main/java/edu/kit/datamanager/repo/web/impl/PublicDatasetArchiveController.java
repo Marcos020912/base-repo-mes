@@ -5,9 +5,9 @@ import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.ContentInformation;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.service.RepositoryFileAccess;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -35,10 +35,11 @@ public class PublicDatasetArchiveController {
     private final ScientificRecordRepository records;
     private final IDataResourceDao resources;
     private final IContentInformationDao contents;
+    private final RepositoryFileAccess fileAccess;
 
     public PublicDatasetArchiveController(ScientificRecordRepository records, IDataResourceDao resources,
-                                          IContentInformationDao contents) {
-        this.records = records; this.resources = resources; this.contents = contents;
+                                          IContentInformationDao contents, RepositoryFileAccess fileAccess) {
+        this.records = records; this.resources = resources; this.contents = contents; this.fileAccess = fileAccess;
     }
 
     @GetMapping("/{id}/archive")
@@ -63,13 +64,11 @@ public class PublicDatasetArchiveController {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Ruta de contenido no apta para el ZIP.");
                 Path path;
                 try {
-                    if (info.getContentUri() == null || !info.getContentUri().startsWith("file:"))
-                        throw new IllegalArgumentException();
-                    path = Path.of(URI.create(info.getContentUri()));
-                } catch (IllegalArgumentException ex) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Almacenamiento no local o inválido.");
+                    path = fileAccess.resolve(info);
+                } catch (IOException ex) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Almacenamiento fuera del repositorio o inválido.");
                 }
-                if (!Files.isRegularFile(path) || !Files.isReadable(path))
+                if (!Files.isReadable(path))
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Falta un archivo del dataset.");
                 files.add(new ArchiveFile(name, path));
             }

@@ -7,8 +7,10 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.service.RepositoryFileAccess;
 import edu.kit.datamanager.repo.web.impl.PublicDatasetArchiveController;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +31,9 @@ public class PublicDatasetArchiveControllerTest {
     private final ScientificRecordRepository records = mock(ScientificRecordRepository.class);
     private final IDataResourceDao resources = mock(IDataResourceDao.class);
     private final IContentInformationDao contents = mock(IContentInformationDao.class);
-    private final PublicDatasetArchiveController controller = new PublicDatasetArchiveController(records, resources, contents);
+    private final RepositoryFileAccess fileAccess = new RepositoryFileAccess(
+            Path.of(System.getProperty("java.io.tmpdir")).toUri().toString());
+    private final PublicDatasetArchiveController controller = new PublicDatasetArchiveController(records, resources, contents, fileAccess);
 
     @Test public void publicZipContainsDescriptionAndDatasetFilesButNoCuratorialRecords() throws Exception {
         var markdown = Files.createTempFile("public-description", ".md");
@@ -87,6 +91,17 @@ public class PublicDatasetArchiveControllerTest {
         var invalid = new ContentInformation(); invalid.setRelativePath("../secrets.txt");
         when(contents.findByParentResource(eq(resource), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(invalid)));
+        var response = new MockHttpServletResponse();
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> controller.download("r1", response)).getStatusCode());
+        assertEquals(0, response.getContentAsByteArray().length);
+    }
+
+    @Test public void storedFileOutsideRepositoryFailsBeforeZipStarts() throws Exception {
+        var resource = published("OPEN", null);
+        var outside = file("secret.txt", Path.of("/etc/hosts"));
+        when(contents.findByParentResource(eq(resource), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(outside)));
         var response = new MockHttpServletResponse();
         assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
                 () -> controller.download("r1", response)).getStatusCode());

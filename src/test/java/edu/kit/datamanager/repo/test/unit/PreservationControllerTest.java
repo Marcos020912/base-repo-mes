@@ -11,6 +11,7 @@ import edu.kit.datamanager.repo.repository.FileProvenanceEventRepository;
 import edu.kit.datamanager.repo.repository.FixityAuditRunRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.service.PreservationAuditService;
+import edu.kit.datamanager.repo.service.RepositoryFileAccess;
 import edu.kit.datamanager.repo.web.impl.PreservationController;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
@@ -47,7 +48,8 @@ public class PreservationControllerTest {
             when(provenance.findByResourceIdOrderByOccurredAtAscIdAsc("r1")).thenReturn(List.of());
             var controller = new PreservationController(mock(PreservationAuditService.class),
                     mock(FixityAuditRunRepository.class), mock(FileFixityStateRepository.class),
-                    records, resources, contents, provenance, new ObjectMapper().findAndRegisterModules());
+                    records, resources, contents, provenance, new ObjectMapper().findAndRegisterModules(),
+                    new RepositoryFileAccess(file.getParent().toUri().toString()));
             var response = new MockHttpServletResponse();
             controller.downloadPackage("r1", response);
             var artifact = java.nio.file.Path.of("build/test-artifacts/preservation-ro-crate.zip");

@@ -5,9 +5,9 @@ import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.ContentInformation;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.service.ReviewerAccessService;
+import edu.kit.datamanager.repo.service.RepositoryFileAccess;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -29,10 +29,11 @@ public class ExternalReviewerController {
     private final ReviewerAccessService access;
     private final IDataResourceDao resources;
     private final IContentInformationDao contents;
+    private final RepositoryFileAccess fileAccess;
 
     public ExternalReviewerController(ReviewerAccessService access, IDataResourceDao resources,
-            IContentInformationDao contents) {
-        this.access = access; this.resources = resources; this.contents = contents;
+            IContentInformationDao contents, RepositoryFileAccess fileAccess) {
+        this.access = access; this.resources = resources; this.contents = contents; this.fileAccess = fileAccess;
     }
 
     @GetMapping("/metadata")
@@ -43,7 +44,7 @@ public class ExternalReviewerController {
         String markdown = contents.findByParentResourceAndRelativePath(resource, "description.md")
                 .map(info -> {
                     try {
-                        Path path = localPath(info);
+                        Path path = fileAccess.resolve(info);
                         return Files.size(path) <= 1024 * 1024 ? Files.readString(path) : "Descripción demasiado grande para mostrar.";
                     } catch (IOException error) { return "Descripción no disponible."; }
                 }).orElse("No hay description.md.");
@@ -78,8 +79,9 @@ public class ExternalReviewerController {
         DataResource resource = resource(token);
         ContentInformation info = contents.findByParentResourceAndRelativePath(resource, path)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        Path file = localPath(info);
-        if (!Files.isRegularFile(file)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        Path file;
+        try { file = fileAccess.resolve(info); }
+        catch (IOException error) { throw new ResponseStatusException(HttpStatus.NOT_FOUND); }
         response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("Content-Disposition", "attachment; filename=\"" + file.getFileName().toString().replaceAll("[^A-Za-z0-9._-]", "_") + "\"");
@@ -96,12 +98,6 @@ public class ExternalReviewerController {
         response.setHeader("Cache-Control", "no-store");
         response.setHeader("Referrer-Policy", "no-referrer");
         response.setHeader("X-Robots-Tag", "noindex, nofollow");
-    }
-
-    private static Path localPath(ContentInformation info) {
-        if (info.getContentUri() == null || !info.getContentUri().startsWith("file:"))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return Path.of(URI.create(info.getContentUri()));
     }
 
     public record ReviewMetadata(String id, String title, List<String> authors, String publisher, String year, String markdown) {}

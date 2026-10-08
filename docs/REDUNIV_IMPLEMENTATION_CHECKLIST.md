@@ -82,6 +82,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       archivos originales sin historial ni metadatos internos de curación,
       solo para acceso abierto o embargo vencido. La ficha pública muestra
       el enlace cuando procede. Es una base DIP, no un perfil OAIS acordado.
+- [x] Lectura local confinada a `repo.basepath`: descargas públicas,
+      revisión externa/interna y ZIPs resuelven symlinks y rechazan un
+      `contentUri` que salga del árbol real del repositorio, antes de enviar
+      bytes. Revisar archivos heredados fuera de esa ruta antes de desplegar.
 - [x] Relaciones científicas tipadas DOI/URL con semántica DataCite,
       editables solo por el autor mientras el depósito sea borrador,
       visibles en la ficha pública y enviadas al DOI de versión.
@@ -139,6 +143,9 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 
 - [ ] Validar migración/retroceso con copia **real** de PostgreSQL y archivos
       de staging, medir tiempos y arrancar la aplicación restaurada.
+- [ ] Inventariar `contentUri` heredados que apunten fuera de `repo.basepath`
+      y migrar los archivos o documentar una solución de almacenamiento
+      aprobada antes de activar las descargas restringidas por ruta.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Probar el nuevo asistente en un navegador conectado a una instancia de
       prueba: carga de Markdown/ZIP, fallos parciales, envío y nueva versión.

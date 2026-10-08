@@ -6,9 +6,9 @@ import edu.kit.datamanager.repo.domain.ContentInformation;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.service.RepositoryFileAccess;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -32,9 +32,11 @@ public class ScientificReviewPreviewController {
     private final ScientificRecordRepository records;
     private final IDataResourceDao resources;
     private final IContentInformationDao contents;
+    private final RepositoryFileAccess fileAccess;
 
-    public ScientificReviewPreviewController(ScientificRecordRepository records, IDataResourceDao resources, IContentInformationDao contents) {
-        this.records = records; this.resources = resources; this.contents = contents;
+    public ScientificReviewPreviewController(ScientificRecordRepository records, IDataResourceDao resources,
+            IContentInformationDao contents, RepositoryFileAccess fileAccess) {
+        this.records = records; this.resources = resources; this.contents = contents; this.fileAccess = fileAccess;
     }
 
     @GetMapping("/{id}")
@@ -44,7 +46,7 @@ public class ScientificReviewPreviewController {
         String markdown = contents.findByParentResourceAndRelativePath(resource, "description.md")
                 .map(info -> {
                     try {
-                        Path path = localPath(info);
+                        Path path = fileAccess.resolve(info);
                         return Files.size(path) <= 1024 * 1024 ? Files.readString(path) : "Descripción demasiado grande para la vista previa.";
                     } catch (IOException ex) { return "No se pudo leer description.md."; }
                 }).orElse("No hay description.md.");
@@ -73,8 +75,9 @@ public class ScientificReviewPreviewController {
         DataResource resource = reviewResource(id);
         ContentInformation info = contents.findByParentResourceAndRelativePath(resource, path)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        Path file = localPath(info);
-        if (!Files.isRegularFile(file)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        Path file;
+        try { file = fileAccess.resolve(info); }
+        catch (IOException error) { throw new ResponseStatusException(HttpStatus.NOT_FOUND); }
         response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("Content-Disposition", "attachment; filename=\"" + file.getFileName().toString().replaceAll("[^A-Za-z0-9._-]", "_") + "\"");
@@ -86,11 +89,6 @@ public class ScientificReviewPreviewController {
         var record = records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (record.getStatus() != PublicationStatus.IN_REVIEW) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return resources.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    }
-
-    private static Path localPath(ContentInformation info) {
-        if (info.getContentUri() == null || !info.getContentUri().startsWith("file:")) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return Path.of(URI.create(info.getContentUri()));
     }
 
     public record ReviewPreview(String id, String title, List<String> authors, String publisher, String year, String markdown) {}

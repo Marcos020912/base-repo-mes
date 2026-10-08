@@ -6,6 +6,7 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.PublicationStatus;
 import edu.kit.datamanager.repo.domain.ScientificRecord;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
+import edu.kit.datamanager.repo.service.RepositoryFileAccess;
 import edu.kit.datamanager.repo.web.impl.ScientificReviewPreviewController;
 import java.util.Optional;
 import org.junit.Test;
@@ -19,7 +20,8 @@ public class ScientificReviewPreviewControllerTest {
         ScientificRecordRepository records = mock(ScientificRecordRepository.class);
         IDataResourceDao resources = mock(IDataResourceDao.class);
         IContentInformationDao contents = mock(IContentInformationDao.class);
-        ScientificReviewPreviewController controller = new ScientificReviewPreviewController(records, resources, contents);
+        ScientificReviewPreviewController controller = new ScientificReviewPreviewController(records, resources, contents,
+                mock(RepositoryFileAccess.class));
         ScientificRecord record = new ScientificRecord("r1");
         when(records.findById("r1")).thenReturn(Optional.of(record));
         assertThrows(ResponseStatusException.class, () -> controller.detail("r1"));

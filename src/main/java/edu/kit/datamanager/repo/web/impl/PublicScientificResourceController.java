@@ -12,13 +12,13 @@ import edu.kit.datamanager.repo.repository.ScientificRelationRepository;
 import edu.kit.datamanager.repo.repository.ScientificCreatorRepository;
 import edu.kit.datamanager.repo.repository.ScientificFundingRepository;
 import edu.kit.datamanager.repo.repository.ScientificAffiliationRepository;
+import edu.kit.datamanager.repo.service.RepositoryFileAccess;
 import edu.kit.datamanager.repo.domain.ScientificFunding;
 import edu.kit.datamanager.repo.domain.ScientificAffiliation;
 import edu.kit.datamanager.repo.domain.ScientificRelation;
 import edu.kit.datamanager.repo.domain.FileFixityState;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -48,11 +48,12 @@ public class PublicScientificResourceController {
     private final ScientificCreatorRepository creators;
     private final ScientificFundingRepository funding;
     private final ScientificAffiliationRepository affiliations;
+    private final RepositoryFileAccess fileAccess;
 
     public PublicScientificResourceController(IDataResourceDao resources, ScientificRecordRepository records, IContentInformationDao contents,
                                               FileFixityStateRepository fixityStates, ScientificRelationRepository relations,
                                               ScientificCreatorRepository creators, ScientificFundingRepository funding,
-                                              ScientificAffiliationRepository affiliations) {
+                                              ScientificAffiliationRepository affiliations, RepositoryFileAccess fileAccess) {
         this.resources = resources;
         this.records = records;
         this.contents = contents;
@@ -61,6 +62,7 @@ public class PublicScientificResourceController {
         this.creators = creators;
         this.funding = funding;
         this.affiliations = affiliations;
+        this.fileAccess = fileAccess;
     }
 
     @GetMapping("/{id}")
@@ -97,7 +99,7 @@ public class PublicScientificResourceController {
         String markdown = contents.findByParentResourceAndRelativePath(resource, "description.md")
                 .map(info -> {
                     try {
-                        Path path = localPath(info);
+                        Path path = fileAccess.resolve(info);
                         return Files.size(path) <= 1024 * 1024 ? Files.readString(path) : "Descripción demasiado grande para mostrarla aquí.";
                     } catch (IOException | IllegalArgumentException ex) { return "La descripción no está disponible."; }
                 }).orElse("No hay descripción.");
@@ -140,8 +142,9 @@ public class PublicScientificResourceController {
         if (!open) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Los archivos no son de acceso abierto.");
         ContentInformation info = contents.findByParentResourceAndRelativePath(resource, path)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        Path file = localPath(info);
-        if (!Files.isRegularFile(file)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        Path file;
+        try { file = fileAccess.resolve(info); }
+        catch (IOException error) { throw new ResponseStatusException(HttpStatus.NOT_FOUND); }
         String mediaType = info.getMediaType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : info.getMediaType();
         boolean safeImage = inline && List.of("image/png", "image/jpeg", "image/gif", "image/webp").contains(mediaType);
         response.setContentType(safeImage ? mediaType : MediaType.APPLICATION_OCTET_STREAM_VALUE);
@@ -161,11 +164,6 @@ public class PublicScientificResourceController {
         if (science.getStatus() != PublicationStatus.PUBLISHED) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-    }
-
-    private static Path localPath(ContentInformation info) {
-        if (info.getContentUri() == null || !info.getContentUri().startsWith("file:")) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return Path.of(URI.create(info.getContentUri()));
     }
 
     public record PublicDetail(String id, String title, List<String> authors, String publisher, String year, String type,
