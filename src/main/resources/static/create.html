@@ -50,10 +50,20 @@
         </section>
         <section class="panel wizard-panel" data-step="2" aria-labelledby="step-content" hidden>
           <p class="eyebrow">Paso 3 de 4</p><h2 id="step-content">Descripción y archivos</h2>
-          <p class="muted">Puedes cargar varios archivos. El servidor comprobará el tipo y descomprimirá los ZIP admitidos.</p>
+          <p class="muted">Elige cómo preparar el depósito. El servidor comprobará la estructura y los tipos antes de descomprimir un ZIP.</p>
           <div class="wizard-fields">
-            <label>Descripción del proyecto <small>Archivo llamado exactamente description.md, o ZIP con description.md en su raíz e imágenes auxiliares</small><input id="description-file" name="description" type="file" accept=".md,.zip,text/markdown,application/zip" required></label>
-            <label>Archivos del dataset <small id="file-type-hint"></small><input id="dataset-files" name="files" type="file" multiple required></label>
+            <fieldset class="wizard-upload-choice"><legend>Forma de carga</legend>
+              <label><input type="radio" name="uploadMode" value="separate" checked> Descripción y archivos por separado</label>
+              <label><input type="radio" name="uploadMode" value="package"> Un único ZIP del depósito completo</label>
+            </fieldset>
+            <div id="separate-upload" class="wizard-fields">
+              <label>Descripción del proyecto <small>Archivo llamado exactamente description.md, o ZIP con description.md en su raíz e imágenes auxiliares</small><input id="description-file" name="description" type="file" accept=".md,.zip,text/markdown,application/zip" required></label>
+              <label>Archivos del dataset <small id="file-type-hint"></small><input id="dataset-files" name="files" type="file" multiple required></label>
+            </div>
+            <div id="package-upload" class="wizard-fields" hidden>
+              <label>ZIP completo <small>Debe contener description/description.md; coloca las imágenes dentro de description/ y los archivos del dataset en la raíz del ZIP.</small><input id="package-file" name="packageFile" type="file" accept=".zip,application/zip"></label>
+              <p class="muted">En el Markdown, referencia las imágenes con rutas relativas como <code>![Gráfico](grafico.png)</code>. Se validará que exista al menos un archivo del tipo elegido.</p>
+            </div>
             <p id="file-count" class="muted" role="status"></p>
           </div>
         </section>

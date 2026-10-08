@@ -67,6 +67,14 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   La ficha del autor muestra una vista previa real y el checklist de calidad
   antes de confirmar ese envío. Si falla una carga parcial, el borrador no se
   envía y puede corregirse desde su ficha.
+- El contenido del asistente admite carga separada o ZIP integral con
+  `description/description.md`, imágenes en `description/` y datos en la raíz.
+  El ZIP se valida por completo antes de escribir; como no se renderiza su
+  contenido en el navegador antes de cargarlo, se guarda como borrador y el
+  autor confirma el envío tras ver la descripción y los archivos reales.
+  `tools/e2e/wizard-smoke.cjs` probó los tres modos, dos ZIP inválidos y el
+  envío tras la vista previa real en Chrome contra un JAR local con H2, no
+  contra staging.
 - El asistente conserva localmente metadatos y autores por 14 días para poder
   reanudar un formulario interrumpido; por seguridad, los archivos se
   seleccionan de nuevo. El catálogo público muestra facetas agregadas con

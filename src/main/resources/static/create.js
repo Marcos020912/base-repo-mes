@@ -22,6 +22,7 @@ const policies = {
 const field = name => form.elements.namedItem(name);
 const value = name => field(name).value.trim();
 const files = () => Array.from($('#dataset-files').files);
+const packageMode = () => field('uploadMode').value === 'package';
 const errorBox = $('#wizard-message');
 const autosaveKey = `reduniv-deposit-v1:${user?.username || 'anonymous'}:${basedOnId || 'new'}`;
 const autosaveFields = ['title','year','type','publisher','versionLabel','licenseId','institution','ror','orcid','language','discipline','keywords','methodology','accessLevel','embargoUntil','relatedPublications'];
@@ -37,7 +38,7 @@ function persistDraft() {
   if (!autosaveEnabled || createdId) return;
   const values = Object.fromEntries(autosaveFields.map(name => [name, value(name)]));
   try {
-    localStorage.setItem(autosaveKey, JSON.stringify({ values, creators: creators(), funding: fundingEntries(), step, updatedAt: Date.now() }));
+    localStorage.setItem(autosaveKey, JSON.stringify({ values, creators: creators(), funding: fundingEntries(), uploadMode: packageMode() ? 'package' : 'separate', step, updatedAt: Date.now() }));
     $('#autosave-status').textContent = 'Metadatos guardados en este navegador. Los archivos deben seleccionarse de nuevo tras recargar.';
     $('#discard-autosave').hidden = false;
   } catch { $('#autosave-status').textContent = 'No se pudieron guardar los metadatos en este navegador.'; }
@@ -61,7 +62,9 @@ function restoreDraft() {
       $('#funding-list').replaceChildren();
       for (const item of draft.funding.slice(0, 20)) addFunding(item);
     }
-    $('#autosave-status').textContent = 'Se recuperaron tus metadatos. Selecciona de nuevo description.md y los archivos antes de guardar.';
+    if (draft.uploadMode === 'package') form.querySelector('[name="uploadMode"][value="package"]').checked = true;
+    updateUploadMode();
+    $('#autosave-status').textContent = 'Se recuperaron tus metadatos. Selecciona de nuevo el ZIP o los archivos antes de guardar.';
     $('#discard-autosave').hidden = false;
   }
   autosaveEnabled = true;
@@ -111,9 +114,30 @@ function applyPolicy() {
   $('#file-type-hint').textContent = `${policy.hint}. También se permite un ZIP validado por el servidor.`;
   updateFileCount();
 }
+function updateUploadMode() {
+  const packaged = packageMode();
+  $('#separate-upload').hidden = packaged;
+  $('#package-upload').hidden = !packaged;
+  $('#description-file').required = !packaged;
+  $('#dataset-files').required = !packaged;
+  $('#package-file').required = packaged;
+  updateFileCount();
+}
 function updateFileCount() {
+  updateSubmissionButton();
+  if (packageMode()) {
+    const archive = $('#package-file').files[0];
+    $('#file-count').textContent = archive ? `${archive.name} · ${archive.size.toLocaleString('es')} bytes. El contenido se validará al guardar.` : 'Aún no hay un ZIP seleccionado.';
+    return;
+  }
   const selected = files();
   $('#file-count').textContent = selected.length ? `${selected.length} archivo(s), ${selected.reduce((total, file) => total + file.size, 0).toLocaleString('es')} bytes en total.` : 'Aún no hay archivos seleccionados.';
+}
+function needsPostUploadPreview() {
+  return packageMode() || $('#description-file').files[0]?.name.toLowerCase().endsWith('.zip') || files().some(file => file.name.toLowerCase().endsWith('.zip'));
+}
+function updateSubmissionButton() {
+  $('#save-submit').textContent = needsPostUploadPreview() ? 'Guardar y revisar antes de enviar' : 'Guardar y enviar a revisión';
 }
 function showStep(next) {
   step = next;
@@ -164,6 +188,12 @@ function validateStep(index) {
     }
   }
   if (index === 2) {
+    if (packageMode()) {
+      const archive = $('#package-file').files[0];
+      if (!archive || !archive.size) return invalid('Selecciona un ZIP completo del depósito.', $('#package-file'));
+      if (!archive.name.toLowerCase().endsWith('.zip')) return invalid('El depósito completo debe ser un archivo ZIP.', $('#package-file'));
+      return true;
+    }
     const description = $('#description-file').files[0];
     if (!description || !description.size) return invalid('Selecciona description.md o un ZIP de descripción.', $('#description-file'));
     if (description.name !== 'description.md' && !description.name.toLowerCase().endsWith('.zip'))
@@ -211,6 +241,15 @@ async function renderPreview() {
   target.append(identity);
   const description = document.createElement('section'); description.className = 'wizard-preview-section';
   description.append(node('h3', 'Descripción del proyecto'));
+  if (packageMode()) {
+    const archive = $('#package-file').files[0];
+    description.append(node('p', `ZIP completo «${archive.name}». Debe contener description/description.md, imágenes opcionales en description/ y archivos ${value('type')} en la raíz. El servidor comprobará su contenido antes de guardarlo.`));
+    target.append(description);
+    const list = document.createElement('section'); list.className = 'wizard-preview-section'; list.append(node('h3', 'Paquete seleccionado'));
+    list.append(node('p', `${archive.name} · ${archive.size.toLocaleString('es')} bytes`));
+    target.append(list);
+    return;
+  }
   const descriptionFile = $('#description-file').files[0];
   if (descriptionFile.name === 'description.md') {
     if (descriptionFile.size > 1024 * 1024) description.append(node('p', 'El Markdown supera 1 MB; se mostrará completo después de guardarlo.'));
@@ -238,6 +277,7 @@ function sciencePayload() {
 }
 async function save(submit) {
   if (busy || createdId) return;
+  const reviewAfterUpload = submit && needsPostUploadPreview();
   if (!basedOnVerified) { report('La versión anterior debe ser publicada y tuya antes de crear una sucesora.', 'error'); return; }
   for (const index of [0,1,2]) {
     if (!validateStep(index)) { showStep(index); validateStep(index); return; }
@@ -263,14 +303,20 @@ async function save(submit) {
       await api(`/api/v1/scientific/${encodeURIComponent(createdId)}/funding`, { method: 'PUT',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fundingEntries()) });
     }
-    report('Subiendo descripción…');
-    await upload(`/api/v1/dataresources/${encodeURIComponent(createdId)}/description`, $('#description-file').files[0]);
-    for (const [index, file] of files().entries()) {
-      report(`Subiendo archivo ${index + 1} de ${files().length}: ${file.name}…`);
-      await upload(`/api/v1/dataresources/${encodeURIComponent(createdId)}/attachments?path=${encodeURIComponent(file.webkitRelativePath || file.name)}`, file);
+    if (packageMode()) {
+      const archive = $('#package-file').files[0];
+      report(`Validando y subiendo paquete «${archive.name}»…`);
+      await upload(`/api/v1/dataresources/${encodeURIComponent(createdId)}/attachments?package=true&path=${encodeURIComponent(archive.name)}`, archive);
+    } else {
+      report('Subiendo descripción…');
+      await upload(`/api/v1/dataresources/${encodeURIComponent(createdId)}/description`, $('#description-file').files[0]);
+      for (const [index, file] of files().entries()) {
+        report(`Subiendo archivo ${index + 1} de ${files().length}: ${file.name}…`);
+        await upload(`/api/v1/dataresources/${encodeURIComponent(createdId)}/attachments?path=${encodeURIComponent(file.webkitRelativePath || file.name)}`, file);
+      }
     }
-    if (submit) { report('Validando y enviando a revisión…'); await api(`/api/v1/scientific/${encodeURIComponent(createdId)}/submit`, { method: 'POST' }); }
-    toast.success(submit ? 'Depósito enviado a revisión.' : 'Borrador guardado.');
+    if (submit && !reviewAfterUpload) { report('Validando y enviando a revisión…'); await api(`/api/v1/scientific/${encodeURIComponent(createdId)}/submit`, { method: 'POST' }); }
+    toast.success(reviewAfterUpload ? 'Borrador guardado. Revisa la descripción y los archivos antes de enviarlo.' : submit ? 'Depósito enviado a revisión.' : 'Borrador guardado.');
     busy = false;
     location.assign(`resource.html?id=${encodeURIComponent(createdId)}`);
   } catch (error) {
@@ -303,12 +349,15 @@ $('#discard-autosave').addEventListener('click', () => {
 });
 field('type').addEventListener('change', applyPolicy);
 $('#dataset-files').addEventListener('change', updateFileCount);
+$('#description-file').addEventListener('change', updateSubmissionButton);
+$('#package-file').addEventListener('change', updateFileCount);
+form.querySelectorAll('[name="uploadMode"]').forEach(input => input.addEventListener('change', updateUploadMode));
 $('#wizard-back').addEventListener('click', () => showStep(step - 1));
 $('#wizard-next').addEventListener('click', () => { if (validateStep(step)) showStep(step + 1); });
 $('#save-draft').addEventListener('click', () => save(false));
 $('#save-submit').addEventListener('click', () => save(true));
 window.addEventListener('beforeunload', event => { if (busy && createdId) { event.preventDefault(); event.returnValue = ''; } });
-addCreator(); field('year').value = String(new Date().getFullYear()); field('publisher').value = 'Repositorio local'; applyPolicy(); showStep(0);
+addCreator(); field('year').value = String(new Date().getFullYear()); field('publisher').value = 'Repositorio local'; updateUploadMode(); applyPolicy(); showStep(0);
 if (!basedOnId) restoreDraft();
 if (basedOnId) Promise.all([
   api(`/api/v1/dataresources/${encodeURIComponent(basedOnId)}`),

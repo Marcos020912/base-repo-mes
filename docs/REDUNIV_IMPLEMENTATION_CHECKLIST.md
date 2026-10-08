@@ -48,6 +48,14 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       bloqueos de calidad. Si falla una carga, conserva el enlace al borrador.
       Los metadatos del asistente se guardan localmente por usuario y depósito
       durante 14 días; los archivos deben reseleccionarse tras recargar.
+- [x] Dos modos de contenido en el asistente: descripción y archivos separados,
+      o un ZIP integral con `description/description.md`, imágenes auxiliares
+      bajo `description/` y datos en la raíz. El backend pre-valida estructura,
+      extensión, nombres en conflicto, rutas y límites antes de guardar;
+      los ZIP requieren revisar la ficha renderizada antes de enviar a curación.
+      Smoke test local con Chrome y H2: tres depósitos correctos, Markdown con
+      imagen, rechazo de ZIP sin descripción o con extensión incorrecta y
+      envío del paquete a revisión tras la vista previa real.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
 - [x] Ítem 7 (curación/preservación): auditorías SHA-256 manuales y programadas
@@ -147,8 +155,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       y migrar los archivos o documentar una solución de almacenamiento
       aprobada antes de activar las descargas restringidas por ruta.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
-- [ ] Probar el nuevo asistente en un navegador conectado a una instancia de
-      prueba: carga de Markdown/ZIP, fallos parciales, envío y nueva versión.
+- [ ] Completar pruebas del asistente con usuarios en staging: fallos de red o
+      almacenamiento a mitad de subida, nueva versión y
+      comportamiento con PostgreSQL/HAProxy. La prueba local automatizada con
+      Chrome y H2 ya cubre cargas Markdown/ZIP, validación de archivos y envío.
 - [ ] Rotar credenciales/JWT de producción y revisar logs históricos; pruebas
       de seguridad y de carga del limitador con varias instancias y HAProxy
       realmente desplegado. Restringir acceso directo al backend.

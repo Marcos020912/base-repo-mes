@@ -11,8 +11,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLConnection;
-import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/dataresources/{id}/attachments")
 public class ResourceAttachmentController {
+    private static final Set<String> DESCRIPTION_IMAGES = Set.of("jpg", "jpeg", "png", "gif", "webp", "svg", "tif", "tiff", "bmp");
     private static final Map<ResourceType.TYPE_GENERAL, Set<String>> ALLOWED = Map.of(
             ResourceType.TYPE_GENERAL.IMAGE, Set.of("jpg", "jpeg", "png", "gif", "webp", "svg", "tif", "tiff", "bmp"),
             ResourceType.TYPE_GENERAL.TEXT, Set.of("pdf", "doc", "docx", "odt", "rtf", "txt", "md", "epub"),
@@ -42,7 +43,9 @@ public class ResourceAttachmentController {
     public ResourceAttachmentController(RepoBaseConfiguration repository, ContentDigestService digests) { this.repository = repository; this.digests = digests; }
 
     @PostMapping(consumes = "multipart/form-data")
-    public ResponseEntity<?> upload(@PathVariable String id, @RequestParam String path, @RequestPart("file") MultipartFile file) {
+    public ResponseEntity<?> upload(@PathVariable String id, @RequestParam String path,
+                                    @RequestParam(name = "package", defaultValue = "false") boolean packageMode,
+                                    @RequestPart("file") MultipartFile file) {
         if (file == null || file.isEmpty()) return ResponseEntity.badRequest().body("Debe seleccionar un archivo.");
         String cleanPath = cleanPath(path); if (cleanPath == null) return ResponseEntity.badRequest().body("Ruta de archivo no válida.");
         DataResource resource = DataResourceUtils.getResourceByIdentifierOrRedirect(repository, id, null, value -> value);
@@ -50,24 +53,59 @@ public class ResourceAttachmentController {
         try {
             if (extension(cleanPath).equals("zip")) {
                 List<Entry> entries = unzip(file.getInputStream());
-                for (Entry entry : entries) {
-                    if (entry.path().equals("description.md") || entry.path().startsWith("description/")) continue;
-                    validate(allowed, entry.path());
-                }
-                for (Entry entry : entries) {
-                    String target = entry.path().equals("description/description.md") ? "description.md" : entry.path().startsWith("description/") ? entry.path().substring("description/".length()) : entry.path();
-                    digests.record(ContentDataUtils.addFile(repository, resource, new BytesFile(target, entry.bytes()), target, null, true, value -> value));
+                List<Entry> prepared = prepare(entries, allowed, packageMode);
+                for (Entry entry : prepared) {
+                    digests.record(ContentDataUtils.addFile(repository, resource, new BytesFile(entry.path(), entry.bytes()), entry.path(), null, true, value -> value));
                 }
                 return ResponseEntity.noContent().build();
             }
+            if (packageMode) return ResponseEntity.badRequest().body("El depósito completo debe ser un ZIP.");
             validate(allowed, cleanPath);
             digests.record(ContentDataUtils.addFile(repository, resource, file, cleanPath, null, true, value -> value));
             return ResponseEntity.noContent().build();
         } catch (IOException ex) { return ResponseEntity.badRequest().body(ex.getMessage()); }
     }
+    private List<Entry> prepare(List<Entry> entries, Set<String> allowed, boolean packageMode) throws IOException {
+        if (entries.isEmpty()) throw new IOException("El ZIP está vacío.");
+        List<Entry> prepared = new ArrayList<>();
+        Set<String> targets = new HashSet<>();
+        boolean description = false;
+        boolean datasetFile = false;
+        for (Entry entry : entries) {
+            String source = entry.path();
+            String target = source;
+            if (entry.bytes().length == 0) throw new IOException("El ZIP contiene un archivo vacío: " + source);
+            if (source.equals("description/description.md")) {
+                target = "description.md";
+                description = true;
+            } else if (source.startsWith("description/")) {
+                if (!DESCRIPTION_IMAGES.contains(extension(source)))
+                    throw new IOException("La carpeta description/ solo admite imágenes auxiliares: " + source);
+                target = source.substring("description/".length());
+            } else if (packageMode) {
+                if (source.equals("description.md") || source.contains("/"))
+                    throw new IOException("El ZIP completo requiere description/description.md y los datos en la raíz: " + source);
+                validate(allowed, source);
+                datasetFile = true;
+            } else if (!source.equals("description.md")) {
+                validate(allowed, source);
+            }
+            if (!targets.add(target)) throw new IOException("El ZIP contiene nombres repetidos o en conflicto: " + target);
+            prepared.add(new Entry(target, entry.bytes()));
+        }
+        if (packageMode && !description) throw new IOException("El ZIP completo debe contener description/description.md.");
+        if (packageMode && !datasetFile) throw new IOException("El ZIP completo debe contener al menos un archivo del dataset en su raíz.");
+        return prepared;
+    }
     private void validate(Set<String> allowed, String path) throws IOException { if (allowed != null && !allowed.contains(extension(path))) throw new IOException("El tipo de recurso no admite archivos ." + extension(path) + "."); }
-    private List<Entry> unzip(InputStream source) throws IOException { List<Entry> result=new ArrayList<>(); long total=0; try(ZipInputStream zip=new ZipInputStream(source)){ZipEntry entry;while((entry=zip.getNextEntry())!=null){if(entry.isDirectory())continue;if(result.size()>=200)throw new IOException("El ZIP contiene demasiados archivos.");String path=cleanPath(Path.of(entry.getName()).normalize().toString());if(path==null)throw new IOException("El ZIP contiene una ruta no válida.");ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int read;while((read=zip.read(buffer))!=-1){total+=read;if(total>50L*1024*1024)throw new IOException("El ZIP supera el tamaño permitido.");out.write(buffer,0,read);}result.add(new Entry(path,out.toByteArray()));}}return result; }
-    private String cleanPath(String path) { if (path == null) return null; String value = path.replace('\\', '/'); return value.isBlank() || value.startsWith("/") || value.contains("../") || value.equals("..") ? null : value; }
+    private List<Entry> unzip(InputStream source) throws IOException { List<Entry> result=new ArrayList<>(); long total=0; try(ZipInputStream zip=new ZipInputStream(source)){ZipEntry entry;while((entry=zip.getNextEntry())!=null){if(entry.isDirectory())continue;if(result.size()>=200)throw new IOException("El ZIP contiene demasiados archivos.");String path=cleanPath(entry.getName());if(path==null)throw new IOException("El ZIP contiene una ruta no válida.");ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int read;while((read=zip.read(buffer))!=-1){total+=read;if(total>50L*1024*1024)throw new IOException("El ZIP supera el tamaño permitido.");out.write(buffer,0,read);}result.add(new Entry(path,out.toByteArray()));}}return result; }
+    private String cleanPath(String path) {
+        if (path == null) return null;
+        String value = path.replace('\\', '/');
+        if (value.isBlank() || value.startsWith("/") || value.matches("^[A-Za-z]:.*") || value.indexOf('\0') >= 0) return null;
+        for (String segment : value.split("/", -1)) if (segment.isEmpty() || segment.equals(".") || segment.equals("..")) return null;
+        return value;
+    }
     private String extension(String path) { int dot = path.lastIndexOf('.'); return dot < 1 ? "" : path.substring(dot + 1).toLowerCase(Locale.ROOT); }
     private record Entry(String path, byte[] bytes) {}
     private static class BytesFile implements MultipartFile { private final String name; private final byte[] bytes; BytesFile(String name,byte[] bytes){this.name=name;this.bytes=bytes;} public String getName(){return "file";} public String getOriginalFilename(){return name;} public String getContentType(){String type=URLConnection.guessContentTypeFromName(name);return type==null?"application/octet-stream":type;} public boolean isEmpty(){return bytes.length==0;} public long getSize(){return bytes.length;} public byte[] getBytes(){return bytes.clone();} public InputStream getInputStream(){return new ByteArrayInputStream(bytes);} public void transferTo(java.io.File destination)throws IOException{java.nio.file.Files.write(destination.toPath(),bytes);} }
