@@ -7,11 +7,20 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const puppeteer = require('../a11y/node_modules/puppeteer-core');
 const root = path.resolve(__dirname, '../../src/main/resources/static');
-const allowed = new Set(['login.html','register.html','auth.js','login.js','register.js','verify.html','verify.js','styles.css','login.css']);
+const allowed = new Set(['account.html','account.js','login.html','register.html','auth.js','login.js','register.js','verify.html','verify.js','styles.css','login.css']);
 let requests = 0;
 let resends = 0;
 let registrations = 0;
+let passwordChanges = 0;
 const server = http.createServer((request,response) => {
+  if (request.url === '/api/v1/auth/change-password') {
+    passwordChanges++; request.resume();
+    const attempt = passwordChanges;
+    setTimeout(() => {
+      response.writeHead(attempt === 1 ? 400 : 200, {'Content-Type':'application/json'});
+      response.end(JSON.stringify(attempt === 1 ? {message:'Contraseña actual incorrecta.'} : {}));
+    },200); return;
+  }
   if (request.url === '/api/v1/auth/login') {
     requests++;
     request.resume();
@@ -107,6 +116,22 @@ const server = http.createServer((request,response) => {
     await page.waitForFunction(()=>document.querySelector('#verify-message')?.textContent==='Correo verificado. Redirigiendo…');
     assert.equal(await page.$eval('#resend',el=>el.disabled),true);
     await page.waitForFunction(()=>location.pathname==='/login.html');
+    await page.goto(base+'/account.html');
+    for (const [name,value] of Object.entries({currentPassword:password,newPassword:password+'new',confirmation:password+'new'}))
+      await page.type(`input[name=${name}]`,value);
+    await page.click('#password-form button');
+    assert.equal(await page.$eval('#password-form button',el=>el.disabled),true);
+    await page.evaluate(()=>document.querySelector('#password-form').requestSubmit());
+    await page.waitForFunction(()=>!document.querySelector('#password-form button').disabled);
+    assert.equal(passwordChanges,1);
+    assert((await page.content()).includes('Contraseña actual incorrecta.'));
+    await page.click('#password-form button');
+    await page.waitForFunction(()=>document.body.textContent.includes('Contraseña actualizada.'));
+    await page.evaluate(()=>document.querySelector('#password-form').requestSubmit());
+    assert.equal(await page.$eval('#password-form button',el=>el.disabled),true);
+    await page.waitForFunction(()=>location.pathname==='/login.html');
+    assert.equal(passwordChanges,2,'Cambio de contraseña duplicó solicitudes.');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-token')),null);
     assert.deepEqual(errors,[]);
     console.log('Auth UI OK: token viejo, confirmación, error legible, reenvío sin duplicados y verificación.');
   } finally {
