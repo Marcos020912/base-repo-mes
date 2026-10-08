@@ -151,7 +151,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       el auditor comprueba primer Tab y activación con Enter en las 13 páginas.
       Una segunda pasada a 320 px detectó y corrigió desbordamiento horizontal
       de Curación; dos estados dinámicos simulados de la ficha pública verifican
-      que el ZIP completo solo se ofrece con acceso abierto. Total 41 estados
+      que el ZIP completo solo se ofrece con acceso abierto. El modo de carga
+      ZIP integral se audita también en escritorio y a 320 px. Total 43 estados
       sin infracciones automáticas.
       La revisión manual y de contenido real permanece pendiente.
 - [x] Limitación distribuida de intentos de inicio de sesión, registro,

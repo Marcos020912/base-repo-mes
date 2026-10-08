@@ -100,6 +100,28 @@ async function main() {
           if (variant.type === 'DIALOG') await page.evaluate(id => document.getElementById(id).close(), variant.id);
           else await page.evaluate(({id,hidden}) => { document.querySelector(`section[data-step="${id}"]`).hidden = hidden; }, variant);
         }
+        if (name === 'create.html') {
+          await page.evaluate(() => {
+            document.querySelector('section[data-step="0"]').hidden = true;
+            document.querySelector('section[data-step="2"]').hidden = false;
+            document.querySelector('#separate-upload').hidden = true;
+            document.querySelector('#package-upload').hidden = false;
+            document.querySelector('[name="uploadMode"][value="package"]').checked = true;
+            document.querySelector('#description-file').required = false;
+            document.querySelector('#dataset-files').required = false;
+            document.querySelector('#package-file').required = true;
+          });
+          failures += await audit(page, 'create.html#package'); states++;
+          await page.setViewport({width:320, height:700});
+          const packageOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+          if (packageOverflow) { console.error('create.html#package@320: desbordamiento horizontal'); failures++; }
+          failures += await audit(page, 'create.html#package@320'); states++;
+          await page.setViewport({width:1280, height:800});
+          await page.evaluate(() => {
+            document.querySelector('section[data-step="2"]').hidden = true;
+            document.querySelector('section[data-step="0"]').hidden = false;
+          });
+        }
         await page.setViewport({width:320, height:700});
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
         if (overflow) { console.error(`${name}@320: desbordamiento horizontal de la página`); failures++; }

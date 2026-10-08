@@ -117,8 +117,8 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   visible y reducción de movimiento; se corrigió el espaciado del formulario
   de autenticación y el nombre de botones de cierre. Esto es una línea base,
   no una declaración de conformidad WCAG 2.2 AA. `tools/a11y` permite repetir
-  una auditoría automática de 41 estados en Chrome sin backend (incluye 320 px
-  y dos fichas públicas simuladas);
+  una auditoría automática de 43 estados en Chrome sin backend (incluye 320 px,
+  modo ZIP integral y dos fichas públicas simuladas);
   pasó sin infracciones después de corregir el contraste de revisión privada,
   el primer foco en login/registro y el desbordamiento de Curación. Quedan
   pruebas manuales de teclado, lectores de pantalla y contenido real.
