@@ -38,8 +38,9 @@ public class PreservationControllerTest {
             var provenance = mock(FileProvenanceEventRepository.class);
             var resource = new DataResource();
             var info = new ContentInformation();
-            info.setRelativePath("sample.txt"); info.setContentUri(file.toUri().toString());
-            info.setMetadata(Map.of("sha256", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
+            info.setRelativePath("sample data%.txt"); info.setContentUri(file.toUri().toString());
+            // This admission baseline is intentionally different from the bytes in the ZIP.
+            info.setMetadata(Map.of("sha256", "0".repeat(64)));
             when(records.findById("r1")).thenReturn(Optional.of(new ScientificRecord("r1")));
             when(resources.findById("r1")).thenReturn(Optional.of(resource));
             when(contents.findByParentResource(eq(resource), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(info)));
@@ -49,15 +50,38 @@ public class PreservationControllerTest {
                     records, resources, contents, provenance, new ObjectMapper().findAndRegisterModules());
             var response = new MockHttpServletResponse();
             controller.downloadPackage("r1", response);
+            var artifact = java.nio.file.Path.of("build/test-artifacts/preservation-ro-crate.zip");
+            Files.createDirectories(artifact.getParent());
+            Files.write(artifact, response.getContentAsByteArray());
             var entries = new java.util.HashMap<String, String>();
             try (var zip = new ZipInputStream(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
                 java.util.zip.ZipEntry entry;
                 while ((entry = zip.getNextEntry()) != null) entries.put(entry.getName(), new String(zip.readAllBytes()));
             }
-            assertEquals("abc", entries.get("data/sample.txt"));
-            assertTrue(entries.get("preservation/manifest-sha256.txt").contains("sample.txt"));
+            assertEquals("abc", entries.get("data/sample data%.txt"));
+            assertTrue(entries.get("preservation/manifest-sha256.txt").contains("0".repeat(64)));
             assertTrue(entries.containsKey("preservation/metadata.json"));
             assertTrue(entries.containsKey("preservation/provenance.json"));
+            var crate = new ObjectMapper().readTree(entries.get("ro-crate-metadata.json"));
+            assertEquals("https://w3id.org/ro/crate/1.2/context", crate.path("@context").asText());
+            assertEquals("ro-crate-metadata.json", crate.path("@graph").get(0).path("@id").asText());
+            assertEquals("./", crate.path("@graph").get(0).path("about").path("@id").asText());
+            assertEquals("Dataset", crate.path("@graph").get(1).path("@type").asText());
+            assertEquals("#license", crate.path("@graph").get(1).path("license").path("@id").asText());
+            assertTrue(entries.get("ro-crate-metadata.json").contains("No se declara ninguna licencia"));
+            assertTrue(crate.path("@graph").get(1).path("datePublished").asText().startsWith("20"));
+            for (var part : crate.path("@graph").get(1).path("hasPart")) {
+                String path = java.net.URLDecoder.decode(part.path("@id").asText(), java.nio.charset.StandardCharsets.UTF_8);
+                assertTrue("Referenced file missing from ZIP: " + path, entries.containsKey(path));
+            }
+            boolean found = false;
+            for (var entity : crate.path("@graph")) if (entity.path("@id").asText().equals("data/sample%20data%25.txt")) {
+                assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                        entity.path("sha256").asText());
+                assertEquals("3", entity.path("contentSize").asText());
+                found = true;
+            }
+            assertTrue("RO-Crate must describe archived bytes, not the admission baseline", found);
         } finally { Files.deleteIfExists(file); }
     }
 }

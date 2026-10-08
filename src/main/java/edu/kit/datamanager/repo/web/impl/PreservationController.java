@@ -11,6 +11,7 @@ import edu.kit.datamanager.repo.repository.FileProvenanceEventRepository;
 import edu.kit.datamanager.repo.repository.FixityAuditRunRepository;
 import edu.kit.datamanager.repo.repository.ScientificRecordRepository;
 import edu.kit.datamanager.repo.service.PreservationAuditService;
+import edu.kit.datamanager.repo.service.RoCrateMetadataBuilder;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
@@ -18,7 +19,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -109,26 +115,50 @@ public class PreservationController {
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("Content-Disposition", "attachment; filename=preservation-" + id.replaceAll("[^A-Za-z0-9_-]", "_") + ".zip");
         try (ZipOutputStream zip = new ZipOutputStream(response.getOutputStream())) {
-            write(zip, "preservation/metadata.json", mapper.writeValueAsBytes(Map.of(
+            List<RoCrateMetadataBuilder.PackagedFile> packaged = new ArrayList<>();
+            byte[] metadata = mapper.writeValueAsBytes(Map.of(
                     "resourceId", id, "record", record, "title", resource.getTitles().stream().findFirst()
-                            .map(title -> title.getValue()).orElse(""))));
-            write(zip, "preservation/provenance.json", mapper.writeValueAsBytes(
-                    provenance.findByResourceIdOrderByOccurredAtAscIdAsc(id)));
+                            .map(title -> title.getValue()).orElse("")));
+            write(zip, "preservation/metadata.json", metadata);
+            packaged.add(packagedBytes("preservation/metadata.json", "application/json", metadata));
+            byte[] history = mapper.writeValueAsBytes(provenance.findByResourceIdOrderByOccurredAtAscIdAsc(id));
+            write(zip, "preservation/provenance.json", history);
+            packaged.add(packagedBytes("preservation/provenance.json", "application/json", history));
             StringBuilder manifest = new StringBuilder("# SHA-256 al ingreso; no implica comprobación actual\n");
             for (var file : files) {
                 String hash = file.getMetadata() == null ? null : file.getMetadata().get("sha256");
                 if (hash != null && hash.matches("(?i)[0-9a-f]{64}"))
                     manifest.append(hash).append("  ").append(file.getRelativePath()).append('\n');
                 zip.putNextEntry(new ZipEntry("data/" + file.getRelativePath()));
-                try (var input = Files.newInputStream(Path.of(URI.create(file.getContentUri())))) { input.transferTo(zip); }
+                MessageDigest digest = sha256();
+                long size;
+                try (var input = new DigestInputStream(Files.newInputStream(Path.of(URI.create(file.getContentUri()))), digest)) {
+                    size = input.transferTo(zip);
+                }
                 zip.closeEntry();
+                packaged.add(new RoCrateMetadataBuilder.PackagedFile("data/" + file.getRelativePath(), size,
+                        file.getMediaType(), HexFormat.of().formatHex(digest.digest())));
             }
-            write(zip, "preservation/manifest-sha256.txt", manifest.toString().getBytes(StandardCharsets.UTF_8));
+            byte[] baselineManifest = manifest.toString().getBytes(StandardCharsets.UTF_8);
+            write(zip, "preservation/manifest-sha256.txt", baselineManifest);
+            packaged.add(packagedBytes("preservation/manifest-sha256.txt", "text/plain", baselineManifest));
+            write(zip, "ro-crate-metadata.json", mapper.writeValueAsBytes(
+                    RoCrateMetadataBuilder.build(id, record, resource, packaged, Instant.now())));
         }
     }
 
     private static void write(ZipOutputStream zip, String name, byte[] data) throws IOException {
         zip.putNextEntry(new ZipEntry(name)); zip.write(data); zip.closeEntry();
+    }
+
+    private static RoCrateMetadataBuilder.PackagedFile packagedBytes(String path, String mediaType, byte[] bytes) {
+        return new RoCrateMetadataBuilder.PackagedFile(path, bytes.length, mediaType,
+                HexFormat.of().formatHex(sha256().digest(bytes)));
+    }
+
+    private static MessageDigest sha256() {
+        try { return MessageDigest.getInstance("SHA-256"); }
+        catch (NoSuchAlgorithmException failure) { throw new IllegalStateException(failure); }
     }
 
     private static boolean safeRelativePath(String relative) {

@@ -43,6 +43,15 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       eventos de procedencia de altas/bajas de archivos web y exportación ZIP
       curatorial con metadatos, archivos, historial y manifiesto de huellas
       iniciales. Sugerencias configurables de licencia y disciplina en formularios.
+- [x] El ZIP curatorial incluye ahora un RO-Crate 1.2 adjunto
+      (`ro-crate-metadata.json` en la raíz) con entidad Dataset, autores,
+      versión/DOI publicado y entidades File. Las huellas `sha256` del crate
+      se calculan sobre los bytes realmente empaquetados, distintas del
+      manifiesto histórico con huellas al ingreso. Sin licencia informada se
+      declara explícitamente que no se conceden permisos de reutilización.
+      Un ZIP de prueba pasó los requisitos obligatorios del validador
+      `roc-validator` 0.11.4; siguen cinco recomendaciones ligadas a URL de
+      licencia y URL/ROR/contacto institucional no disponibles.
 - [x] Relaciones científicas tipadas DOI/URL con semántica DataCite,
       editables solo por el autor mientras el depósito sea borrador,
       visibles en la ficha pública y enviadas al DOI de versión.
@@ -108,7 +117,10 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       de proyectos/financiadores y metadatos de financiación en DataCite Test.
 - [ ] Dimensionar I/O y pool JDBC para la auditoría, configurar alerta externa
       por `MISMATCH`/`MISSING_FILE` y política de archivos anteriores sin huella.
-- [ ] Validar paquetes de preservación y procedencia en almacenamiento externo,
+- [ ] Validar RO-Crate con curadores externos, aportar URL/ROR/contacto
+      institucional aprobados y completar perfiles OAIS SIP/AIP/DIP y
+      procedencia W3C PROV. Validar paquetes de preservación
+      y procedencia en almacenamiento externo,
       firmar manifiestos si la institución lo requiere e internacionalizar la UI.
 
 ## Operación de la auditoría SHA-256
