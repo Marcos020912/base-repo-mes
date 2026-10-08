@@ -6,7 +6,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 
 ## Implementado en la rama
 
-- [x] Monitor de transferencias en el asistente y ficha autenticada: progreso
+- [x] Monitor de transferencias en el asistente, fichas autenticada/pública,
+      Curación y revisión externa: progreso
       de subida con XHR, lectura de descarga por streaming, tamaño indeterminado
       cuando no existe Content-Length, cancelación y limpieza de finalizadas.
       El historial es por pestaña/página; «Descarga preparada» no certifica la
@@ -267,3 +268,10 @@ heredados antes de activarla.
 - [x] Revisión externa: descarga monitorizada con X-Review-Token y cache no-store; el monitor rechaza origen distinto y redirecciones. E2E local Chrome/JAR/H2 crea enlace temporal, abre contexto sin sesión, verifica retirada del fragmento y descarga completada. No sustituye pruebas HAProxy/logs/caché institucionales.
 - [x] Revisión externa local E2E: no-store en descarga y rechazo, revocación DELETE desde Curación y denegación de nueva descarga desde página ya abierta; monitor/mensaje muestran fallo. No retira copias previamente descargadas ni prueba caché del HAProxy.
 - [x] Errores de descarga JSON muestran detail/message legible sin prefijar código HTTP; revisión privada usa mensaje genérico explícito. Prueba Chrome/HTTP de problem+json y ocultación privada aprobada.
+
+### Regresión conjunta local — 2026-10-08
+- Gradle sin perfil minimal: 43 suites, 452 pruebas, 0 fallos/errores/omitidas.
+- JAR minimal construido correctamente; ambos smoke tests Chrome/HTTP y Chrome/JAR/H2 completados.
+- Axe: 43 estados, 0 infracciones automáticas.
+- Esta evidencia no cierra los pendientes institucionales, staging, archivos masivos ni WCAG manual enumerados arriba.
+- Comandos reproducibles en `tools/e2e/README.md`; `-Dprofile=minimal test` solo ejecuta la suite documental.

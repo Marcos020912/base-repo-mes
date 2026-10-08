@@ -8,7 +8,8 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 
 ## Primer incremento en esta rama
 
-- Monitor de subidas/descargas en el asistente y ficha autenticada, con progreso
+- Monitor de subidas/descargas en el asistente, ficha autenticada/pública,
+  Curación y revisión externa temporal, con progreso
   real de red y cancelación. Es un historial efímero por página; no declara que
   el navegador haya guardado la descarga en disco ni revierte una carga ya
   aceptada por el backend.

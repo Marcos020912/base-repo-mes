@@ -89,3 +89,17 @@ error. Las copias descargadas antes de revocar no se pueden retirar.
 También comprueba errores application/problem+json: conserva detail legible
 sin prefijar el estado HTTP, y permite imponer un mensaje genérico para la
 revisión privada. Los cuerpos no JSON o inválidos conservan el mensaje genérico.
+
+## Regresión conjunta (sin servicios productivos)
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew --offline --no-daemon test
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew --offline --no-daemon -Dprofile=minimal bootJar
+node tools/e2e/transfer-smoke.cjs
+node tools/e2e/wizard-smoke.cjs
+npm run audit --prefix tools/a11y
+```
+
+**Importante:** `-Dprofile=minimal test` ejecuta solo la suite documental.
+No lo utilice como evidencia de la suite Java completa. El perfil minimal
+sí sirve para construir el JAR usado por el smoke test.
