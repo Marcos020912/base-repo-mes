@@ -251,3 +251,9 @@ permiten texto libre para no rechazar depósitos previos. La opción
 `repo.scientific.strict-vocabulary=true` hace que el backend rechace nuevos
 valores fuera de esas listas; definir y aprobar la taxonomía y migrar datos
 heredados antes de activarla.
+
+### Seguimiento de descargas públicas
+- [x] Ficha pública: archivos individuales, ZIP completo y exportaciones de citas usan el monitor de transferencias.
+- [x] Funciona sin cargar autenticación; la cancelación se informa sin mostrar un error técnico.
+- [x] Comprobación Chrome aislada: descarga anónima y cancelación; auditoría axe: 43 estados, 0 infracciones automáticas.
+- [ ] Validar este flujo con archivos grandes y endpoints públicos reales en staging; el monitor mantiene el archivo en memoria antes de ofrecer su guardado.

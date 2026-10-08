@@ -105,6 +105,7 @@ async function loadFiles(page = 0) {
       verified.className = file.fixityStatus === 'MATCH' ? 'quality-ok' : 'quality-missing'; info.append(verified);
     } else info.append(node('small', 'Integridad aún no comprobada'));
     const link = document.createElement('a'); link.className = 'secondary'; link.textContent = 'Descargar'; link.href = `/api/v1/public/resources/${encodeURIComponent(id)}/file?path=${encodeURIComponent(file.path)}`;
+    link.addEventListener('click', event => { event.preventDefault(); downloadPublic(link.href, file.path); });
     row.append(info, canDownloadContent() ? link : node('span', 'Acceso restringido', 'muted')); list.append(row);
   }
   const pager = document.querySelector('#files-pagination'); pager.replaceChildren();
@@ -124,6 +125,7 @@ async function load() {
     detail = data; document.querySelector('#landing').hidden = false;
     const archive = document.querySelector('#download-archive');
     archive.hidden = !canDownloadContent();
+    archive.onclick = event => { event.preventDefault(); downloadPublic(archive.href, id + '.zip'); };
     if (!archive.hidden) archive.href = `/api/v1/public/resources/${encodeURIComponent(id)}/archive`;
     document.querySelector('#title').textContent = data.title;
     document.querySelector('#subtitle').textContent = `${data.authors?.join(', ') || 'Autoría no informada'} · ${data.year || 's. f.'}`;
@@ -157,6 +159,11 @@ async function load() {
 document.querySelector('#export').addEventListener('click', () => {
   if (!detail) return;
   const format = document.querySelector('#format').value;
-  location.href = `/api/v1/scientific/${encodeURIComponent(id)}/citation?format=${encodeURIComponent(format)}`;
+  const extension = ({bibtex:'bib', ris:'ris', 'csl-json':'json'})[format] || 'txt';
+  downloadPublic(`/api/v1/scientific/${encodeURIComponent(id)}/citation?format=${encodeURIComponent(format)}`, `citation.${extension}`);
 });
+async function downloadPublic(url, filename) {
+  try { await transfers.download(url, filename); status.textContent = 'Descarga preparada.'; }
+  catch (error) { status.textContent = error.name === 'AbortError' ? 'Descarga cancelada.' : error.message; }
+}
 load();

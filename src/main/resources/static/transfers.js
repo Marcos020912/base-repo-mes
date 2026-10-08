@@ -1,4 +1,4 @@
-/* Local, per-tab transfer monitor for authenticated uploads and downloads. */
+/* Local, per-tab transfer monitor for uploads and public/authenticated downloads. */
 const transfers = (() => {
   const tasks = [];
   document.body.classList.add('transfer-enabled');
@@ -64,13 +64,17 @@ const transfers = (() => {
     if (tasks.some(task => task.active)) { event.preventDefault(); event.returnValue = ''; }
   });
 
+  function headers(extra = {}) {
+    return typeof auth !== 'undefined' ? auth.headers(extra) : extra;
+  }
+
   function upload(url, file, label = file.name) {
     const task = add(label, 'upload');
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       task.cancel.addEventListener('click', () => xhr.abort());
       xhr.open('POST', url);
-      for (const [name, value] of Object.entries(auth.headers({Accept:'application/json'}))) xhr.setRequestHeader(name, value);
+      for (const [name, value] of Object.entries(headers({Accept:'application/json'}))) xhr.setRequestHeader(name, value);
       xhr.upload.onprogress = event => setProgress(task, event.loaded, event.lengthComputable ? event.total : 0);
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) { finish(task, 'Subida completada'); resolve(); return; }
@@ -89,7 +93,7 @@ const transfers = (() => {
     const controller = new AbortController();
     task.cancel.addEventListener('click', () => controller.abort());
     try {
-      const response = await fetch(url, {headers:auth.headers(), signal:controller.signal});
+      const response = await fetch(url, {headers:headers(), signal:controller.signal});
       if (!response.ok) throw new Error('No se pudo descargar el archivo.');
       const total = Number(response.headers.get('Content-Length')) || 0;
       const chunks = []; let loaded = 0;
