@@ -6,8 +6,9 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const puppeteer = require('../a11y/node_modules/puppeteer-core');
+const axe=require('../a11y/node_modules/axe-core');
 const root = path.resolve(__dirname, '../../src/main/resources/static');
-const allowed = new Set(['account.html','account.js','login.html','register.html','auth.js','login.js','register.js','verify.html','verify.js','styles.css','login.css']);
+const allowed = new Set(['account.html','account.js','login.html','register.html','auth.js','login.js','register.js','verify.html','verify.js','ui-locales.js','ui-i18n.js','styles.css','login.css']);
 let requests = 0;
 let resends = 0;
 let registrations = 0;
@@ -70,6 +71,22 @@ const server = http.createServer((request,response) => {
     const page = await browser.newPage();
     const errors=[]; page.on('pageerror',error=>errors.push(error.message));
     await page.goto(base+'/login.html');
+    await page.type('input[name=username]','kept-local-input');
+    await page.select('[data-ui-locale]','en');
+    assert.equal(await page.$eval('h1',node=>node.textContent),'Sign in');
+    assert.equal(await page.$eval('input[name=username]',node=>node.value),'kept-local-input');
+    assert.equal(await page.$eval('html',node=>node.lang),'en');
+    await page.setViewport({width:320,height:700});await page.evaluate(axe.source);
+    const accessibility=await page.evaluate(async()=>axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));
+    assert.equal(accessibility.violations.length,0,'Login English at320px has axe violations: '+accessibility.violations.map(item=>item.id).join(','));
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1),false);
+    await page.setViewport({width:1280,height:800});
+    await page.goto(base+'/verify.html?mailPending=1');
+    assert.equal(await page.$eval('h1',node=>node.textContent),'Verify your email');
+    assert((await page.$eval('#verify-message',node=>node.textContent)).includes('could not be sent'));
+    await page.select('[data-ui-locale]','es');
+    assert((await page.$eval('#verify-message',node=>node.textContent)).includes('correo no salió'));
+    assert.equal(requests+resends+registrations,0,'Cambiar idioma envió solicitudes de autenticación.');
     await page.evaluate(()=>localStorage.setItem('base-repo-token','invalid-local-fixture'));
     for (const name of ['login','register']) {
       await page.goto(base+'/'+name+'.html',{waitUntil:'load'});
@@ -96,6 +113,9 @@ const server = http.createServer((request,response) => {
     await page.click('#login-form button');
     await page.waitForFunction(()=>document.querySelector('#login-message').textContent==='No se pudo iniciar sesión.');
     assert.equal(requests,2,'Login duplicó solicitudes pendientes.');
+    await page.select('[data-ui-locale]','en');assert.equal(await page.$eval('#login-message',node=>node.textContent),'Unable to sign in.');
+    assert.equal(await page.$eval('input[name=password]',node=>node.value),password);
+    await page.select('[data-ui-locale]','es');
     await page.click('#login-form button');
     await page.waitForFunction(()=>document.querySelector('#login-message').textContent.includes('respuesta del servidor no es válida'));
     assert.equal(new URL(page.url()).pathname,'/login.html');
@@ -156,6 +176,11 @@ const server = http.createServer((request,response) => {
     await page.waitForFunction(()=>location.pathname==='/login.html');
     assert.equal(passwordChanges,2,'Cambio de contraseña duplicó solicitudes.');
     assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-token')),null);
+    const blocked=await browser.newPage();blocked.on('pageerror',error=>errors.push(error.message));
+    await blocked.evaluateOnNewDocument(()=>Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Storage disabled','SecurityError');}}));
+    await blocked.goto(base+'/login.html');await blocked.type('input[name=username]','kept-without-storage');
+    await blocked.select('[data-ui-locale]','en');assert.equal(await blocked.$eval('h1',node=>node.textContent),'Sign in');
+    assert.equal(await blocked.$eval('input[name=username]',node=>node.value),'kept-without-storage');await blocked.close();
     assert.deepEqual(errors,[]);
     console.log('Auth UI OK: acceso, correo válido, reenvío/verificación y cambio de contraseña sin duplicados.');
   } finally {

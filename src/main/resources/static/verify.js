@@ -4,43 +4,41 @@ const resend = document.querySelector('#resend');
 const submit = form.querySelector('button');
 const params = new URLSearchParams(location.search);
 form.elements.email.value = params.get('email') || '';
-function notify(text, kind = '') {
-  message.className = `message ${kind}`.trim();
-  message.textContent = text;
-}
+function notifyKey(key,kind=''){message.className=`message ${kind}`.trim();uiI18n.set(message,key);}
+function notifyError(error){message.className='message error';uiI18n.showError(message,error);}
 function busy(value) {
   resend.disabled = value; submit.disabled = value;
   form.setAttribute('aria-busy', String(value));
 }
 if (params.get('mailPending') === '1')
-  notify('Su cuenta fue creada, pero el correo no salió. Pulse «Reenviar código» más tarde.', 'error');
+  notifyKey('mail.pending', 'error');
 async function post(path, payload) {
   const response = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.message || 'No se pudo completar la operación.');
+  if (!response.ok) throw body.message?new Error(body.message):uiI18n.error('operation.failed');
   return body;
 }
 form.addEventListener('submit', async event => {
   event.preventDefault();
   if (submit.disabled) return;
   const data = new FormData(form);
-  busy(true); notify('Verificando correo…');
+  busy(true); notifyKey('verify.busy');
   try {
     await post('/api/v1/auth/verify', {email:data.get('email'), code:data.get('code')});
-    notify('Correo verificado. Redirigiendo…', 'success');
+    notifyKey('verify.success', 'success');
     setTimeout(() => location.assign('login.html'), 900);
     // Remain disabled until navigation; do not verify the same code twice.
-  } catch (error) {notify(error.message, 'error'); busy(false);}
+  } catch (error) {notifyError(error); busy(false);}
 });
 resend.addEventListener('click', async () => {
   if (resend.disabled) return;
   const email = form.elements.email;
   if (!email.reportValidity()) return;
   const address = email.value;
-  busy(true); notify('Solicitando código…');
+  busy(true); notifyKey('verify.requesting');
   try {
     await post('/api/v1/auth/resend-verification', {email:address});
-    notify('Si el correo existe, se envió un código.', 'success');
-  } catch (error) {notify(error.message, 'error');}
+    notifyKey('verify.sent', 'success');
+  } catch (error) {notifyError(error);}
   finally {busy(false);}
 });

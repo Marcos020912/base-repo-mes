@@ -55,7 +55,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **A04 — Usuarios, roles e integraciones DOI/OIDC/correo**. Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID.
 - [x] **A05 — Estado almacenamiento/fixity, auditoría/reportes operativos**. Implementado local: consola autorizada con volumen local, inventario técnico/fixity, veinte auditorías e informe JSON fechado. Tests/E2E aprobados; no sustituye monitorización y backup institucional.
 - [x] **A06 — Metadatos multilingües**. Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI.
-- [ ] **A07 — Internacionalización sin textos incrustados en JS**. Pendiente: strings españoles siguen en scripts; acordar idiomas, separar catálogos y traducir estados dinámicos.
+- [ ] **A07 — Internacionalización sin textos incrustados en JS**. Parcial: catálogos fuente JSON es/en y acceso/login/registro/verificación migrados, selector persistente sin borrar formularios. Chrome/catálogos/axe aprobados; demás vistas pendientes.
 - [ ] **A08 — Paquetes OAIS SIP/AIP/DIP**. Parcial: BagIt/paquete curatorial/ZIP público; perfiles institucionales completos no acreditados.
 - [x] **A09 — RO-Crate y W3C PROV**. Implementado local: declaración científica y eventos técnicos separados, manifiestos/paquetes probados; no inventa actividades ni fechas. Tests/E2E aprobados. Validación externa de perfiles pendiente.
 - [ ] **A10 — Auditorías periódicas SHA-256 verificables**. Base local: manual/programada opcional y alertas; política/volumen/buzón real pendientes.
@@ -171,3 +171,11 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Árbol actual: cero patrones detectados. Historial: 102 ocurrencias de propiedades literales en ocho rutas; no son necesariamente 102 secretos activos. No se revelaron valores ni se reescribió historia.
 - Plantillas DB/Rabbit/JWT usan configuración externa/env. H2 existente requiere conservar contraseña anterior externa; no se cambian cuentas ni datos. Ver tools/security/README.md.
 - JAR reconstruido y E2E PostgreSQL/SMTP/Chrome/restauración aprobado después de retirar defaults. `bash -n deploy.sh` aprobado; no se ejecutó el despliegue ni se modificaron servicios reales.
+
+### Internacionalización — acceso (A07 parcial)
+
+- Catálogos fuente JSON es/en con38claves y bundle estático determinista; claves explícitas, sin sustitución de texto de autor ni HTML.
+- Login/registro/verificación migrados, selector persistente sin reload/pérdida de campos; errores locales cambian de idioma, mensajes originales del backend se conservan. Funciona en memoria cuando localStorage está bloqueado.
+- Dos tests de coherencia/bindings y Chrome authfixture aprobado, incluidos idioma entre páginas, mensajes dinámicos, credenciales conservadas y login inglés a320px sin desbordamiento/infracciones axe.
+- Regresión Java21:52suites504tests0fallos/errores/omitidas. JAR y E2E PostgreSQL/SMTP/Chrome/restauración aprobados después de añadir whitelist deassets; axe estático66estados0.
+- Catálogo, depósito, fichas, cuenta, administración y transferencias aún pendientes de migración. No marcar A07 completo ni anunciar plataforma entera bilingüe. Ver tools/i18n/README.md.
