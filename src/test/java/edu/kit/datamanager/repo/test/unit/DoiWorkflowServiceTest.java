@@ -191,4 +191,72 @@ public class DoiWorkflowServiceTest {
         verify(datacite, never()).reserveDraft(anyString());
         assertTrue(local.isEmpty());
     }
+    @Test public void configuredLandingRefreshRequiresExactConfirmationAndAuditsBoth() {
+        workflow.reserve("r1");science.setStatus(PublicationStatus.PUBLISHED);
+        var targets=workflow.landingTargets("r1");
+        when(datacite.updateUrl(anyString(),any())).thenAnswer(call->new DataCiteService.DoiResponse(call.getArgument(0),"findable"));
+        assertEquals(targets,workflow.refreshLandingUrls("r1",targets,"admin"));
+        verify(datacite).updateUrl(targets.versionDoi(),java.net.URI.create("https://datos.reduniv.edu.cu/datasets/r1"));
+        verify(datacite).updateUrl(targets.conceptualDoi(),java.net.URI.create("https://datos.reduniv.edu.cu/datasets/r1/concept"));
+        assertEquals("FINDABLE",local.get("v:r1").getState());
+        verify(editorial).save(any());
+    }
+    @Test public void landingRefreshRejectsArbitraryRedirectWithoutRemoteWrites() {
+        workflow.reserve("r1");science.setStatus(PublicationStatus.PUBLISHED);
+        var targets=workflow.landingTargets("r1");
+        try {workflow.refreshLandingUrls("r1",new DoiWorkflowService.LandingTargets(targets.versionDoi(),"https://evil.example/",targets.conceptualDoi(),targets.conceptualUrl()),"admin");fail();}
+        catch(ResponseStatusException expected){assertEquals(409,expected.getStatusCode().value());}
+        verify(datacite,never()).updateUrl(anyString(),any());
+    }
+    @Test public void landingRefreshRejectsForeignEnvironmentAndManualDois() {
+        science.setStatus(PublicationStatus.PUBLISHED);
+        try {workflow.landingTargets("r1");fail();}catch(ResponseStatusException expected){assertEquals(409,expected.getStatusCode().value());}
+        science.setStatus(PublicationStatus.DRAFT);workflow.reserve("r1");science.setStatus(PublicationStatus.PUBLISHED);
+        local.get("v:r1").setApiHost("api.datacite.org");
+        try {workflow.landingTargets("r1");fail();}catch(ResponseStatusException expected){assertEquals(409,expected.getStatusCode().value());}
+        verify(datacite,never()).updateUrl(anyString(),any());
+    }
+    @Test public void partialLandingRefreshCanBeRetriedWithoutChangingContent() {
+        workflow.reserve("r1");science.setStatus(PublicationStatus.PUBLISHED);
+        var targets=workflow.landingTargets("r1");
+        when(datacite.updateUrl(eq(targets.versionDoi()),any())).thenReturn(new DataCiteService.DoiResponse(targets.versionDoi(),"findable"));
+        when(datacite.updateUrl(eq(targets.conceptualDoi()),any())).thenThrow(new IllegalStateException("network"))
+            .thenReturn(new DataCiteService.DoiResponse(targets.conceptualDoi(),"findable"));
+        try {workflow.refreshLandingUrls("r1",targets,"admin");fail();}catch(IllegalStateException expected){}
+        assertEquals("ERROR",local.get("c:r1").getState());assertEquals(PublicationStatus.PUBLISHED,science.getStatus());
+        workflow.refreshLandingUrls("r1",targets,"admin");assertEquals("FINDABLE",local.get("c:r1").getState());
+    }
+    private ScientificRecord predecessor() {
+        var previous=new ScientificRecord("r0");
+        when(resources.findById("r0")).thenReturn(Optional.of(mock(DataResource.class)));
+        when(records.findById("r0")).thenReturn(Optional.of(previous));
+        workflow.reserve("r0");previous.setStatus(PublicationStatus.PUBLISHED);
+        remote.put(previous.getVersionDoi(),"findable");remote.put(previous.getConceptualDoi(),"findable");
+        science.setPreviousResourceId("r0");science.setStatus(PublicationStatus.IN_REVIEW);
+        return previous;
+    }
+    @Test public void publishSynchronizesInverseRelationWithoutOverwritingOtherMetadata() {
+        var previous=predecessor();
+        var sibling=new ScientificRecord("sibling");sibling.setStatus(PublicationStatus.PUBLISHED);sibling.setVersionDoi("10.1234/sibling");
+        when(records.findByPreviousResourceId("r0")).thenReturn(java.util.List.of(sibling));
+        workflow.publish("r1","curator");
+        var capture=org.mockito.ArgumentCaptor.forClass(Map.class);
+        verify(datacite).updateMetadata(eq(previous.getVersionDoi()),capture.capture());
+        assertEquals(java.util.Set.of("relatedIdentifiers"),capture.getValue().keySet());
+        var identifiers=(java.util.List<Map<String,String>>)capture.getValue().get("relatedIdentifiers");
+        assertTrue(identifiers.stream().anyMatch(item->"IsPreviousVersionOf".equals(item.get("relationType")) && science.getVersionDoi().equals(item.get("relatedIdentifier"))));
+        assertTrue(identifiers.stream().anyMatch(item->"10.1234/sibling".equals(item.get("relatedIdentifier"))));
+        assertTrue(identifiers.stream().anyMatch(item->"IsVersionOf".equals(item.get("relationType"))));
+        assertEquals(PublicationStatus.PUBLISHED,science.getStatus());
+    }
+    @Test public void inverseRelationFailureLeavesReviewAndCanBeRetried() {
+        var previous=predecessor();
+        when(datacite.updateMetadata(eq(previous.getVersionDoi()),anyMap()))
+            .thenThrow(new IllegalStateException("network"))
+            .thenReturn(new DataCiteService.DoiResponse(previous.getVersionDoi(),"findable"));
+        try {workflow.publish("r1","curator");fail();}catch(IllegalStateException expected){}
+        assertEquals(PublicationStatus.IN_REVIEW,science.getStatus());
+        workflow.publish("r1","curator");assertEquals(PublicationStatus.PUBLISHED,science.getStatus());
+        verify(datacite,times(2)).updateMetadata(eq(previous.getVersionDoi()),anyMap());
+    }
 }

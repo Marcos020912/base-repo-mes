@@ -239,6 +239,12 @@ async function renderPreview() {
   for (const item of fundingEntries()) identity.append(node('p', `Financiación: ${item.funderName}${item.awardTitle ? ` · ${item.awardTitle}` : ''}${item.awardNumber ? ` (${item.awardNumber})` : ''}`));
   if (basedOnId) identity.append(node('p', `Nueva versión de ${basedOnId}.`));
   target.append(identity);
+  const citationPreview=document.createElement('section');citationPreview.className='wizard-preview-section';
+  citationPreview.append(node('h3','Vista previa de cita (borrador)'));
+  const authorText=creators().map(author=>[author.familyName,author.givenName].filter(Boolean).join(', ')).join('; ') || 'Autoría pendiente';
+  const draftCitation=`${authorText} (${value('year') || 's. f.'}). ${value('title')} (versión ${value('versionLabel') || 'pendiente'}) [${value('type')}]. ${value('publisher') || 'Editorial pendiente'}.`;
+  citationPreview.append(node('p',draftCitation),node('p','Cita provisional: este depósito todavía no está publicado. El DOI resoluble y la landing permanente se incorporan después de la aprobación; no cite esta vista previa como una publicación.','muted'));
+  target.append(citationPreview);
   const description = document.createElement('section'); description.className = 'wizard-preview-section';
   description.append(node('h3', 'Descripción del proyecto'));
   if (packageMode()) {

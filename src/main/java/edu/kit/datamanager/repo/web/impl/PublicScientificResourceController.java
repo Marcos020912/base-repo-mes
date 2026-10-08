@@ -109,7 +109,7 @@ public class PublicScientificResourceController {
                 resource.getResourceType() == null ? null : resource.getResourceType().getTypeGeneral().name(),
                 science.getVersionLabel(), science.getVersionDoi(), science.getConceptualDoi(), science.getLicenseId(),
                 science.getInstitution(), science.getOrcid(), science.getRor(), science.getLanguage(), science.getDiscipline(),
-                science.getKeywords(), science.getRelatedPublications(), science.getMethodology(), science.getPublishedAt(), markdown,
+                science.getKeywords(), science.getRelatedPublications(), science.getMethodology(), science.getPublishedAt(), resource.getLastUpdate(), markdown,
                 science.getPreviousResourceId(), newerVersionId, science.getAccessLevel(), science.getEmbargoUntil(),
                 relations.findByResourceIdOrderByIdAsc(id), authorIdentities,
                 funding.findByResourceIdOrderByIdAsc(id)));
@@ -169,7 +169,7 @@ public class PublicScientificResourceController {
     public record PublicDetail(String id, String title, List<String> authors, String publisher, String year, String type,
                                String version, String doi, String conceptualDoi, String license, String institution,
                                String orcid, String ror, String language, String discipline, String keywords,
-                               String relatedPublications, String methodology, java.time.Instant publishedAt, String markdown,
+                               String relatedPublications, String methodology, java.time.Instant publishedAt, java.time.Instant lastUpdate, String markdown,
                                String previousResourceId, String newerVersionId, String accessLevel, java.time.Instant embargoUntil,
                                List<ScientificRelation> relations, List<AuthorIdentity> authorIdentities,
                                List<ScientificFunding> funding) {}

@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ScientificRecordRepository extends JpaRepository<ScientificRecord, String> {
+    List<ScientificRecord> findByPreviousResourceId(String previousResourceId);
     long countByStatus(PublicationStatus status);
     List<ScientificRecord> findByStatusOrderBySubmittedAtAsc(PublicationStatus status);
     boolean existsByVersionDoiIgnoreCaseAndResourceIdNot(String versionDoi, String resourceId);

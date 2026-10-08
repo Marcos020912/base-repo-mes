@@ -82,3 +82,32 @@ la publicación manual se bloquea y se usa únicamente la publicación DataCite.
   registros ya reservados.
 - Revisar metadatos y relaciones con bibliotecarios. Las pruebas simuladas y la
   suite local no sustituyen la validación contra DataCite real.
+
+### Mantenimiento de landing pages tras un cambio de dominio
+
+Operación exclusiva de administrador para versiones publicadas gestionadas por
+la integración automática (no adopta DOI manuales ni cambia de entorno Test a
+Production). Configure primero `repo.datacite.public-base-url` con el origen
+HTTPS aprobado y compruebe DNS, certificado y rutas antes de actualizar DataCite.
+
+1. `GET /api/v1/scientific/{id}/doi/landing-targets` devuelve los DOI y URLs
+   conceptual/de versión previstos.
+2. Revise ambos destinos. Envíe exactamente ese JSON a
+   `POST /api/v1/scientific/{id}/doi/refresh-urls` con autenticación de admin.
+3. Consulte el historial DOI. Cada actualización registra éxito/error; también
+   queda un evento editorial con el actor. No modifica archivos ni contenido.
+
+No se aceptan URLs arbitrarias del cliente. Si la configuración cambia entre
+la vista previa y la confirmación, se rechaza la operación. Si solo una de las
+actualizaciones remotas termina, reintente con los mismos destinos: las
+actualizaciones son idempotentes. No se afirma atomicidad entre DataCite y la
+base local, ni se dan las pruebas simuladas por validación institucional.
+
+La publicación de una sucesora sincroniza `IsPreviousVersionOf` en el DOI de su
+predecesora automática, además de `IsNewVersionOf` en la nueva versión y las
+relaciones conceptuales. Actualiza solo `relatedIdentifiers`, conservando las
+relaciones científicas locales y sucesores publicados/retirados conocidos. La
+base local es la fuente de estas relaciones: cambios manuales externos necesitan
+conciliación previa. Si falla la sincronización, la nueva versión permanece en
+revisión y la publicación puede reintentarse, aunque DataCite ya haya hecho
+Findable alguno de los DOI. No se promete una transacción distribuida.

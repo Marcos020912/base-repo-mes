@@ -138,6 +138,7 @@ async function load() {
     if (!data.authorIdentities?.some(item => item.ror)) field('ROR', data.ror);
     field('Idioma', data.language); field('Disciplina', data.discipline); field('Palabras clave', data.keywords);
     field('Métodos', data.methodology); field('Publicaciones relacionadas', data.relatedPublications);
+    field('Última actualización', data.lastUpdate ? new Date(data.lastUpdate).toLocaleString('es') : null);
     field('Publicado', data.publishedAt ? new Date(data.publishedAt).toLocaleDateString('es') : null);
     if (data.previousResourceId) {
       const previous = document.createElement('a'); previous.href = `/datasets/${encodeURIComponent(data.previousResourceId)}`;
@@ -170,3 +171,18 @@ async function downloadPublic(url, filename) {
   catch (error) { status.textContent = error.name === 'AbortError' ? 'Descarga cancelada.' : error.message; }
 }
 load();
+
+document.querySelector('#share-resource').addEventListener('click',async()=>{
+  if(!detail)return;
+  const url=new URL(`/datasets/${encodeURIComponent(detail.id)}`,location.origin).href;
+  try {await navigator.clipboard.writeText(url);status.textContent='Enlace permanente copiado.';}
+  catch {status.replaceChildren(node('p','No se pudo copiar automáticamente. Seleccione este enlace:'));const link=node('a',url);link.href=url;status.append(link);}
+});
+document.querySelector('#export-metadata').addEventListener('click',()=>{
+  if(!detail)return;
+  const payload={schema:'reduniv.public-metadata.v1',exportedAt:new Date().toISOString(),
+    landingPage:new URL(`/datasets/${encodeURIComponent(detail.id)}`,location.origin).href,metadata:detail};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}));
+  const link=document.createElement('a');link.href=url;link.download=`metadata-${detail.id}.json`;link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='Exportación de metadatos públicos preparada; no incluye archivos ni datos privados.';
+});

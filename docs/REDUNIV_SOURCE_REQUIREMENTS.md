@@ -43,14 +43,14 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | F04 | Copiar cita y elegir APA/Vancouver/Chicago/IEEE | Base local: bloque de cita/exportaciones; validación bibliotecaria pendiente. |
 | F05 | Exportar BibTeX, RIS y CSL-JSON para versión exacta | Base local: servicio de cita; verificar round-trip/validez y como máximo dos acciones (§11). |
 | F06 | Aviso de versión antigua, DOI conceptual y de versión | Base local: sucesora/DOI; verificar historial completo, no solo enlace anterior/siguiente. |
-| F07 | Fecha de publicación y última actualización visibles | Parcial: fecha de publicación encontrada; comprobar/exponer actualización en ficha pública. |
+| F07 | Fecha de publicación y última actualización visibles | Implementado local: publishedAt y lastUpdate públicos visibles; E2E Chrome/PostgreSQL verificó última actualización. |
 | F08 | Resumen, método, cobertura y palabras clave | Parcial: Markdown/metodología/palabras clave existentes; cobertura temporal/geográfica y resumen estructurados no acreditados. |
 | F09 | Archivos: formato, tamaño, checksum y acceso | Base local: lista de archivos/huellas/monitor; selector nativo y volumen real pendientes. |
 | F10 | Procedencia: producción y procesamiento de datos | Parcial: eventos de archivos/PROV no equivalen a procedencia científica completa del procesamiento. |
 | F11 | Artículos, software, proyectos, financiación y datasets relacionados | Base local: relaciones tipadas y funding; comprobar visibilidad y representación máquina de todas las categorías. |
 | F12 | Última verificación y política de preservación aplicable | Parcial: fixity existe; política institucional y su presentación aprobada pendientes. |
 | F13 | Historial de cambios de metadatos y versiones publicadas | Parcial: historial editorial existe; comprobar presentación pública según política. |
-| F14 | Compartir y exportar metadatos como acciones científicas | Parcial: citas exportables; comprobar acción compartir y exportación general de metadatos, no confundir CSL-JSON con ficha completa. |
+| F14 | Compartir y exportar metadatos como acciones científicas | Implementado local: copia de landing permanente y exportación JSON versionada de ficha pública (sin archivos privados), además de citas. E2E Chrome/PostgreSQL aprobado. |
 | F15 | Publicado inmutable; cambios crean nueva versión | Base local: workflow/versiones y E2E sintético; probar todos los endpoints de escritura. |
 | F16 | Retirada controlada sustituye borrado publicado; tombstone | Base local: estado WITHDRAWN/HTTP410; auditoría de autorización y permanencia pendientes. |
 
@@ -66,7 +66,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | C06 | Distinguir vacío, cero coincidencias, permisos y caída | Base local: estados catálogo; comprobar mensajes y acciones diferentes por caso. |
 | C07 | Colecciones temáticas e institucionales | Implementado local: colecciones temáticas/institucionales persistentes, gestión curador/admin con modales y catálogo público paginado solo PUBLISHED. Cuatro pruebas JPA y E2E PostgreSQL/SMTP/Chrome/restauración aprobados; no duplica ni elimina datasets. |
 | C08 | Políticas, ayuda y guía de citación | Parcial: nueva `help.html` ofrece guía y condiciones técnicas; políticas institucionales formales aún no aprobadas. |
-| C09 | Métricas públicas con definiciones transparentes | Pendiente: no acreditar métricas con recuentos ficticios; definir e implementar medición real. |
+| C09 | Métricas públicas con definiciones transparentes | Parcial: inventario público real de versiones PUBLISHED, política OPEN y colecciones públicas con definiciones/fecha; JPA y E2E aprobados. Uso/descargas y metodología COUNTER/DataCite aún pendientes. |
 
 ## Investigador y asistente — informe §5 y §7
 
@@ -80,7 +80,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | W06 | Artículos, software, proyectos y financiación | Base local: relaciones/funding en edición; comprobar disponibilidad durante creación. |
 | W07 | Guardado automático y recuperación | Base local: metadatos locales14d y borrador servidor; no prometer persistencia automática de archivos seleccionados. |
 | W08 | Revisión automática: errores, avisos, porcentaje y explicación | Base local: calidad; comprobar explicación de por qué cada campo ayuda a reutilizar. |
-| W09 | Vista previa de landing y cita antes de enviar | Parcial: ficha real previa disponible; cita de borrador/vista previa integral no acreditada. |
+| W09 | Vista previa de landing y cita antes de enviar | Parcial: ficha real previa disponible y cita provisional sin DOI inventado añadida al asistente; ZIP muestra manifiesto seleccionado y exige revisión real después de guardarlo. Auditar vista previa integral y estilo bibliotecario. |
 | W10 | Envío a curación/publicación según política | Base local: flujo revisión/publicación; depende de política institucional. |
 | W11 | Reserva DOI, embargo y acceso privado a revisores | Base local: DOI Draft/enlaces temporales; pruebas DataCite/HAProxy pendientes. |
 
@@ -114,8 +114,8 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | D03 | Reserva Draft y publicación tras aprobación | Base local: estados persistidos; no enlazar Draft como DOI resoluble. |
 | D04 | Landing permanente, nunca archivo directo | Base local: `/datasets/<id>`; verificar disponibilidad externa institucional. |
 | D05 | DOI conceptual y específico de versión | Base local: workflow/mapper; no reutilizar DOI de versión para contenidos distintos. |
-| D06 | HasVersion/IsVersionOf/IsNewVersionOf/IsPreviousVersionOf | Parcial: relaciones principales existentes; búsqueda dirigida no encontró IsPreviousVersionOf, verificar y completar sincronización de predecesor. |
-| D07 | reserve/publish/updateMetadata/get/createVersion/updateUrl | Parcial: cliente updateMetadata y workflow existentes; operación controlada de cambio URL/infraestructura requiere auditoría específica. |
+| D06 | HasVersion/IsVersionOf/IsNewVersionOf/IsPreviousVersionOf | Implementado local: sincroniza IsPreviousVersionOf del predecesor gestionado, preserva sucesores y relaciones locales y permite reintento sin publicar localmente antes de confirmar. Pruebas mock aprobadas; DataCite real pendiente. |
+| D07 | reserve/publish/updateMetadata/get/createVersion/updateUrl | Base local: operaciones existentes y mantenimiento admin de URLs con vista previa/confirmación contra origen configurado y auditoría. Cuatro pruebas nuevas mock aprobadas; validación institucional y auditoría contractual pendientes. |
 | D08 | Estado, fechas, última sincronización, URL, versión metadatos e historial local | Base local/parcial: registros/eventos DOI; contrastar todos los campos sugeridos y semántica de retirada. |
 | D09 | Secretos solo backend, nunca JS/Git | Base local: properties/despliegue; revisar historial y artefactos con manejo seguro. |
 | D10 | Sufijo generado por DataCite recomendado | Desviación documentada: sufijo UUID estable local para idempotencia; recomendación no obligatoria, requiere transparencia institucional. |

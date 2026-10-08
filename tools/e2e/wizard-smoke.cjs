@@ -268,6 +268,7 @@ async function deposit(page, base, files, mode) {
   await page.waitForSelector('.wizard-panel[data-step="3"]:not([hidden])');
   await page.waitForFunction(() => !document.querySelector('#save-draft').disabled, {timeout:10000});
   const preview = await page.$eval('#preview-content', element => element.textContent);
+  assert(preview.includes('Vista previa de cita (borrador)') && preview.includes('Cita provisional') && preview.includes(title), 'Asistente sin cita de borrador previa o sin título.');
   assert(preview.includes(title) && preview.includes('Ada Ejemplo'), 'La vista previa no muestra los metadatos.');
   if (mode === 'package') {
     assert((await page.$eval('#save-submit', element => element.textContent)).includes('revisar antes de enviar'),
@@ -456,6 +457,11 @@ async function deriveNewVersion(page, base, files, previous) {
   return id;
 }
 async function publicDownloads(base, resource) {
+  const metricsResponse=await fetch(base+'/api/v1/public/metrics');
+  assert(metricsResponse.ok,'Métricas públicas no accesibles.');
+  assert(metricsResponse.headers.get('cache-control').includes('no-store'),'Inventario almacenado en caché.');
+  const metrics=await metricsResponse.json();
+  assert(metrics.publishedVersions>=1 && metrics.definitions.publishedVersions && metrics.scope.includes('COUNTER'), 'Inventario sin datos/definiciones.');
   const help = await fetch(base+'/help.html');
   assert(help.status===200,'La guía de ayuda debe ser pública, sin sesión.');
   const helpHtml = await help.text();
@@ -477,6 +483,19 @@ async function publicDownloads(base, resource) {
     await page.waitForSelector('#files .file-row a');
     assert(await page.evaluate(() => localStorage.getItem('base-repo-token')) === null,
       'La prueba pública heredó una sesión autenticada.');
+    assert(await page.evaluate(()=>document.querySelector('#identity').textContent.includes('Última actualización')), 'Ficha sin última actualización.');
+    await page.evaluate(()=>{
+      const original=URL.createObjectURL;window.originalCreateObjectURL=original;
+      URL.createObjectURL=blob=>{blob.text().then(value=>window.exportedPublicMetadata=JSON.parse(value));return original(blob);};
+      Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.copiedPermanentLink=value;}}});
+    });
+    await page.click('#share-resource');
+    assert(await page.evaluate(id=>window.copiedPermanentLink.endsWith('/datasets/'+id),resource.id),'Enlace compartido no permanente.');
+    await page.click('#export-metadata');
+    await page.waitForFunction(()=>window.exportedPublicMetadata);
+    const exported=await page.evaluate(()=>window.exportedPublicMetadata);
+    assert(exported.schema==='reduniv.public-metadata.v1' && exported.metadata.id===resource.id && exported.metadata.lastUpdate,'Exportación general incompleta.');
+    await page.evaluate(()=>{URL.createObjectURL=window.originalCreateObjectURL;});
     const fileResponse = page.waitForResponse(response => response.url().includes('/file?path='));
     await page.click('#files .file-row a');
     const file = await fileResponse;
@@ -567,6 +586,8 @@ async function verifyMultiuserAccess(page, base, published, otherDraft) {
   let userHeaders={Authorization:`Bearer ${verifiedAccount.token}`};
   assert((await fetch(base+'/api/v1/collections',{headers:userHeaders})).status===403,'Usuario normal puede gestionar colecciones.');
   assert((await fetch(base+'/api/v1/collections',{method:'POST',headers:{...userHeaders,'Content-Type':'application/json'},body:JSON.stringify({title:'No autorizado',kind:'THEMATIC',published:true})})).status===403,'Usuario normal puede crear colecciones.');
+  assert((await fetch(base+'/api/v1/scientific/'+published.id+'/doi/landing-targets',{headers:userHeaders})).status===403,'Usuario accedió a mantenimiento DOI administrativo.');
+  assert((await fetch(base+'/api/v1/scientific/'+published.id+'/doi/refresh-urls',{method:'POST',headers:{...userHeaders,'Content-Type':'application/json'},body:'{}'})).status===403,'Usuario pudo actualizar URLs DOI.');
   const catalogue=await fetch(base+'/api/v1/catalog?q='+encodeURIComponent(published.title), {headers:userHeaders});
   assert(catalogue.ok && (await catalogue.json()).items.some(item=>item.id===published.id),
     'El usuario verificado no ve el dataset compartido de otro autor.');

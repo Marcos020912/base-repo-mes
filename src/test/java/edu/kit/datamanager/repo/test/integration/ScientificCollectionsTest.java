@@ -68,4 +68,29 @@ public class ScientificCollectionsTest {
         assertThrows(ResponseStatusException.class,()->collections.list(true,"INVALID",0,20));
         assertThrows(ResponseStatusException.class,()->collections.datasets(c.id(),true,-1,20));
     }
+    @Autowired private edu.kit.datamanager.repo.service.PublicRepositoryMetricsService metrics;
+    @Test public void metricsExcludeDraftWithdrawnAndOrphanRecords() {
+        long before=metrics.snapshot().publishedVersions();
+        String published=dataset(PublicationStatus.PUBLISHED);
+        dataset(PublicationStatus.DRAFT);dataset(PublicationStatus.WITHDRAWN);
+        var orphan=new ScientificRecord(java.util.UUID.randomUUID().toString());
+        orphan.setStatus(PublicationStatus.PUBLISHED);records.saveAndFlush(orphan);
+        assertEquals(before+1,metrics.snapshot().publishedVersions());
+        var record=records.findById(published).orElseThrow();record.setStatus(PublicationStatus.WITHDRAWN);records.saveAndFlush(record);
+        assertEquals(before,metrics.snapshot().publishedVersions());
+        assertTrue(metrics.snapshot().scope().contains("no son visitas"));
+    }
+    @Test public void metricsDistinguishAccessPolicyAndPrivateCollections() {
+        var initial=metrics.snapshot();
+        String restricted=dataset(PublicationStatus.PUBLISHED);
+        var record=records.findById(restricted).orElseThrow();record.setAccessLevel("RESTRICTED");records.saveAndFlush(record);
+        dataset(PublicationStatus.PUBLISHED);
+        collections.create("Pública vacía","",ScientificCollection.Kind.THEMATIC,true);
+        collections.create("Privada","",ScientificCollection.Kind.INSTITUTIONAL,false);
+        var snapshot=metrics.snapshot();
+        assertEquals(initial.publishedVersions()+2,snapshot.publishedVersions());
+        assertEquals(initial.openPolicyVersions()+1,snapshot.openPolicyVersions());
+        assertEquals(initial.publishedCollections()+1,snapshot.publishedCollections());
+        assertNotNull(snapshot.generatedAt());assertEquals(3,snapshot.definitions().size());
+    }
 }

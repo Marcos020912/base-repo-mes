@@ -117,3 +117,21 @@ async function load() {
 let timer; q.addEventListener('input', () => { state.page = 0; clearTimeout(timer); timer = setTimeout(load, 300); });
 for(const control of [discipline,institution,language,format]) control.addEventListener('input', () => { state.page=0; clearTimeout(timer); timer=setTimeout(load,300); });
 for(const control of [type,access,sort]) control.addEventListener('change', () => { state.page=0; load(); }); load();
+
+async function loadPublicMetrics() {
+  const notice=document.querySelector('#metrics-status');
+  try {
+    const response=await fetch('/api/v1/public/metrics');
+    if(!response.ok)throw new Error('No se pudo consultar el inventario.');
+    const data=await response.json();
+    const list=document.querySelector('#public-metrics');list.replaceChildren();
+    for(const [key,label] of [['publishedVersions','Versiones publicadas'],['openPolicyVersions','Versiones con política abierta'],['publishedCollections','Colecciones públicas']]) {
+      if(!Number.isSafeInteger(data[key])||data[key]<0)throw new Error('Respuesta de inventario inválida.');
+      list.append(text('dt',label),text('dd',String(data[key])));
+    }
+    const definitions=document.querySelector('#metrics-definitions');definitions.replaceChildren();
+    Object.values(data.definitions||{}).forEach(value=>definitions.append(text('li',value)));
+    notice.textContent=`Actualizado: ${new Date(data.generatedAt).toLocaleString()}`;
+  } catch(error) {notice.textContent='Inventario no disponible temporalmente. El catálogo puede seguir utilizándose.';document.querySelector('#public-metrics').replaceChildren();}
+}
+loadPublicMetrics();

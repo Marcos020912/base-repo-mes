@@ -132,3 +132,16 @@ Antes de actualizar una instalación con validación de esquema, hacer copia de
 seguridad y aplicar en mantenimiento la migración revisada
 `docs/migrations/2026-09-scientific-records.sql`, que incluye las dos tablas de
 colecciones. No ejecutar migraciones sobre producción sin autorización.
+
+### Inventario y metadatos públicos
+
+`GET /api/v1/public/metrics` ofrece un inventario actual sin caché, con fecha y
+las definiciones de cada recuento. Cuenta versiones publicadas existentes,
+versiones con política declarada OPEN y colecciones públicas. No cuenta usuarios,
+visitas ni descargas y no representa certificación COUNTER. Borradores, retiradas
+y registros científicos huérfanos se excluyen del número de versiones.
+
+La ficha pública permite copiar su landing permanente, muestra la última
+actualización y exporta sus metadatos públicos como JSON
+`reduniv.public-metadata.v1`. No exporta archivos ni información privada. La
+exportación bibliográfica CSL-JSON sigue disponible por separado.

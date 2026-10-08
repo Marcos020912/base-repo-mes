@@ -131,6 +131,9 @@ public class DoiWorkflowService {
             ScientificRecord previous = science(science.getPreviousResourceId());
             if (previous.getStatus() != PublicationStatus.PUBLISHED || previous.getVersionDoi() == null)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "La versión anterior debe estar publicada con DOI.");
+            if(!managedRegistration("v:"+previous.getResourceId()).getDoi().equalsIgnoreCase(previous.getVersionDoi())
+                    || !ids.conceptualDoi().equalsIgnoreCase(previous.getConceptualDoi()==null?"":previous.getConceptualDoi()))
+                throw new ResponseStatusException(HttpStatus.CONFLICT,"Los DOI de la versión anterior requieren conciliación.");
             versionRelations.add(relation(previous.getVersionDoi(), "IsNewVersionOf"));
         }
         relations.findByResourceIdOrderByIdAsc(resourceId).forEach(item -> versionRelations.add(Map.of(
@@ -156,6 +159,7 @@ public class DoiWorkflowService {
 
         publishRemote("c:" + rootId, ids.conceptualDoi(), concept);
         publishRemote("v:" + resourceId, ids.versionDoi(), version);
+        if(science.getPreviousResourceId()!=null) synchronizePrevious(science.getPreviousResourceId(),ids.versionDoi());
         return transactions.execute(status -> {
             ScientificRecord current = science(resourceId);
             if (current.getStatus() == PublicationStatus.PUBLISHED) return current;
@@ -167,6 +171,77 @@ public class DoiWorkflowService {
             editorialEvents.save(new ScientificRecordEvent(resourceId, actor, "PUBLISHED", ids.versionDoi()));
             return saved;
         });
+    }
+
+    /** Update only relations: published files and all other remote metadata remain untouched. */
+    private void synchronizePrevious(String previousId,String successorDoi) {
+        ScientificRecord previous=science(previousId);
+        DoiRegistration registration=managedRegistration("v:"+previousId);
+        List<Map<String,String>> identifiers=new ArrayList<>();
+        identifiers.add(relation(previous.getConceptualDoi(),"IsVersionOf"));
+        if(previous.getPreviousResourceId()!=null) {
+            String ancestorDoi=science(previous.getPreviousResourceId()).getVersionDoi();
+            if(ancestorDoi!=null)identifiers.add(relation(ancestorDoi,"IsNewVersionOf"));
+        }
+        var successors=new LinkedHashSet<String>();
+        records.findByPreviousResourceId(previousId).stream()
+            .filter(item->item.getStatus()==PublicationStatus.PUBLISHED || item.getStatus()==PublicationStatus.WITHDRAWN)
+            .forEach(item->{if(item.getVersionDoi()!=null)successors.add(item.getVersionDoi());});
+        successors.add(successorDoi);
+        successors.forEach(doi->identifiers.add(relation(doi,"IsPreviousVersionOf")));
+        relations.findByResourceIdOrderByIdAsc(previousId).forEach(item->identifiers.add(Map.of(
+            "relatedIdentifier",item.getIdentifier(),"relatedIdentifierType",item.getIdentifierType().name(),"relationType",item.getRelationType().name())));
+        try {
+            var updated=datacite.updateMetadata(registration.getDoi(),Map.of("relatedIdentifiers",identifiers));
+            if(!"findable".equalsIgnoreCase(updated.state()))
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"DataCite no confirmó relaciones de la versión anterior.");
+            recordSync("v:"+previousId,"UPDATE_RELATIONS","FINDABLE",null);
+        } catch(RuntimeException failure) {
+            recordSync("v:"+previousId,"UPDATE_RELATIONS","ERROR","No se pudo confirmar la relación de sucesión; reintente la publicación.");
+            throw failure;
+        }
+    }
+
+    /** Only the configured public origin is accepted; no arbitrary redirect target from a request. */
+    public record LandingTargets(String versionDoi, String versionUrl, String conceptualDoi, String conceptualUrl) {}
+    public LandingTargets landingTargets(String resourceId) {
+        requireEnabled();
+        ScientificRecord current=science(resourceId);
+        if(current.getStatus()!=PublicationStatus.PUBLISHED)
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Solo versiones publicadas pueden actualizar su landing DOI.");
+        String rootId=root(resourceId);
+        DoiRegistration version=managedRegistration("v:"+resourceId);
+        DoiRegistration concept=managedRegistration("c:"+rootId);
+        if(!version.getDoi().equalsIgnoreCase(current.getVersionDoi()==null?"":current.getVersionDoi())
+                || !concept.getDoi().equalsIgnoreCase(current.getConceptualDoi()==null?"":current.getConceptualDoi()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Los DOI locales requieren conciliación.");
+        return new LandingTargets(version.getDoi(),landing(resourceId).toString(),concept.getDoi(),conceptLanding(rootId).toString());
+    }
+    private DoiRegistration managedRegistration(String key) {
+        DoiRegistration registration=registrations.findById(key).orElseThrow(()->
+            new ResponseStatusException(HttpStatus.CONFLICT,"DOI sin registro automático local; requiere conciliación."));
+        if(!registration.getApiHost().equals(datacite.apiHost()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"El DOI pertenece a otro entorno DataCite.");
+        return registration;
+    }
+    public LandingTargets refreshLandingUrls(String resourceId,LandingTargets confirmed,String actor) {
+        LandingTargets target=landingTargets(resourceId);
+        if(!target.equals(confirmed))throw new ResponseStatusException(HttpStatus.CONFLICT,"La configuración cambió. Revise y confirme de nuevo las URLs.");
+        refreshLanding("v:"+resourceId,target.versionDoi(),target.versionUrl());
+        refreshLanding("c:"+root(resourceId),target.conceptualDoi(),target.conceptualUrl());
+        transactions.executeWithoutResult(status->editorialEvents.save(new ScientificRecordEvent(resourceId,actor,"DOI_URL_UPDATED",target.versionUrl())));
+        return target;
+    }
+    private void refreshLanding(String key,String doi,String url) {
+        try {
+            var updated=datacite.updateUrl(doi,URI.create(url));
+            if(!"findable".equalsIgnoreCase(updated.state()))
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"DataCite no confirmó el estado público del DOI.");
+            recordSync(key,"UPDATE_URL","FINDABLE",null);
+        } catch(RuntimeException failure) {
+            recordSync(key,"UPDATE_URL","ERROR","No se pudo confirmar la URL; reintente la operación para conciliar.");
+            throw failure;
+        }
     }
 
     public DoiStatus status(String resourceId) {
@@ -280,7 +355,7 @@ public class DoiWorkflowService {
         try {
             URI base = URI.create(publicBaseUrl);
             if ("https".equalsIgnoreCase(base.getScheme()) && base.getHost() != null
-                    && base.getRawQuery() == null && base.getRawFragment() == null
+                    && base.getRawUserInfo() == null && base.getRawQuery() == null && base.getRawFragment() == null
                     && (base.getPath() == null || base.getPath().isBlank() || "/".equals(base.getPath())))
                 return base.resolve(path);
         } catch (IllegalArgumentException ignored) { /* report invalid configuration consistently */ }

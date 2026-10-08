@@ -61,6 +61,17 @@ public class DoiWorkflowController {
         return workflow.publish(id, username());
     }
 
+    @GetMapping("/{id}/doi/landing-targets")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRATOR')")
+    public DoiWorkflowService.LandingTargets landingTargets(@PathVariable String id) {return workflow.landingTargets(id);}
+
+    @PostMapping("/{id}/doi/refresh-urls")
+    @PreAuthorize("hasAuthority('ROLE_ADMINISTRATOR')")
+    public DoiWorkflowService.LandingTargets refreshUrls(@PathVariable String id,
+            @org.springframework.web.bind.annotation.RequestBody DoiWorkflowService.LandingTargets confirmed) {
+        return workflow.refreshLandingUrls(id,confirmed,username());
+    }
+
     private void requireOwnerOrCurator(String id) {
         if (!curator()) requireOwner(id);
     }
