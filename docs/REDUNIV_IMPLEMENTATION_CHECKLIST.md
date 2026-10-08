@@ -27,6 +27,12 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       la curación muestra si el envío tuvo éxito o falló. Un error SMTP no
       convierte una auditoría de archivos completada en fallida. La salida
       de correo tiene tiempos máximos configurados en despliegues nuevos.
+- [x] Ensayo aislado de migración y restauración en
+      `tools/migrations/rehearse.sh`: clúster PostgreSQL efímero por socket
+      local, migración aplicada dos veces, comparación de esquema y de datos
+      antes/después de `pg_dump`/`pg_restore`, y copia/restauración de archivos.
+      Pasó con fixture y con un dump/árbol de archivos de prueba. Aún falta
+      repetirlo con una copia real de staging y arrancar la app restaurada.
 - [x] Cliente backend DataCite y mapeo de metadatos obligatorios y opcionales
       seguros (licencia, materias, institución/ROR y ORCID cuando hay un solo
       autor), probados contra HTTP simulado; desactivados por defecto y sin
@@ -131,7 +137,8 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 
 ## Pendiente o sujeto a validación
 
-- [ ] Validar migración/retroceso con copia de PostgreSQL y archivos en entorno de prueba.
+- [ ] Validar migración/retroceso con copia **real** de PostgreSQL y archivos
+      de staging, medir tiempos y arrancar la aplicación restaurada.
 - [ ] Probar funcionalmente con usuarios reales y revisar accesibilidad WCAG 2.2 AA.
 - [ ] Probar el nuevo asistente en un navegador conectado a una instancia de
       prueba: carga de Markdown/ZIP, fallos parciales, envío y nueva versión.

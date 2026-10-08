@@ -105,7 +105,11 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
 
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
-probar restauración. No desplegar esta rama directamente en producción.
+probar restauración. `tools/migrations/rehearse.sh` ensaya localmente
+idempotencia, dump/restauración y archivos en PostgreSQL efímero; pasó con
+fixture y snapshot de prueba, pero no sustituye una copia real de staging ni
+el arranque de la app restaurada. No desplegar esta rama directamente en
+producción.
 Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID, RO-Crate, PROV-O, BagIt, ZIP público, alertas SMTP y marcadores básicos de accesibilidad pasan. El 8 de octubre de 2026 se verificó la **suite completa: 447 pruebas, 0 fallos** con JDK 21 y perfil `complete`, reiniciando procesos cada cinco clases; el JAR también compila sin red. Dos pruebas heredadas `testVariousContentDownload` dejaron de consultar `www.heise.de` y usan un servidor HTTP local efímero. El RO-Crate generado sigue pasando los requisitos obligatorios de `roc-validator`; un artefacto BagIt con nombre simple fue validado por `bagit-python` 1.9.0. Esto no sustituye las pruebas funcionales, de accesibilidad, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
