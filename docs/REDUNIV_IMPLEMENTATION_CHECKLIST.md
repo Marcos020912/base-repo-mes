@@ -262,3 +262,5 @@ heredados antes de activarla.
 - [x] Monitor de subidas: prueba HTTP local de multipart/201, rechazo 400 con mensaje legible y cancelación XHR con cierre de conexión después de que la petición llega al servidor. No valida rollback del almacenamiento.
 - [x] Monitor accesible por teclado: foco al abrir, botón Cerrar/Escape y retorno al activador. Prueba Chrome de foco y aria-expanded pasó; panel no modal, sin atrapamiento de foco.
 - [x] El monitor distingue archivo enviado de confirmación del servidor: mantiene petición activa/progreso indeterminado hasta respuesta satisfactoria. Prueba HTTP con respuesta retenida y cancelación aprobada.
+- [x] Curación tolera informes de calidad sin blockers; smoke Chrome/JAR/H2 valida vista previa completa y descarga de revisión monitorizada.
+- [x] Archivos de revisión y paquetes de preservación usan monitor de transferencias autenticado. El paquete de preservación necesita aún prueba específica de descarga monitorizada.

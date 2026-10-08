@@ -71,3 +71,8 @@ permite seguir navegando por el resto de la página.
 Cuando termina de enviar los bytes y el servidor aún no responde, se comprueba
 el estado «esperando confirmación del servidor» y que siga siendo cancelable.
 El fixture HTTP declara UTF-8 explícitamente para validar mensajes en español.
+
+El flujo del asistente entra además en Curación para abrir la vista previa de
+un depósito completo (blockers puede omitirse en JSON) y descargar un archivo
+mediante el monitor autenticado. La descarga monitorizada del paquete de
+preservación no está cubierta por este escenario.

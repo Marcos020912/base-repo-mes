@@ -27,7 +27,8 @@ async function preview(id, container, page = 0) {
     container.replaceChildren();
     const heading = document.createElement('h3'); heading.textContent = metadata.title;
     const byline = document.createElement('p'); byline.textContent = `${metadata.authors.join(', ') || 'Autoría no informada'} · ${metadata.publisher || 'Institución no informada'} · ${metadata.year || 'Año no informado'}`;
-    const validation = document.createElement('p'); validation.textContent = `Calidad: ${quality.completionPercent} %. ${quality.blockers.length ? `Faltan: ${quality.blockers.join(', ')}` : 'Requisitos automáticos completos.'}`;
+    const blockers = quality.blockers || [];
+    const validation = document.createElement('p'); validation.textContent = `Calidad: ${quality.completionPercent} %. ${blockers.length ? `Faltan: ${blockers.join(', ')}` : 'Requisitos automáticos completos.'}`;
     const descriptionHeading = document.createElement('h4'); descriptionHeading.textContent = 'description.md (vista segura de texto)';
     const description = document.createElement('pre'); description.className = 'review-description'; description.textContent = metadata.markdown;
     const filesHeading = document.createElement('h4'); filesHeading.textContent = 'Archivos para revisar';
@@ -37,10 +38,7 @@ async function preview(id, container, page = 0) {
       const label = document.createElement('span'); label.textContent = `${file.path} · ${file.size} bytes${file.sha256 ? ` · SHA-256 ${file.sha256}` : ''}`;
       const download = action('Descargar', 'secondary', async () => {
         try {
-          const response = await fetch(`/api/v1/scientific/review/${encodeURIComponent(id)}/file?path=${encodeURIComponent(file.path)}`, { headers: auth.headers() });
-          if (!response.ok) throw new Error('No se pudo descargar el archivo de revisión.');
-          const url = URL.createObjectURL(await response.blob()); const anchor = document.createElement('a');
-          anchor.href = url; anchor.download = file.path.split('/').pop(); anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+          await transfers.download(`/api/v1/scientific/review/${encodeURIComponent(id)}/file?path=${encodeURIComponent(file.path)}`, file.path.split('/').pop(), file.path);
         } catch (error) { toast.error(error.message); }
       });
       const verify = action('Comprobar SHA-256', 'secondary', async () => {
@@ -61,11 +59,7 @@ async function preview(id, container, page = 0) {
     }
     const packageButton = action('Descargar paquete de preservación', 'secondary', async () => {
       try {
-        const response = await fetch(`/api/v1/scientific/preservation/${encodeURIComponent(id)}/package`, { headers: auth.headers() });
-        if (!response.ok) throw new Error('No se pudo preparar el paquete; comprueba que todos los archivos estén presentes.');
-        const url = URL.createObjectURL(await response.blob());
-        const link = document.createElement('a'); link.href = url; link.download = `preservation-${id}.zip`; link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        await transfers.download(`/api/v1/scientific/preservation/${encodeURIComponent(id)}/package`, `preservation-${id}.zip`, 'Paquete de preservación');
       } catch (error) { toast.error(error.message); }
     });
     const historyButton = action('Ver procedencia de archivos', 'secondary', async () => {

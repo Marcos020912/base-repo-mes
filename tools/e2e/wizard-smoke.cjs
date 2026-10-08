@@ -418,6 +418,13 @@ async function main() {
       return (await response.json()).status;
     });
     assert(submitted === 'IN_REVIEW', `El depósito no llegó a revisión: ${submitted}`);
+    await page.goto(base + '/reviews.html', {waitUntil:'load'});
+    await page.waitForFunction(() => [...document.querySelectorAll('#reviews-list button')].some(button => button.textContent === 'Revisar metadatos y archivos'));
+    await page.evaluate(() => [...document.querySelectorAll('#reviews-list button')].find(button => button.textContent === 'Revisar metadatos y archivos').click());
+    await page.waitForFunction(() => document.querySelector('#reviews-list').textContent.includes('Requisitos automáticos completos.'));
+    await page.evaluate(() => [...document.querySelectorAll('.review-files button')].find(button => button.textContent === 'Descargar').click());
+    await page.waitForFunction(() => document.querySelector('.transfer-list')?.textContent.includes('Descarga preparada'));
+    process.stdout.write('Curación OK: vista previa sin blockers y descarga monitorizada.\n');
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
     await publicDownloads(base, markdown);
