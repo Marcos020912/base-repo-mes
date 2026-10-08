@@ -7,7 +7,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 ## Requisitos trazados a los tres documentos
 
 - [ ] **S01 — Rotar contraseña expuesta en revisión**. Institucional: no modificar cuentas reales sin autorización.
-- [ ] **S02 — Suite automática corregida y ejecutable**. Base local: Gradle JUnit4, E2E y axe; conservar alcance/fecha exactos de cada ejecución.
+- [x] **S02 — Suite automática corregida y ejecutable**. Implementado local: regresión Java21/JUnit4 offline, E2E PostgreSQL18/SMTP/Chrome/restauración y axe ejecutables; fechas/alcance exactos por bloque.
 - [ ] **S03 — Eliminar secretos/credenciales predeterminados**. Base local: configuración de despliegue/JWT; auditar también historia Git y artefactos reales.
 - [ ] **S04 — Autorización por recurso, no solo autenticación**. Base local: endpoints científicos y E2E edición ajena denegada; ampliar auditoría de todos los endpoints.
 - [ ] **S05 — Rate limiting, auditoría y políticas seguras**. Base local: limitador PostgreSQL y plantilla HAProxy; prueba real multiinstancia y rotación pendientes.
@@ -53,7 +53,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [ ] **A02 — Control de identificadores, vocabularios y perfiles**. Parcial: listas configurables e identidad; administración de perfiles/vocabularios y aprobación no acreditadas.
 - [x] **A03 — Licencias, privacidad y datos sensibles en curación**. Implementado local: decisión de curación con notas privadas y revisión concurrente; bloquea publicación sensible sin aprobación, revoca al devolver a borrador. E2E aprobado; no sustituye aprobación jurídica institucional.
 - [ ] **A04 — Usuarios, roles e integraciones DOI/OIDC/correo**. Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID.
-- [ ] **A05 — Estado almacenamiento/fixity, auditoría/reportes operativos**. Parcial: auditorías de integridad; consola y reportes operativos completos pendientes de alcance.
+- [x] **A05 — Estado almacenamiento/fixity, auditoría/reportes operativos**. Implementado local: consola autorizada con volumen local, inventario técnico/fixity, veinte auditorías e informe JSON fechado. Tests/E2E aprobados; no sustituye monitorización y backup institucional.
 - [x] **A06 — Metadatos multilingües**. Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI.
 - [ ] **A07 — Internacionalización sin textos incrustados en JS**. Pendiente: strings españoles siguen en scripts; acordar idiomas, separar catálogos y traducir estados dinámicos.
 - [ ] **A08 — Paquetes OAIS SIP/AIP/DIP**. Parcial: BagIt/paquete curatorial/ZIP público; perfiles institucionales completos no acreditados.
@@ -117,3 +117,9 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - API autenticada y UI en Mis depósitos; paginación en servidor, inspección de calidad solo por página. Tres tests y E2E de ámbito, paginación y UI aprobados; axe51 estados0.
 - `docs/DEPOSIT_TASKS.md` explica estados, privacidad y límites de escala sin presentar checklist como aprobación.
 - Regresión tareas:47 suites485 pruebas0fallos/errores/omitidas; E2EPG18SMTPChrome/restauración completo aprobado.
+
+### Consola operativa
+- Medición FileStore del volumen configurado sin rutas, no compatible/no disponible distintos de cero; dos tests aprobados.
+- E2E PG18SMTPChrome/restauración: consulta y exportJSON con esquema/fecha, permisos USER403/anónimo401 y no-store; aprobado. Axe53estados0.
+- `docs/OPERATIONS_CONSOLE.md` distingue inventario técnico/últimos estados de verificación de métricas públicas y backups.
+- Regresión operaciones:48 suites487 pruebas0fallos/errores/omitidas; E2E completo y restauración aprobados.

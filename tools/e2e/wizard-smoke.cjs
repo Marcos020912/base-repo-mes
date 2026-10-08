@@ -642,6 +642,19 @@ async function verifyMultiuserAccess(page, base, published, otherDraft) {
   await page.goto(base+'/my-datasets.html',{waitUntil:'load'});await page.waitForFunction(()=>document.querySelector('#task-list article'));
   assert(await page.$eval('#task-status',n=>n.textContent.includes('depósitos activos')),'Vista no informa tareas activas.');
   process.stdout.write('Tareas OK: listado del autor, checklist, paginación y ausencia de datos ajenos.\n');
+  assert((await fetch(base+'/api/v1/scientific/preservation/storage',{headers:userHeaders})).status===403,'Usuario normal consultó volumen de servidor.');
+  assert((await fetch(base+'/api/v1/scientific/preservation/storage')).status===401,'Estado de volumen accesible anónimamente.');
+  const storageResponse=await fetch(base+'/api/v1/scientific/preservation/storage',{headers:{Authorization:`Bearer ${adminTasksToken}`}});
+  assert(storageResponse.ok&&storageResponse.headers.get('cache-control').includes('no-store'),'Estado operativo no protegido de caché.');
+  const volume=await storageResponse.json();assert(volume.status==='AVAILABLE'&&volume.totalBytes>0&&volume.usableBytes>=0&&!JSON.stringify(volume).includes('/tmp/'),'Medición de volumen inválida o ruta expuesta.');
+  await page.goto(base+'/operations.html',{waitUntil:'load'});await page.waitForSelector('#export-operations:not([disabled])');
+  assert(await page.$eval('#storage-summary',n=>n.textContent.includes('Disponible para la aplicación')),'Panel no informa capacidad.');
+  await page.evaluate(()=>{window.originalOperationsObjectURL=URL.createObjectURL;URL.createObjectURL=blob=>{blob.text().then(value=>window.exportedOperations=JSON.parse(value));return window.originalOperationsObjectURL(blob);};});
+  await page.click('#export-operations');await page.waitForFunction(()=>window.exportedOperations);
+  const operationalReport=await page.evaluate(()=>window.exportedOperations);assert(operationalReport.schema==='reduniv-operational-report/1'&&operationalReport.measuredAt&&operationalReport.storage.status==='AVAILABLE'&&Array.isArray(operationalReport.audits),'Informe exportado incompleto.');
+  await page.evaluate(()=>{URL.createObjectURL=window.originalOperationsObjectURL;});
+  process.stdout.write('Operaciones OK: volumen local, informe JSON y autorización/caché.\n');
+
 
   assert((await fetch(base+'/api/v1/collections',{headers:userHeaders})).status===403,'Usuario normal puede gestionar colecciones.');
   assert((await fetch(base+'/api/v1/collections',{method:'POST',headers:{...userHeaders,'Content-Type':'application/json'},body:JSON.stringify({title:'No autorizado',kind:'THEMATIC',published:true})})).status===403,'Usuario normal puede crear colecciones.');

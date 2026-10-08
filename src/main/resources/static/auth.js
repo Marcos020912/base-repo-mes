@@ -52,3 +52,7 @@ if (['CURATOR','ADMINISTRATOR'].includes(signedInUser?.role)) {
     const link=document.createElement('a');link.href='collections.html?manage=true';link.textContent='Colecciones';nav.append(link);
   });
 }
+
+if (['CURATOR','ADMINISTRATOR'].includes(signedInUser?.role)) {
+  document.querySelectorAll('.sidebar nav').forEach(nav=>{if(!nav.querySelector('a[href="operations.html"]')){const link=document.createElement('a');link.href='operations.html';link.textContent='Estado operativo';nav.append(link);}});
+}

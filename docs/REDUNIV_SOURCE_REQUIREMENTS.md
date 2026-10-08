@@ -26,7 +26,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | ID | Requisito | Estado / evidencia / siguiente acción |
 |---|---|---|
 | S01 | Rotar contraseña expuesta en revisión | Institucional: no modificar cuentas reales sin autorización. |
-| S02 | Suite automática corregida y ejecutable | Base local: Gradle JUnit4, E2E y axe; conservar alcance/fecha exactos de cada ejecución. |
+| S02 | Suite automática corregida y ejecutable | Implementado local: Gradle JUnit4, E2E PostgreSQL18/SMTP/Chrome/restauración y axe ejecutables; evidencia por bloque en plan. No sustituye validación externa. |
 | S03 | Eliminar secretos/credenciales predeterminados | Base local: configuración de despliegue/JWT; auditar también historia Git y artefactos reales. |
 | S04 | Autorización por recurso, no solo autenticación | Base local: endpoints científicos y E2E edición ajena denegada; ampliar auditoría de todos los endpoints. |
 | S05 | Rate limiting, auditoría y políticas seguras | Base local: limitador PostgreSQL y plantilla HAProxy; prueba real multiinstancia y rotación pendientes. |
@@ -92,7 +92,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | A02 | Control de identificadores, vocabularios y perfiles | Parcial: listas configurables e identidad; administración de perfiles/vocabularios y aprobación no acreditadas. |
 | A03 | Licencias, privacidad y datos sensibles en curación | Implementado local: revisión privada con control concurrente, aprobación obligatoria y revocación al devolver borrador; tests y E2E aprobados. Validación institucional pendiente. |
 | A04 | Usuarios, roles e integraciones DOI/OIDC/correo | Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID. |
-| A05 | Estado almacenamiento/fixity, auditoría/reportes operativos | Parcial: auditorías de integridad; consola y reportes operativos completos pendientes de alcance. |
+| A05 | Estado almacenamiento/fixity, auditoría/reportes operativos | Implementado local: consola CURATOR/ADMIN de volumen local, inventario técnico/fixity y veinte auditorías con informe JSON fechado; tests/E2E aprobados. No equivale a monitorización/backup institucional. |
 | A06 | Metadatos multilingües | Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI. |
 | A07 | Internacionalización sin textos incrustados en JS | Pendiente: strings españoles siguen en scripts; acordar idiomas, separar catálogos y traducir estados dinámicos. |
 | A08 | Paquetes OAIS SIP/AIP/DIP | Parcial: BagIt/paquete curatorial/ZIP público; perfiles institucionales completos no acreditados. |
