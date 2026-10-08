@@ -193,3 +193,10 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Mensajes externos se desregistran; aviso de cuenta restringida conserva enlace de soporte al cambiar idioma. Guard runtime hoja y poda de nodos retirados.
 - Fixture Chrome confirma marcador tardío intacto y enlace de cuenta restringida con respuesta API simulada; auth, historial público/privado y axe66estados0 aprobados. No sustituye prueba de autorización backend.
 - JAR reconstruido y E2E PostgreSQL/SMTP/Chrome/restauración completo aprobado después del registro de propiedad. No se modificaron servicios/productivo ni se publicaron ramas.
+
+### A07 — Contenido de administración de usuarios
+
+- Pantalla de usuarios, formularios, estados y confirmación de eliminación traducidos es/en; nombres de cuentas y valores de roles se conservan.
+- Parámetros de traducción interpolados solo como texto, nunca HTML; bindings siguen siendo explícitos y de nodos hoja.
+- Cuatro pruebas de catálogo, fixture Chrome de usuarios (formularios conservados, confirmación con nombre especial, una sola consulta), regresión de autenticación y axe66estados0 aprobados.
+- Pendiente: contenido completo de catálogo, depósito, fichas y restantes pantallas administrativas. A07 no se considera terminado. Sin cambios de backend ni publicación.

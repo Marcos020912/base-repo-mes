@@ -5,10 +5,10 @@
   let locale='es';
   try{const stored=localStorage.getItem('reduniv-ui-locale');if(Object.hasOwn(catalogues,stored))locale=stored;}catch{/* Storage can be disabled. */}
   for(const catalogue of Object.values(catalogues))Object.freeze(catalogue);
-  function t(key){const value=catalogues[locale][key];if(typeof value!=='string')throw new Error(`Unknown UI catalogue key: ${key}`);return value;}
-  function set(target,key){
+  function t(key,params={}){const value=catalogues[locale][key];if(typeof value!=='string')throw new Error(`Unknown UI catalogue key: ${key}`);return value.replace(/\{(\w+)\}/g,(_,name)=>{if(!Object.hasOwn(params,name))throw new Error(`Missing UI parameter: ${name}`);return String(params[name]);});}
+  function set(target,key,params={}){
     if(target.children.length)throw new Error('UI text bindings require a leaf node');
-    const value=t(key);textBindings.set(target,key);target.dataset.i18n=key;target.lang=locale;target.textContent=value;
+    const value=t(key,params);textBindings.set(target,{key,params:{...params}});target.dataset.i18n=key;target.lang=locale;target.textContent=value;
   }
   function attribute(target,name,key){
     if(!['alt','aria-label'].includes(name))throw new Error('Unsupported UI attribute binding');
@@ -20,7 +20,7 @@
   function showError(target,failure){if(failure.i18nKey)set(target,failure.i18nKey);else plain(target,failure.message);}
   function render(){
     if(document.documentElement.hasAttribute('data-ui-page-localized'))document.documentElement.lang=locale;
-    for(const [target,key] of textBindings){if(target.isConnected)set(target,key);else textBindings.delete(target);}
+    for(const [target,binding] of textBindings){if(target.isConnected)set(target,binding.key,binding.params);else textBindings.delete(target);}
     for(const [target,values] of attributeBindings){if(target.isConnected)for(const [name,key] of values)attribute(target,name,key);else attributeBindings.delete(target);}
     pickers.forEach(select=>select.value=locale);
   }

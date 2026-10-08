@@ -24,7 +24,7 @@ class CatalogueTest(unittest.TestCase):
     def test_migrated_auth_bindings_reference_known_keys(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
         used=set()
-        for page in ('login','register','verify','account'):
+        for page in ('login','register','verify','account','users'):
             parser=Bindings();parser.feed((STATIC/f'{page}.html').read_text());used.update(parser.keys)
             script=(STATIC/f'{page}.js').read_text()
             used.update(re.findall(r"uiI18n\.(?:t|error)\('([^']+)'",script))
