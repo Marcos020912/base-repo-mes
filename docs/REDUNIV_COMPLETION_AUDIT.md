@@ -4,7 +4,15 @@
 el informe, prototipo HTML ni especificación DOI del usuario. No autoriza
 merge, push o despliegue; el trabajo permanece en `develop-reduniv`.
 
-## Fuentes y límites
+## Actualización: fuentes recuperadas el 2026-10-08
+
+El usuario volvió a aportar los tres documentos sin sufijos `(1)`. Se han leído
+y registrado sus SHA-256 en [la matriz de requisitos](REDUNIV_SOURCE_REQUIREMENTS.md).
+La ausencia de fuentes descrita abajo corresponde a la auditoría anterior, no
+al estado actual. El objetivo sigue sin cierre: la matriz detecta faltantes
+adicionales de implementación, no solo validaciones institucionales.
+
+## Fuentes y límites (estado histórico anterior)
 
 Se comprobaron nuevamente estas rutas; ninguna está disponible:
 

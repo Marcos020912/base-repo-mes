@@ -167,3 +167,7 @@ main:focus { outline:none; }
 }
 
 .transfer-disk-option{display:flex;align-items:flex-start;gap:8px;margin:12px 0;font-weight:400;line-height:1.4}.transfer-disk-option input{width:auto;flex:none;margin-top:3px;padding:0}
+
+.public-nav{flex-wrap:wrap}.public-main pre{max-width:100%;overflow:auto;padding:12px;background:#eef4fb;border-radius:8px}.public-main section[id]{scroll-margin-top:20px}
+
+.help-toc a{display:inline-block;min-height:28px;padding:5px 2px}.help-toc li{margin:4px 0}

@@ -4,6 +4,13 @@ Estado de `develop-reduniv` respecto al informe y prototipo. Una casilla marcada
 significa implementada y probada en desarrollo, **no** autorizada para producción.
 No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada ítem.
 
+## Alcance recuperado de las fuentes originales
+
+Ver [matriz de requisitos](REDUNIV_SOURCE_REQUIREMENTS.md). La revisión del PDF,
+HTML y Markdown DOI recuperados detectó faltantes adicionales: colecciones,
+métricas públicas, metadatos multilingües, cobertura, mantenimiento DOI y
+contratos OpenAPI, entre otros. Las casillas históricas no cierran esos requisitos.
+
 ## Implementado en la rama
 
 - [x] Monitor de transferencias en el asistente, fichas autenticada/pública,
@@ -302,3 +309,4 @@ heredados antes de activarla.
 - [x] Prueba aislada de transferencias carga ahora CSS real y viewport móvil de 320 px: panel y opción de disco quedan dentro del viewport, sin desbordamiento horizontal; axe del panel con estilos reales cero infracciones. Selector nativo y WCAG manual siguen pendientes.
 - [x] E2E Chrome + JAR + PostgreSQL18 + SMTP local: ficha pública anónima activa guardado directo, cierra panel y guarda CSV en OPFS real con selector simulado; bytes iguales a respuesta backend y «Archivo guardado» en ficha/monitor. La descarga tradicional sigue «Descarga preparada». Regresión conjunta pasó; no valida selector del SO.
 - [x] Guía DOI corregida para el modelo actual de ORCID y afiliaciones por creador (sin atribuir el campo heredado a coautores). Se ejecutaron las seis pruebas de DataCiteMetadataMapperTest, todas aprobadas: autoría/ORCID/ROR, afiliaciones múltiples, financiación, campos obligatorios y rechazo de publicación incompleta. No prueba DataCite institucional.
+- [x] Guía pública de uso/citación `help.html`, enlazada desde catálogo y ficha: depósitos, DOI/versión, descargas, licencia/acceso, SHA-256, soporte y aviso de políticas formales pendientes. GET anónimo200 verificado contra JAR real en E2E/H2. Axe45 estados,0 infracciones automáticas tras corregir tamaño de enlaces del índice; no cierra políticas institucionales ni WCAG manual.

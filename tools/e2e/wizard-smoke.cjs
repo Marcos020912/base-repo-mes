@@ -456,6 +456,11 @@ async function deriveNewVersion(page, base, files, previous) {
   return id;
 }
 async function publicDownloads(base, resource) {
+  const help = await fetch(base+'/help.html');
+  assert(help.status===200,'La guía de ayuda debe ser pública, sin sesión.');
+  const helpHtml = await help.text();
+  assert(helpHtml.includes('Citar una versión') && helpHtml.includes('pendiente de aprobación/publicación'),
+    'Guía incompleta o política institucional presentada como aprobada.');
   const context = await browser.createBrowserContext();
   try {
     const page = await context.newPage();
