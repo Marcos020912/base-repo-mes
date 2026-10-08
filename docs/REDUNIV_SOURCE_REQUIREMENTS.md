@@ -72,7 +72,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 
 | ID | Requisito | Estado / evidencia / siguiente acción |
 |---|---|---|
-| W01 | Mis depósitos y tareas de metadatos pendientes | Parcial: Mis datasets/checklist por ficha; comprobar vista consolidada de tareas. |
+| W01 | Mis depósitos y tareas de metadatos pendientes | Implementado local: cola consolidada del autor paginada con estado, checklist, pendientes y siguiente acción; tres tests y E2E multiusuario/UI aprobados. Rendimiento institucional pendiente. |
 | W02 | Etapas: identidad/tipo y autores/organizaciones | Base local: asistente de cuatro pantallas agrupa operaciones; comprobar cobertura de nueve etapas funcionales del informe. |
 | W03 | Búsqueda ORCID/ROR | Parcial: búsqueda ROR y OAuth ORCID; no atribuir identidad mediante búsqueda por nombre sin confirmación. |
 | W04 | Descripción/metodología y archivos/documentación | Base local: asistente y Markdown/ZIP; validar resumen y cobertura requeridos. |

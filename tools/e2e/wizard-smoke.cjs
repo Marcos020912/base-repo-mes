@@ -633,6 +633,16 @@ async function collectionsFlow(page, base, published, draft) {
 async function verifyMultiuserAccess(page, base, published, otherDraft) {
   if (!verifiedAccount) return;
   let userHeaders={Authorization:`Bearer ${verifiedAccount.token}`};
+  const adminTasksToken=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const taskResponse=await fetch(base+'/api/v1/my-deposit-tasks?page=0&size=1',{headers:{Authorization:`Bearer ${adminTasksToken}`}});
+  assert(taskResponse.ok,'No se pudieron consultar tareas del autor.');const tasks=await taskResponse.json();assert(tasks.total>1&&tasks.items.length===1&&tasks.pages===tasks.total,'Paginación de tareas inválida.');
+  assert(tasks.items.every(item=>['DRAFT','IN_REVIEW'].includes(item.status)&&item.resourceId!==published.id),'Tareas incluye publicado.');
+  const otherTasks=await fetch(base+'/api/v1/my-deposit-tasks',{headers:userHeaders});assert(otherTasks.ok&&(await otherTasks.json()).total===0,'Usuario ajeno recibió tareas privadas.');
+  assert((await fetch(base+'/api/v1/my-deposit-tasks')).status===401,'Tareas accesibles anónimamente.');
+  await page.goto(base+'/my-datasets.html',{waitUntil:'load'});await page.waitForFunction(()=>document.querySelector('#task-list article'));
+  assert(await page.$eval('#task-status',n=>n.textContent.includes('depósitos activos')),'Vista no informa tareas activas.');
+  process.stdout.write('Tareas OK: listado del autor, checklist, paginación y ausencia de datos ajenos.\n');
+
   assert((await fetch(base+'/api/v1/collections',{headers:userHeaders})).status===403,'Usuario normal puede gestionar colecciones.');
   assert((await fetch(base+'/api/v1/collections',{method:'POST',headers:{...userHeaders,'Content-Type':'application/json'},body:JSON.stringify({title:'No autorizado',kind:'THEMATIC',published:true})})).status===403,'Usuario normal puede crear colecciones.');
   assert((await fetch(base+'/api/v1/scientific/'+published.id+'/doi/landing-targets',{headers:userHeaders})).status===403,'Usuario accedió a mantenimiento DOI administrativo.');

@@ -173,3 +173,10 @@ main:focus { outline:none; }
 .help-toc a{display:inline-block;min-height:28px;padding:5px 2px}.help-toc li{margin:4px 0}
 
 .collection-check{display:flex;align-items:center;gap:8px;margin:12px 0}.collection-check input{width:auto}.resource-card h2 a{overflow-wrap:anywhere}#collection-actions[hidden]{display:none}#kind-filter-label{max-width:320px;margin:16px 0}#collection-form{display:grid;gap:16px}
+
+/* Consolidated author tasks keep long titles and checklist entries inside cards. */
+#task-list > article { min-width:0; }
+#task-list h3 { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+#task-list p, #task-list li { overflow-wrap:anywhere; }
+#deposit-tasks { margin-bottom:2rem; }
+#deposit-tasks nav { display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem; }

@@ -320,3 +320,11 @@ heredados antes de activarla.
 - [x] Regresión del bloque público/DOI:45 suites469 pruebas Java,0 fallos/errores/omitidas; E2E PG18+SMTP+Chrome+restauración repetido aprobado, incluidos mantenimiento DOI denegado a USER y cita provisional. Axe49estados0. Sin servicios externos ni producción.
 - [x] F08/A06: resumen estructurado, cobertura temporal/geográfica y traducciones declaradas de título/resumen BCP47 por versión. Editor compartido con etiquetas/validación, creación/edición/autoguardado/vista previa y ficha pública; DataCite exporta títulos traducidos, abstracts/métodos, ubicación textual y fechas declaradas. Cuatro nuevas pruebas de controller, una JPA y una mapper aprobadas; E2E PG18+SMTP+Chrome+restauración aprobado. Axe49estados0; internacionalización UI sigue pendiente.
 - [x] Regresión completa tras metadatos estructurados/multilingües:45 suites475 pruebas Java,0 fallos/errores/omitidas; E2E PG18+SMTP+Chrome+restauración aprobado. Prueba ZIP desplaza imagen lazy al viewport antes de esperar carga (la ficha ahora es más alta); no se cambió lazy loading ni se aumentaron tiempos para ocultarlo.
+
+### Privacidad editorial (2026-10-08)
+- [x] Declaración privada de datos personales/confidenciales y medidas del autor en borrador.
+- [x] Revisión explícita de curación, control concurrente y revocación al devolver a borrador.
+- [x] Acceso restringido y aprobación obligatorios para publicación sensible manual/DataCite.
+- [x] Notas excluidas de ficha pública y autoguardado del navegador.
+- [x] Flag reutilizable de obligatoriedad en deploy; compatibilidad explícita con legado sin falsa clasificación.
+- [x] Regresión46 suites482 pruebas; E2E PostgreSQL18/SMTP/Chrome/restauración; axe51estados0. No equivale a validación jurídica ni certificación de accesibilidad.

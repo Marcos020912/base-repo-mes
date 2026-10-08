@@ -38,7 +38,7 @@ Cada casilla se marca únicamente con implementación y evidencia. Las validacio
 - [x] **C07 — Colecciones temáticas e institucionales**. Implementado local: colecciones temáticas/institucionales persistentes, gestión curador/admin con modales y catálogo público paginado solo PUBLISHED. Cuatro pruebas JPA y E2E PostgreSQL/SMTP/Chrome/restauración aprobados; no duplica ni elimina datasets.
 - [ ] **C08 — Políticas, ayuda y guía de citación**. Parcial: nueva `help.html` ofrece guía y condiciones técnicas; políticas institucionales formales aún no aprobadas.
 - [ ] **C09 — Métricas públicas con definiciones transparentes**. Parcial: inventario público real de versiones PUBLISHED, política OPEN y colecciones públicas con definiciones/fecha; JPA y E2E aprobados. Uso/descargas y metodología COUNTER/DataCite aún pendientes.
-- [ ] **W01 — Mis depósitos y tareas de metadatos pendientes**. Parcial: Mis datasets/checklist por ficha; comprobar vista consolidada de tareas.
+- [x] **W01 — Mis depósitos y tareas de metadatos pendientes**. Implementado local: cola del autor paginada con estado, checklist, explicaciones y siguiente acción; excluye publicados/retirados/huérfanos y datos ajenos. Tres tests y E2E multiusuario/UI aprobados. Rendimiento institucional pendiente.
 - [ ] **W02 — Etapas: identidad/tipo y autores/organizaciones**. Base local: asistente de cuatro pantallas agrupa operaciones; comprobar cobertura de nueve etapas funcionales del informe.
 - [ ] **W03 — Búsqueda ORCID/ROR**. Parcial: búsqueda ROR y OAuth ORCID; no atribuir identidad mediante búsqueda por nombre sin confirmación.
 - [ ] **W04 — Descripción/metodología y archivos/documentación**. Base local: asistente y Markdown/ZIP; validar resumen y cobertura requeridos.
@@ -112,3 +112,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Siete pruebas nuevas de servicio/guardas y E2E real de modales, permisos y publicación restringida; axe51 estados sin infracciones automáticas.
 - Reglas y límites documentados en `docs/PRIVACY_WORKFLOW.md`.
 - Regresión privacidad:46 suites482 pruebas,0 fallos/errores/omitidas; E2E PG18/SMTP/Chrome/restauración completo aprobado (migración doble, tablas idénticas, esquema validado y descarga).
+
+### Tareas consolidadas del autor
+- API autenticada y UI en Mis depósitos; paginación en servidor, inspección de calidad solo por página. Tres tests y E2E de ámbito, paginación y UI aprobados; axe51 estados0.
+- `docs/DEPOSIT_TASKS.md` explica estados, privacidad y límites de escala sin presentar checklist como aprobación.
+- Regresión tareas:47 suites485 pruebas0fallos/errores/omitidas; E2EPG18SMTPChrome/restauración completo aprobado.
