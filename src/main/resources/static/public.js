@@ -14,20 +14,21 @@ const facetResults = document.createElement('div');
 results.before(facetLayout);
 facetResults.append(results, pagination);
 facetLayout.append(facetPanel, facetResults);
-let authorFilter = '', yearFilter = '', licenseFilter = '', doiFilter = '';
+let authorFilter = '', yearFilter = '', licenseFilter = '', mimeFilter = '', doiFilter = '';
 let pendingRequest = 0;
 const params = new URLSearchParams(location.search);
 q.value = params.get('q') || ''; type.value = params.get('type') || '';
 for (const [key, control] of [['discipline',discipline],['institution',institution],['language',language],['format',format],['access',access],['sort',sort]]) if(params.has(key)) control.value=params.get(key);
 state.page = Math.max(0, Number.parseInt(params.get('page') || '0', 10) || 0);
-authorFilter = params.get('author') || ''; yearFilter = params.get('year') || ''; licenseFilter = params.get('license') || '';
+authorFilter = params.get('author') || ''; yearFilter = params.get('year') || ''; licenseFilter = params.get('license') || ''; mimeFilter = params.get('mimeType') || '';
 doiFilter = params.get('hasDoi') === 'true' ? 'true' : params.get('withoutDoi') === 'true' ? 'false' : '';
 function text(tag, value, className) { const node = document.createElement(tag); node.textContent = value; if (className) node.className = className; return node; }
-const facetNames = {type:'Tipo',author:'Autoría',access:'Acceso',year:'Año',license:'Licencia',discipline:'Disciplina',institution:'Institución',language:'Idioma',hasDoi:'DOI'};
+const facetNames = {type:'Tipo',author:'Autoría',access:'Acceso',year:'Año',license:'Licencia',discipline:'Disciplina',institution:'Institución',language:'Idioma',mimeType:'Formato',hasDoi:'DOI'};
 const facetLabels = {OPEN:'Abierto',RESTRICTED:'Restringido',EMBARGOED:'Embargo',true:'Con DOI',false:'Sin DOI'};
+const mimeLabels = {'text/csv':'CSV','application/pdf':'PDF','application/json':'JSON','text/plain':'TXT','image/png':'PNG','image/jpeg':'JPEG','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'XLSX','application/vnd.ms-excel':'XLS','application/vnd.oasis.opendocument.spreadsheet':'ODS'};
 function selectedFacet(name) {
   return ({type:type.value,author:authorFilter,access:access.value,year:yearFilter,license:licenseFilter,
-    discipline:discipline.value,institution:institution.value,language:language.value,
+    discipline:discipline.value,institution:institution.value,language:language.value,mimeType:mimeFilter,
     hasDoi:doiFilter})[name];
 }
 function chooseFacet(name, value) {
@@ -40,6 +41,7 @@ function chooseFacet(name, value) {
   else if (name === 'discipline') discipline.value = next;
   else if (name === 'institution') institution.value = next;
   else if (name === 'language') language.value = next;
+  else if (name === 'mimeType') mimeFilter = next;
   else if (name === 'hasDoi') doiFilter = next;
   state.page = 0; load();
 }
@@ -50,7 +52,8 @@ function renderFacets(data) {
     const group = document.createElement('section'); group.className = 'public-facet-group';
     group.append(text('h3', label));
     for (const option of values) {
-      const button = text('button', `${facetLabels[option.value] || option.value} (${option.count})`, 'public-facet-option');
+      const label = name === 'mimeType' ? (mimeLabels[option.value] || option.value) : (facetLabels[option.value] || option.value);
+      const button = text('button', `${label} (${option.count})`, 'public-facet-option');
       button.type = 'button'; button.setAttribute('aria-pressed', selectedFacet(name) === option.value ? 'true' : 'false');
       button.addEventListener('click', () => chooseFacet(name, option.value)); group.append(button);
     }
@@ -61,7 +64,7 @@ async function load() {
   const requestId = ++pendingRequest;
   const search = new URLSearchParams({ q: q.value.trim(), author:authorFilter, type: type.value, year:yearFilter, license:licenseFilter,
     discipline: discipline.value.trim(), institution: institution.value.trim(), language: language.value.trim(),
-    format: format.value.trim(), access: access.value, hasDoi:String(doiFilter === 'true'),
+    format: format.value.trim(), mimeType:mimeFilter, access: access.value, hasDoi:String(doiFilter === 'true'),
     withoutDoi:String(doiFilter === 'false'), sort: sort.value,
     page: String(state.page), size: '20' });
   history.replaceState(null, '', `${location.pathname}?${search}`);
@@ -75,11 +78,11 @@ async function load() {
     results.replaceChildren(); pagination.replaceChildren();
     if (!data.items.length) {
       const filtered = [q.value, authorFilter, type.value, yearFilter, licenseFilter, discipline.value, institution.value,
-        language.value, format.value, access.value].some(Boolean) || doiFilter;
+        language.value, format.value, mimeFilter, access.value].some(Boolean) || doiFilter;
       const empty = document.createElement('div'); empty.className = 'panel empty';
       empty.append(text('p', filtered ? 'No hay resultados para estos filtros.' : 'Todavía no existen datasets publicados.'));
       if (filtered) { const clear = text('button', 'Limpiar filtros', 'secondary'); clear.type = 'button';
-        clear.onclick = () => { q.value=''; authorFilter=''; type.value=''; discipline.value=''; institution.value=''; language.value=''; format.value=''; access.value=''; yearFilter=''; licenseFilter=''; doiFilter=''; state.page=0; load(); };
+        clear.onclick = () => { q.value=''; authorFilter=''; type.value=''; discipline.value=''; institution.value=''; language.value=''; format.value=''; mimeFilter=''; access.value=''; yearFilter=''; licenseFilter=''; doiFilter=''; state.page=0; load(); };
         empty.append(clear); }
       results.append(empty);
     }

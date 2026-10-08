@@ -87,7 +87,7 @@ El estado detallado y actualizado de cada ítem está en
    y el mapeo por creador ya están implementados localmente.
 4. Citación: validar todos los estilos con bibliotecarios y el orden de
    autoría; completar descarga de metadatos y pruebas bibliográficas.
-5. Descubrimiento: completar facetas de formato y financiación/proyecto,
+5. Descubrimiento: completar facetas de financiación/proyecto,
    además de medir el rendimiento PostgreSQL; las restantes facetas y estados
    explícitos de búsqueda ya están implementados localmente.
 6. Curación y preservación: cola de revisión, vocabularios controlados,
