@@ -14,20 +14,21 @@ const facetResults = document.createElement('div');
 results.before(facetLayout);
 facetResults.append(results, pagination);
 facetLayout.append(facetPanel, facetResults);
-let yearFilter = '', licenseFilter = '', doiFilter = false;
+let yearFilter = '', licenseFilter = '', doiFilter = '';
 let pendingRequest = 0;
 const params = new URLSearchParams(location.search);
 q.value = params.get('q') || ''; type.value = params.get('type') || '';
 for (const [key, control] of [['discipline',discipline],['institution',institution],['language',language],['format',format],['access',access],['sort',sort]]) if(params.has(key)) control.value=params.get(key);
 state.page = Math.max(0, Number.parseInt(params.get('page') || '0', 10) || 0);
-yearFilter = params.get('year') || ''; licenseFilter = params.get('license') || ''; doiFilter = params.get('hasDoi') === 'true';
+yearFilter = params.get('year') || ''; licenseFilter = params.get('license') || '';
+doiFilter = params.get('hasDoi') === 'true' ? 'true' : params.get('withoutDoi') === 'true' ? 'false' : '';
 function text(tag, value, className) { const node = document.createElement(tag); node.textContent = value; if (className) node.className = className; return node; }
 const facetNames = {type:'Tipo',access:'Acceso',year:'Año',license:'Licencia',discipline:'Disciplina',institution:'Institución',language:'Idioma',hasDoi:'DOI'};
 const facetLabels = {OPEN:'Abierto',RESTRICTED:'Restringido',EMBARGOED:'Embargo',true:'Con DOI',false:'Sin DOI'};
 function selectedFacet(name) {
   return ({type:type.value,access:access.value,year:yearFilter,license:licenseFilter,
     discipline:discipline.value,institution:institution.value,language:language.value,
-    hasDoi:doiFilter?'true':''})[name];
+    hasDoi:doiFilter})[name];
 }
 function chooseFacet(name, value) {
   const next = selectedFacet(name) === value ? '' : value;
@@ -38,7 +39,7 @@ function chooseFacet(name, value) {
   else if (name === 'discipline') discipline.value = next;
   else if (name === 'institution') institution.value = next;
   else if (name === 'language') language.value = next;
-  else if (name === 'hasDoi') doiFilter = next === 'true';
+  else if (name === 'hasDoi') doiFilter = next;
   state.page = 0; load();
 }
 function renderFacets(data) {
@@ -59,7 +60,8 @@ async function load() {
   const requestId = ++pendingRequest;
   const search = new URLSearchParams({ q: q.value.trim(), type: type.value, year:yearFilter, license:licenseFilter,
     discipline: discipline.value.trim(), institution: institution.value.trim(), language: language.value.trim(),
-    format: format.value.trim(), access: access.value, hasDoi:String(doiFilter), sort: sort.value,
+    format: format.value.trim(), access: access.value, hasDoi:String(doiFilter === 'true'),
+    withoutDoi:String(doiFilter === 'false'), sort: sort.value,
     page: String(state.page), size: '20' });
   history.replaceState(null, '', `${location.pathname}?${search}`);
   status.textContent = 'Buscando…';
@@ -76,7 +78,7 @@ async function load() {
       const empty = document.createElement('div'); empty.className = 'panel empty';
       empty.append(text('p', filtered ? 'No hay resultados para estos filtros.' : 'Todavía no existen datasets publicados.'));
       if (filtered) { const clear = text('button', 'Limpiar filtros', 'secondary'); clear.type = 'button';
-        clear.onclick = () => { q.value=''; type.value=''; discipline.value=''; institution.value=''; language.value=''; format.value=''; access.value=''; yearFilter=''; licenseFilter=''; doiFilter=false; state.page=0; load(); };
+        clear.onclick = () => { q.value=''; type.value=''; discipline.value=''; institution.value=''; language.value=''; format.value=''; access.value=''; yearFilter=''; licenseFilter=''; doiFilter=''; state.page=0; load(); };
         empty.append(clear); }
       results.append(empty);
     }

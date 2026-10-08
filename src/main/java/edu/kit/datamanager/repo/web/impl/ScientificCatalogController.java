@@ -58,6 +58,7 @@ public class ScientificCatalogController {
                             @RequestParam(defaultValue = "") String access,
                             @RequestParam(defaultValue = "") String format,
                             @RequestParam(defaultValue = "false") boolean hasDoi,
+                            @RequestParam(defaultValue = "false") boolean withoutDoi,
                             @RequestParam(defaultValue = "newest") String sort,
                             @RequestParam(defaultValue = "0") int page,
                             @RequestParam(defaultValue = "20") int size,
@@ -73,7 +74,8 @@ public class ScientificCatalogController {
             try { ResourceType.TYPE_GENERAL.valueOf(type); }
             catch (IllegalArgumentException ex) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de recurso no válido."); }
         }
-        Specification<DataResource> spec = specification(q, author, type, year, license, discipline, institution, language, access, format, hasDoi, publicOnly);
+        if (hasDoi && withoutDoi) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Filtros de DOI incompatibles.");
+        Specification<DataResource> spec = specification(q, author, type, year, license, discipline, institution, language, access, format, hasDoi, withoutDoi, publicOnly);
         Sort order = switch (sort) {
             case "oldest" -> Sort.by(Sort.Direction.ASC, "lastUpdate", "id");
             case "year_asc" -> Sort.by(Sort.Direction.ASC, "publicationYear", "id");
@@ -99,7 +101,7 @@ public class ScientificCatalogController {
 
     private static Specification<DataResource> specification(String q, String author, String type, String year,
             String license, String discipline, String institution, String language, String access,
-            String format, boolean hasDoi, boolean publicOnly) {
+            String format, boolean hasDoi, boolean withoutDoi, boolean publicOnly) {
         final ResourceType.TYPE_GENERAL category;
         if (type.isBlank()) category = null;
         else category = ResourceType.TYPE_GENERAL.valueOf(type);
@@ -125,7 +127,7 @@ public class ScientificCatalogController {
             }
             if (category != null) predicates.add(cb.equal(root.join("resourceType", JoinType.INNER).get("typeGeneral"), category));
             if (!year.isBlank()) predicates.add(cb.equal(root.get("publicationYear"), year.trim()));
-            if (!license.isBlank() || !discipline.isBlank() || !institution.isBlank() || !language.isBlank() || !access.isBlank() || hasDoi || publicOnly) {
+            if (!license.isBlank() || !discipline.isBlank() || !institution.isBlank() || !language.isBlank() || !access.isBlank() || hasDoi || withoutDoi || publicOnly) {
                 Subquery<String> subquery = query.subquery(String.class);
                 Root<ScientificRecord> scientific = subquery.from(ScientificRecord.class);
                 List<Predicate> terms = new ArrayList<>();
@@ -136,6 +138,7 @@ public class ScientificCatalogController {
                 if (!language.isBlank()) terms.add(cb.equal(cb.lower(scientific.get("language")), language.trim().toLowerCase()));
                 if (!access.isBlank()) terms.add(cb.equal(scientific.get("accessLevel"), access));
                 if (hasDoi) terms.add(cb.isNotNull(scientific.get("versionDoi")));
+                if (withoutDoi) terms.add(cb.isNull(scientific.get("versionDoi")));
                 if (publicOnly) {
                     terms.add(cb.equal(scientific.get("status"), PublicationStatus.PUBLISHED));
                 }
@@ -176,6 +179,7 @@ public class ScientificCatalogController {
             @RequestParam(defaultValue = "") String discipline, @RequestParam(defaultValue = "") String institution,
             @RequestParam(defaultValue = "") String language, @RequestParam(defaultValue = "") String access,
             @RequestParam(defaultValue = "") String format, @RequestParam(defaultValue = "false") boolean hasDoi,
+            @RequestParam(defaultValue = "false") boolean withoutDoi,
             HttpServletRequest request) {
         if (q.length() > 200 || author.length() > 200 || year.length() > 4 || license.length() > 100 ||
                 discipline.length() > 255 || institution.length() > 200 || language.length() > 16 ||
@@ -186,8 +190,9 @@ public class ScientificCatalogController {
             try { ResourceType.TYPE_GENERAL.valueOf(type); }
             catch (IllegalArgumentException ex) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de recurso no válido."); }
         }
+        if (hasDoi && withoutDoi) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Filtros de DOI incompatibles.");
         CatalogFilters filters = new CatalogFilters(q, author, type, year, license, discipline, institution,
-                language, access, format, hasDoi);
+                language, access, format, hasDoi, withoutDoi);
         boolean publicOnly = request.getRequestURI().startsWith("/api/v1/public/");
         Map<String, List<FacetOption>> result = new LinkedHashMap<>();
         for (String dimension : List.of("type", "year", "access", "license", "discipline", "institution", "language", "hasDoi"))
@@ -213,7 +218,7 @@ public class ScientificCatalogController {
         };
         var condition = specification(filter.q, filter.author, filter.type, filter.year, filter.license,
                 filter.discipline, filter.institution, filter.language, filter.access, filter.format,
-                filter.hasDoi, publicOnly).toPredicate(root, query, cb);
+                filter.hasDoi, filter.withoutDoi, publicOnly).toPredicate(root, query, cb);
         Expression<Long> count = cb.countDistinct(root.get("id"));
         query.multiselect(value.alias("value"), count.alias("count"))
                 .where(cb.and(condition, cb.equal(science.get("resourceId"), root.get("id")),
@@ -226,7 +231,7 @@ public class ScientificCatalogController {
     }
 
     private record CatalogFilters(String q, String author, String type, String year, String license,
-            String discipline, String institution, String language, String access, String format, boolean hasDoi) {
+            String discipline, String institution, String language, String access, String format, boolean hasDoi, boolean withoutDoi) {
         CatalogFilters without(String dimension) {
             return new CatalogFilters(q, author, dimension.equals("type") ? "" : type,
                     dimension.equals("year") ? "" : year, dimension.equals("license") ? "" : license,
@@ -234,7 +239,8 @@ public class ScientificCatalogController {
                     dimension.equals("institution") ? "" : institution,
                     dimension.equals("language") ? "" : language,
                     dimension.equals("access") ? "" : access, format,
-                    !dimension.equals("hasDoi") && hasDoi);
+                    !dimension.equals("hasDoi") && hasDoi,
+                    !dimension.equals("hasDoi") && withoutDoi);
         }
     }
 
