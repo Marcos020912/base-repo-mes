@@ -33,7 +33,26 @@
       const [orcidLabel, orcid] = labelled('ORCID', author.orcid, '0000-0000-0000-0000'); orcid.name = 'orcid';
       const [institutionLabel, institution] = labelled('Institución', author.institution); institution.name = 'institution';
       const [rorLabel, ror] = labelled('ROR de la institución', author.ror, 'https://ror.org/...'); ror.name = 'ror';
-      row.append(legend, orcidLabel, institutionLabel, rorLabel); rows.append(row);
+      const lookup = document.createElement('button'); lookup.type = 'button'; lookup.className = 'secondary'; lookup.textContent = 'Buscar institución en ROR';
+      const suggestions = document.createElement('div'); suggestions.className = 'ror-suggestions'; suggestions.setAttribute('aria-live','polite');
+      lookup.onclick = async () => {
+        suggestions.replaceChildren();
+        if (institution.value.trim().length < 2) { suggestions.textContent = 'Escribe al menos dos caracteres del nombre institucional.'; return; }
+        lookup.disabled = true; suggestions.textContent = 'Consultando ROR…';
+        try {
+          const response = await fetch(`/api/v1/scientific/ror/search?q=${encodeURIComponent(institution.value.trim())}`, {headers:auth.headers()});
+          if (!response.ok) throw new Error('ROR no está disponible. Puedes introducir el identificador manualmente.');
+          const matches = await response.json(); suggestions.replaceChildren();
+          if (!matches.length) suggestions.textContent = 'No se encontraron instituciones.';
+          for (const item of matches) {
+            const option = document.createElement('button'); option.type = 'button'; option.className = 'ror-option';
+            option.textContent = `${item.name} · ${item.ror}`;
+            option.onclick = () => { institution.value = item.name; ror.value = item.ror; suggestions.replaceChildren(); };
+            suggestions.append(option);
+          }
+        } catch (error) { suggestions.textContent = error.message; } finally { lookup.disabled = false; }
+      };
+      row.append(legend, orcidLabel, institutionLabel, lookup, suggestions, rorLabel); rows.append(row);
     }
     dialog.showModal();
   };
