@@ -236,3 +236,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Vocabularios es/en: lista, estado activo/configurado/estricto, propuesta y confirmación explícita; términos, notas, revisiones y responsables originales se conservan.
 - [x] Fixture Chrome `node tools/e2e/vocabulary-i18n.cjs`: sin consultas por idioma, texto/control original conservado en modal, payload PUT con revisión, ningún POST hasta confirmar y aprobación POST con revisión. Evidencia UI aislada, no autorización de servidor.
 - [ ] Administración de perfiles, revisiones, colecciones/ayuda y ficha privada pendientes; no cierre global.
+
+### Administración de perfiles bilingüe — avance A07 (2026-10-08)
+- [x] Perfiles administrativos es/en: definición, requisitos conocidos por código, propuesta, aprobación y disponibilidad; nombres/descripciones/notas y campos institucionales desconocidos originales.
+- [x] Chrome `node tools/e2e/profiles-admin-i18n.cjs`: cambio es/en sin consultas, controles y checks preservados, payload PUT con revisión/campos y POST solo tras confirmación. Fixture UI aislada, no prueba autorización ni inmutabilidad de snapshots backend.
+- [ ] Ficha privada, revisiones, colecciones y ayuda pendientes; pruebas integradas reales y demás requisitos globales siguen abiertos.
