@@ -60,9 +60,11 @@ public class ScientificCatalogSearchTest {
         assertEquals(1, filtered.total());
         var facets = catalog.facets("astronomía", "Ada", "", "", "", "", "", "", "", "", false, false, publicRequest);
         assertTrue(facets.get("type").stream().anyMatch(option -> option.value().equals("DATASET") && option.count() >= 1));
+        assertTrue(facets.get("author").stream().anyMatch(option -> option.value().trim().equals("Ada López") && option.count() >= 1));
         assertTrue(facets.get("access").stream().anyMatch(option -> option.value().equals("RESTRICTED") && option.count() >= 1));
         assertTrue(facets.get("year").stream().anyMatch(option -> option.value().equals("2026") && option.count() >= 1));
         assertEquals(0, catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "", false, true, "newest", 0, 20, publicRequest).total());
+        assertEquals(1, catalog.list("", "Ada López", "DATASET", "2026", "", "", "", "", "", "", false, false, "newest", 0, 20, publicRequest).total());
         assertEquals(0, catalog.list("astronomía", "Ada", "DATASET", "2026", "", "", "", "", "", "csv", false, false, "newest", 0, 20, publicRequest).total());
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () ->
                 catalog.list("", "", "", "", "", "", "", "", "", "", false, false, "arbitrary", 0, 20, publicRequest));

@@ -123,7 +123,11 @@ public class ScientificCatalogController {
             if (!author.isBlank()) {
                 String needle = "%" + author.trim().toLowerCase() + "%";
                 var creator = root.join("creators", JoinType.INNER);
-                predicates.add(cb.or(cb.like(cb.lower(creator.get("givenName")), needle), cb.like(cb.lower(creator.get("familyName")), needle)));
+                Expression<String> fullName = cb.concat(cb.concat(cb.coalesce(creator.get("givenName"), ""), " "),
+                        cb.coalesce(creator.get("familyName"), ""));
+                predicates.add(cb.or(cb.like(cb.lower(creator.get("givenName")), needle),
+                        cb.like(cb.lower(creator.get("familyName")), needle),
+                        cb.like(cb.lower(fullName), needle)));
             }
             if (category != null) predicates.add(cb.equal(root.join("resourceType", JoinType.INNER).get("typeGeneral"), category));
             if (!year.isBlank()) predicates.add(cb.equal(root.get("publicationYear"), year.trim()));
@@ -195,7 +199,7 @@ public class ScientificCatalogController {
                 language, access, format, hasDoi, withoutDoi);
         boolean publicOnly = request.getRequestURI().startsWith("/api/v1/public/");
         Map<String, List<FacetOption>> result = new LinkedHashMap<>();
-        for (String dimension : List.of("type", "year", "access", "license", "discipline", "institution", "language", "hasDoi"))
+        for (String dimension : List.of("type", "author", "year", "access", "license", "discipline", "institution", "language", "hasDoi"))
             result.put(dimension, facetValues(dimension, filters.without(dimension), publicOnly));
         return result;
     }
@@ -207,6 +211,11 @@ public class ScientificCatalogController {
         Root<ScientificRecord> science = query.from(ScientificRecord.class);
         Expression<?> value = switch (dimension) {
             case "type" -> root.join("resourceType", JoinType.LEFT).get("typeGeneral");
+            case "author" -> {
+                var creator = root.join("creators", JoinType.INNER);
+                yield cb.concat(cb.concat(cb.coalesce(creator.get("givenName"), ""), " "),
+                        cb.coalesce(creator.get("familyName"), ""));
+            }
             case "year" -> root.get("publicationYear");
             case "access" -> science.get("accessLevel");
             case "license" -> science.get("licenseId");
@@ -233,7 +242,7 @@ public class ScientificCatalogController {
     private record CatalogFilters(String q, String author, String type, String year, String license,
             String discipline, String institution, String language, String access, String format, boolean hasDoi, boolean withoutDoi) {
         CatalogFilters without(String dimension) {
-            return new CatalogFilters(q, author, dimension.equals("type") ? "" : type,
+            return new CatalogFilters(q, dimension.equals("author") ? "" : author, dimension.equals("type") ? "" : type,
                     dimension.equals("year") ? "" : year, dimension.equals("license") ? "" : license,
                     dimension.equals("discipline") ? "" : discipline,
                     dimension.equals("institution") ? "" : institution,

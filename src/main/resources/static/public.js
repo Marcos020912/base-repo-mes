@@ -14,25 +14,26 @@ const facetResults = document.createElement('div');
 results.before(facetLayout);
 facetResults.append(results, pagination);
 facetLayout.append(facetPanel, facetResults);
-let yearFilter = '', licenseFilter = '', doiFilter = '';
+let authorFilter = '', yearFilter = '', licenseFilter = '', doiFilter = '';
 let pendingRequest = 0;
 const params = new URLSearchParams(location.search);
 q.value = params.get('q') || ''; type.value = params.get('type') || '';
 for (const [key, control] of [['discipline',discipline],['institution',institution],['language',language],['format',format],['access',access],['sort',sort]]) if(params.has(key)) control.value=params.get(key);
 state.page = Math.max(0, Number.parseInt(params.get('page') || '0', 10) || 0);
-yearFilter = params.get('year') || ''; licenseFilter = params.get('license') || '';
+authorFilter = params.get('author') || ''; yearFilter = params.get('year') || ''; licenseFilter = params.get('license') || '';
 doiFilter = params.get('hasDoi') === 'true' ? 'true' : params.get('withoutDoi') === 'true' ? 'false' : '';
 function text(tag, value, className) { const node = document.createElement(tag); node.textContent = value; if (className) node.className = className; return node; }
-const facetNames = {type:'Tipo',access:'Acceso',year:'Año',license:'Licencia',discipline:'Disciplina',institution:'Institución',language:'Idioma',hasDoi:'DOI'};
+const facetNames = {type:'Tipo',author:'Autoría',access:'Acceso',year:'Año',license:'Licencia',discipline:'Disciplina',institution:'Institución',language:'Idioma',hasDoi:'DOI'};
 const facetLabels = {OPEN:'Abierto',RESTRICTED:'Restringido',EMBARGOED:'Embargo',true:'Con DOI',false:'Sin DOI'};
 function selectedFacet(name) {
-  return ({type:type.value,access:access.value,year:yearFilter,license:licenseFilter,
+  return ({type:type.value,author:authorFilter,access:access.value,year:yearFilter,license:licenseFilter,
     discipline:discipline.value,institution:institution.value,language:language.value,
     hasDoi:doiFilter})[name];
 }
 function chooseFacet(name, value) {
   const next = selectedFacet(name) === value ? '' : value;
   if (name === 'type') type.value = next;
+  else if (name === 'author') authorFilter = next;
   else if (name === 'access') access.value = next;
   else if (name === 'year') yearFilter = next;
   else if (name === 'license') licenseFilter = next;
@@ -58,7 +59,7 @@ function renderFacets(data) {
 }
 async function load() {
   const requestId = ++pendingRequest;
-  const search = new URLSearchParams({ q: q.value.trim(), type: type.value, year:yearFilter, license:licenseFilter,
+  const search = new URLSearchParams({ q: q.value.trim(), author:authorFilter, type: type.value, year:yearFilter, license:licenseFilter,
     discipline: discipline.value.trim(), institution: institution.value.trim(), language: language.value.trim(),
     format: format.value.trim(), access: access.value, hasDoi:String(doiFilter === 'true'),
     withoutDoi:String(doiFilter === 'false'), sort: sort.value,
@@ -73,12 +74,12 @@ async function load() {
     state.page = data.page; state.pages = data.pages;
     results.replaceChildren(); pagination.replaceChildren();
     if (!data.items.length) {
-      const filtered = [q.value, type.value, yearFilter, licenseFilter, discipline.value, institution.value,
+      const filtered = [q.value, authorFilter, type.value, yearFilter, licenseFilter, discipline.value, institution.value,
         language.value, format.value, access.value].some(Boolean) || doiFilter;
       const empty = document.createElement('div'); empty.className = 'panel empty';
       empty.append(text('p', filtered ? 'No hay resultados para estos filtros.' : 'Todavía no existen datasets publicados.'));
       if (filtered) { const clear = text('button', 'Limpiar filtros', 'secondary'); clear.type = 'button';
-        clear.onclick = () => { q.value=''; type.value=''; discipline.value=''; institution.value=''; language.value=''; format.value=''; access.value=''; yearFilter=''; licenseFilter=''; doiFilter=''; state.page=0; load(); };
+        clear.onclick = () => { q.value=''; authorFilter=''; type.value=''; discipline.value=''; institution.value=''; language.value=''; format.value=''; access.value=''; yearFilter=''; licenseFilter=''; doiFilter=''; state.page=0; load(); };
         empty.append(clear); }
       results.append(empty);
     }

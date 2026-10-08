@@ -8,7 +8,7 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
 
 - [x] Identidad visual, portada científica, ficha con metadatos reales y DOI solo cuando existe.
 - [x] Catálogo público separado de borradores, paginación, búsqueda y filtros en servidor.
-- [x] Facetas agregadas de tipo, año, acceso, licencia, disciplina,
+- [x] Facetas agregadas de tipo, autoría, año, acceso, licencia, disciplina,
       institución, idioma y DOI con recuentos sobre resultados publicados;
       estados diferentes para catálogo vacío, filtros sin coincidencias,
       falta de permisos y fallo del servicio.
@@ -83,7 +83,7 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       heredados; las listas actuales no son un catálogo institucional aprobado.
 - [ ] Validación bibliotecaria de todos los estilos de cita y del orden de
       autoría heredado; los nuevos formatos aún son preliminares.
-- [ ] Completar facetas de autor, formato y proyecto/financiador y validar
+- [ ] Completar facetas de formato y proyecto/financiador y validar
       rendimiento de consultas agregadas con volumen real en PostgreSQL.
 - [ ] Dimensionar I/O y pool JDBC para la auditoría, configurar alerta externa
       por `MISMATCH`/`MISSING_FILE` y política de archivos anteriores sin huella.
