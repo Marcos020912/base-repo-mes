@@ -185,10 +185,12 @@ const transfers = (() => {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
       finish(task, 'Descarga preparada');
     } catch (error) {
+      const cancelled = controller.signal.aborted || error.name === 'AbortError';
+      // A local write failure must stop the HTTP stream too; classify it before aborting.
+      controller.abort();
       if (writable) {
         try { await writable.abort(); } catch { /* Preserve the original download error. */ }
       }
-      const cancelled = controller.signal.aborted || error.name === 'AbortError';
       finish(task, cancelled ? 'Descarga cancelada' : 'Error en la descarga', false);
       throw error;
     }

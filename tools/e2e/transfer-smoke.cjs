@@ -33,6 +33,18 @@ const server = http.createServer((request, response) => {
     response.setHeader('Content-Type', 'application/octet-stream');
     const timer = setInterval(() => response.write(Buffer.alloc(4096)), 50);
     response.on('close', () => {clearInterval(timer); closed = true;});
+  } else if (request.url === '/large-file') {
+    response.setHeader('Content-Length', String(16 * 1024 * 1024));
+    const block = Buffer.alloc(64 * 1024, 65);
+    let remaining = 256;
+    function send() {
+      while (remaining > 0) {
+        remaining--;
+        if (!response.write(block)) {response.once('drain',send); return;}
+      }
+      response.end();
+    }
+    send();
   } else if (request.url === '/file') {
     response.setHeader('Content-Length', '5'); response.end('datos');
   } else if (request.url === '/problem') {
@@ -168,6 +180,41 @@ const server = http.createServer((request, response) => {
     });
     assert.equal(diskFailure,'El archivo cambió. Actualiza la ficha antes de descargar.');
     assert.equal(await page.evaluate(async () => (await selectedHandle.getFile()).text()), 'original');
+    closed = false;
+    const writeFailure = await page.evaluate(async () => {
+      const originalHandle = selectedHandle;
+      window.selectedHandle = {createWritable:async () => {
+        const stream = await originalHandle.createWritable();
+        let writes = 0;
+        return {
+          write: async chunk => {
+            if (++writes > 1) throw new DOMException('No se pudo escribir el archivo.', 'QuotaExceededError');
+            await stream.write(chunk);
+          },
+          close: () => stream.close(), abort: () => stream.abort()
+        };
+      }};
+      try {await transfers.download('/slow','stream-fixture.csv'); return null;}
+      catch(error) {return error.name;}
+      finally {window.selectedHandle=originalHandle;}
+    });
+    assert.equal(writeFailure,'QuotaExceededError');
+    for (let i=0; i<40 && !closed; i++) await new Promise(resolve=>setTimeout(resolve,50));
+    assert(closed,'Fallo de escritura dejó la conexión HTTP abierta.');
+    assert.equal(await page.$eval('.transfer-item span',el=>el.textContent),'Error en la descarga');
+    assert.equal(await page.evaluate(async () => (await selectedHandle.getFile()).text()),'original');
+    const largeFile = await page.evaluate(async () => {
+      const OriginalBlob = window.Blob;
+      window.Blob = function() {throw new Error('El modo directo no debe construir Blob.');};
+      try {await transfers.download('/large-file','stream-fixture.csv');}
+      finally {window.Blob=OriginalBlob;}
+      const file = await selectedHandle.getFile();
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      return {size:file.size,allExpected:bytes.every(byte=>byte===65)};
+    });
+    assert.equal(largeFile.size,16*1024*1024);
+    assert.equal(largeFile.allExpected,true);
+    assert.equal(await page.$eval('.transfer-item span',el=>el.textContent),'Archivo guardado');
     await page.evaluate(async () => {
       window.cancelPicker=true;
       try {await transfers.download('/file','stream-fixture.csv');} catch(error) {window.pickerError=error.name;}
