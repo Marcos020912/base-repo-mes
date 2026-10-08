@@ -43,3 +43,5 @@ Asistente: `node tools/e2e/wizard-i18n.cjs` recorre las nueve etapas, alterna id
 `review-access.html/js` incluye español/inglés para acceso temporal; `node tools/e2e/review-access-i18n.cjs` comprueba conservación del contenido y token en memoria, paginado fallido y cambios de idioma sin consultas. No prueba la autorización del backend ni implica que el resto de las fichas esté migrado.
 
 Ficha pública: `node tools/e2e/public-record-i18n.cjs` verifica interfaz bilingüe sin traducir contenido científico ni cambiar la selección de traducción declarada. La cita se conserva como artefacto bibliográfico original; los exportadores mantienen sus códigos de formato. Las fechas de presentación utilizan la configuración regional de la interfaz.
+
+Administración de vocabularios: `node tools/e2e/vocabulary-i18n.cjs` valida etiquetas es/en, preservación de términos/notas/formulario, ausencia de solicitudes por cambio de idioma y aprobación explícita con revisión. Los términos no se traducen automáticamente; la aprobación local no certifica aprobación institucional externa.

@@ -231,3 +231,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Ficha publicada es/en: navegación, etiquetas de metadatos, autores, financiación, integridad, traducciones declaradas y acciones de descarga/compartir/exportar. Cita y declaraciones originales no se traducen automáticamente.
 - [x] Fixture Chrome `node tools/e2e/public-record-i18n.cjs`: cambios es/en preservan título, Markdown, cita, archivos y selección de idioma de metadatos; sin consultas adicionales. Catálogos y fixtures de revisión temporal/editores aprobados.
 - [ ] Pruebas integradas JAR y verificación completa de paginado/fallos; ficha privada y administración restantes. A07 y objetivo global continúan abiertos.
+
+### Administración de vocabularios bilingüe — avance A07 (2026-10-08)
+- [x] Vocabularios es/en: lista, estado activo/configurado/estricto, propuesta y confirmación explícita; términos, notas, revisiones y responsables originales se conservan.
+- [x] Fixture Chrome `node tools/e2e/vocabulary-i18n.cjs`: sin consultas por idioma, texto/control original conservado en modal, payload PUT con revisión, ningún POST hasta confirmar y aprobación POST con revisión. Evidencia UI aislada, no autorización de servidor.
+- [ ] Administración de perfiles, revisiones, colecciones/ayuda y ficha privada pendientes; no cierre global.
