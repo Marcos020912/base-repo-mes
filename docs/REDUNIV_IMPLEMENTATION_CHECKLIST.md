@@ -86,6 +86,12 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       tabla `scientific_funding` de la migración antes del despliegue.
 - [x] El arranque ya no vuelca propiedades de entorno en los logs; el filtro
       anterior podía revelar `repo.auth.jwtSecret`.
+- [x] Línea base de accesibilidad para teclado: enlace visible al recibir foco
+      para saltar al contenido en las trece páginas, `<main>` enfocables,
+      navegación con nombre accesible, botones de cierre identificados,
+      indicador de foco de dos colores y respeto de movimiento reducido.
+      **No equivale a conformidad WCAG**; quedan pruebas con tecnologías de
+      asistencia y revisión de formularios, contraste y componentes dinámicos.
 - [x] Limitación distribuida de intentos de inicio de sesión, registro,
       verificación, reenvío y cambio de contraseña mediante PostgreSQL:
       ventanas por cuenta+IP y por IP, claves HMAC en vez de datos personales,

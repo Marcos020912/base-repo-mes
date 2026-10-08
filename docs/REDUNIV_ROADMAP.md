@@ -82,13 +82,17 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   devuelven `Retry-After` al agotarlas. El HAProxy de referencia reemplaza
   `X-Forwarded-For`/`Forwarded`; no exponer el backend directamente. La
   plantilla no incorpora un secreto JWT válido: despliegue genera uno único.
+- Las páginas comparten un enlace de salto al contenido, foco de teclado
+  visible y reducción de movimiento; se corrigió el espaciado del formulario
+  de autenticación y el nombre de botones de cierre. Esto es una línea base,
+  no una auditoría ni una declaración de conformidad WCAG 2.2 AA.
 
 ### Migración y pruebas
 
 Antes de desplegar esta rama: respaldar PostgreSQL y archivos, revisar
 `docs/migrations/2026-09-scientific-records.sql`, aplicarlo en mantenimiento y
 probar restauración. No desplegar esta rama directamente en producción.
-Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID, RO-Crate y PROV-O pasan. La suite completa pasó con 434 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`, con procesos de prueba reiniciados cada cinco clases para evitar falta de memoria local); el JAR también compila sin red. El RO-Crate generado sigue pasando los requisitos obligatorios de `roc-validator`. Esto no sustituye las pruebas funcionales, de seguridad ni la aprobación para fusión.
+Las pruebas focalizadas de flujo, búsqueda pública, acceso restringido, calidad, SHA-256, DataCite, ORCID, RO-Crate, PROV-O y marcadores básicos de accesibilidad pasan. La suite completa pasó con 436 pruebas y 0 fallos (8 de octubre de 2026, JDK 21 y perfil `complete`, con procesos de prueba reiniciados cada cinco clases para evitar falta de memoria local); el JAR también compila sin red. El RO-Crate generado sigue pasando los requisitos obligatorios de `roc-validator`. Esto no sustituye las pruebas funcionales, de accesibilidad, de seguridad ni la aprobación para fusión.
 
 El estado detallado y actualizado de cada ítem está en
 [`REDUNIV_IMPLEMENTATION_CHECKLIST.md`](REDUNIV_IMPLEMENTATION_CHECKLIST.md).
