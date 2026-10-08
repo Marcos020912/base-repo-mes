@@ -74,5 +74,6 @@ El fixture HTTP declara UTF-8 explícitamente para validar mensajes en español.
 
 El flujo del asistente entra además en Curación para abrir la vista previa de
 un depósito completo (blockers puede omitirse en JSON) y descargar un archivo
-mediante el monitor autenticado. La descarga monitorizada del paquete de
-preservación no está cubierta por este escenario.
+mediante el monitor autenticado. También descarga el paquete de preservación desde Curación y verifica ZIP,
+datos/descripción, declaración BagIt 1.0, JSON y hashes payload/tag contra
+los bytes incluidos. Esto no sustituye validación externa RO-Crate/OAIS.

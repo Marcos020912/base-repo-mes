@@ -424,7 +424,26 @@ async function main() {
     await page.waitForFunction(() => document.querySelector('#reviews-list').textContent.includes('Requisitos automáticos completos.'));
     await page.evaluate(() => [...document.querySelectorAll('.review-files button')].find(button => button.textContent === 'Descargar').click());
     await page.waitForFunction(() => document.querySelector('.transfer-list')?.textContent.includes('Descarga preparada'));
-    process.stdout.write('Curación OK: vista previa sin blockers y descarga monitorizada.\n');
+    const preservationResponse = page.waitForResponse(response => response.url().includes('/preservation/') && response.url().endsWith('/package'));
+    await page.evaluate(() => [...document.querySelectorAll('#reviews-list button')].find(button => button.textContent === 'Descargar paquete de preservación').click());
+    const preservation = await preservationResponse;
+    assert(preservation.ok(), 'El paquete de preservación fue rechazado.');
+    const preservationZip = path.join(temp, 'preservation-download.zip');
+    fs.writeFileSync(preservationZip, await preservation.buffer());
+    const verifiedPackage = spawnSync('python3', ['-c', [
+      'import sys,zipfile,json,hashlib',
+      'z=zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None',
+      "names=z.namelist(); assert 'data/datos-uno.csv' in names; assert any(n.endswith('description.md') for n in names)",
+      "assert 'BagIt-Version: 1.0' in z.read('bagit.txt').decode()",
+      "for name in ['preservation/metadata.json','preservation/provenance.json','preservation/prov.jsonld','ro-crate-metadata.json']: json.loads(z.read(name))",
+      "for name in ['manifest-sha256.txt','tagmanifest-sha256.txt']:",
+      " for line in z.read(name).decode().splitlines():",
+      "  if line.strip():",
+      "   digest,entry=line.split('  ',1); assert hashlib.sha256(z.read(entry)).hexdigest()==digest, entry"
+    ].join('\n'), preservationZip], {encoding:'utf8'});
+    assert(verifiedPackage.status === 0, `Paquete preservación inválido: ${verifiedPackage.stderr}`);
+    await page.waitForFunction(() => [...document.querySelectorAll('.transfer-item span')].filter(node => node.textContent === 'Descarga preparada').length === 2);
+    process.stdout.write('Curación OK: vista previa, archivo y paquete de preservación con manifiestos verificados.\n');
     const recovered = await recoverInterruptedUpload(page, base, files);
     const newVersionId = await deriveNewVersion(page, base, files, markdown);
     await publicDownloads(base, markdown);
