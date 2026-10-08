@@ -64,7 +64,18 @@ function setupFiles() {
   const invalidTypeZip = path.join(temp, 'tipo-invalido.zip');
   assert(spawnSync('zip', ['-q', '-r', invalidTypeZip, 'description', 'datos-uno.csv', 'invalido.exe'], {cwd:fullDir}).status === 0,
     'No se pudo preparar ZIP de tipo inválido.');
-  return {data, description, csv1, csv2, zip, fullZip, missingDescriptionZip, invalidTypeZip};
+  const crafted = (filename, kind) => {
+    const archive = path.join(temp, filename);
+    const program = `import sys,zipfile\nwith zipfile.ZipFile(sys.argv[1],'w') as z:\n k=sys.argv[2]\n if k=='description-traversal':\n  z.writestr('description.md','# Prueba\\n'); z.writestr('folder/../chart.png',b'png')\n elif k=='description-duplicate':\n  z.writestr('description.md','# Uno\\n'); z.writestr('description.md','# Dos\\n')\n elif k=='description-html':\n  z.writestr('description.md','# Prueba\\n'); z.writestr('script.html','<script></script>')\n elif k=='package-traversal':\n  z.writestr('description/description.md','# Prueba\\n'); z.writestr('datos-uno.csv','a,b\\n1,2\\n'); z.writestr('../fuera.csv','x,y\\n3,4\\n')\n`;
+    const result = spawnSync('python3', ['-c', program, archive, kind], {encoding:'utf8'});
+    assert(result.status === 0, `No se pudo crear ZIP malicioso ${kind}: ${result.stderr}`);
+    return archive;
+  };
+  return {data, description, csv1, csv2, zip, fullZip, missingDescriptionZip, invalidTypeZip,
+    descriptionTraversalZip:crafted('descripcion-ruta-invalida.zip','description-traversal'),
+    descriptionDuplicateZip:crafted('descripcion-duplicada.zip','description-duplicate'),
+    descriptionHtmlZip:crafted('descripcion-html.zip','description-html'),
+    fullTraversalZip:crafted('deposito-ruta-invalida.zip','package-traversal')};
 }
 async function startApp(port, files) {
   assert(fs.existsSync(jar), 'Falta build/libs/base-repo.jar; compile antes de iniciar el smoke test.');
@@ -193,6 +204,16 @@ async function rejectPackage(page, base, id, archive, expected) {
   const body = await response.text();
   assert(response.status === 400 && body.includes(expected),
     `El ZIP inválido no fue rechazado correctamente: HTTP ${response.status} ${body}`);
+}
+async function rejectDescription(page, base, id, archive, expected) {
+  const token = await page.evaluate(() => localStorage.getItem('base-repo-token'));
+  const form = new FormData();
+  form.append('file', new Blob([fs.readFileSync(archive)], {type:'application/zip'}), path.basename(archive));
+  const response = await fetch(`${base}/api/v1/dataresources/${encodeURIComponent(id)}/description`,
+    {method:'POST', headers:{Authorization:`Bearer ${token}`}, body:form});
+  const body = await response.text();
+  assert(response.status === 400 && body.includes(expected),
+    `El ZIP de descripción inválido no fue rechazado: HTTP ${response.status} ${body}`);
 }
 async function recoverInterruptedUpload(page, base, files) {
   const title = `Depósito E2E interrumpido ${Date.now()}`;
@@ -326,6 +347,10 @@ async function main() {
     const before = await page.$eval('#download-list', element => element.textContent);
     await rejectPackage(page, base, packaged.id, files.missingDescriptionZip, 'description/description.md');
     await rejectPackage(page, base, packaged.id, files.invalidTypeZip, 'no admite archivos .exe');
+    await rejectPackage(page, base, packaged.id, files.fullTraversalZip, 'ruta no válida');
+    await rejectDescription(page, base, packaged.id, files.descriptionTraversalZip, 'ruta no permitida');
+    await rejectDescription(page, base, packaged.id, files.descriptionDuplicateZip, 'nombres repetidos');
+    await rejectDescription(page, base, packaged.id, files.descriptionHtmlZip, 'solo admite description.md e imágenes');
     await page.reload({waitUntil:'load'});
     await page.waitForFunction(() => document.querySelector('#download-list')?.textContent.includes('datos-uno.csv'));
     assert(await page.$eval('#download-list', element => element.textContent) === before,

@@ -78,6 +78,10 @@ rama con `main` sin aprobación explícita y pruebas funcionales.
   Además comprobó la derivación de una versión publicada sintética con DOI
   ficticio en H2, sin llamar a DataCite. No sustituye staging, curación real
   ni fallos de almacenamiento.
+- Los dos endpoints de ZIP comparten reglas de rutas seguras y de nombres
+  únicos, incluido conflicto entre archivo y directorio. El ZIP de descripción
+  se limita a `description.md` e imágenes auxiliares; una batería de paquetes
+  adversariales valida que las entradas rechazadas no modifiquen el depósito.
 - El asistente conserva localmente metadatos y autores por 14 días para poder
   reanudar un formulario interrumpido; por seguridad, los archivos se
   seleccionan de nuevo. El catálogo público muestra facetas agregadas con

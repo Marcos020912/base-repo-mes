@@ -10,10 +10,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLConnection;
-import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class DescriptionPackageController {
     private static final int MAX_ENTRIES = 200;
     private static final long MAX_UNCOMPRESSED_BYTES = 50L * 1024 * 1024;
+    private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp", "svg", "tif", "tiff", "bmp");
     private final RepoBaseConfiguration repository;
     private final ContentDigestService digests;
 
@@ -57,6 +59,11 @@ public class DescriptionPackageController {
                 return ResponseEntity.badRequest().body("El ZIP debe contener description.md en su carpeta raíz.");
             }
             for (Upload entry : files) {
+                if (entry.bytes().length == 0) return ResponseEntity.badRequest().body("El ZIP contiene un archivo vacío: " + entry.path());
+                if (!entry.path().equals("description.md") && !IMAGE_EXTENSIONS.contains(extension(entry.path())))
+                    return ResponseEntity.badRequest().body("El ZIP de descripción solo admite description.md e imágenes auxiliares.");
+            }
+            for (Upload entry : files) {
                 digests.record(ContentDataUtils.addFile(repository, resource, new BytesMultipartFile(entry.path(), entry.bytes()), entry.path(), null, true, value -> value));
             }
             return ResponseEntity.status(HttpStatus.CREATED).body(new UploadResult(files.size(), "description.md"));
@@ -66,13 +73,14 @@ public class DescriptionPackageController {
     }
 
     private List<Upload> unpack(InputStream source) throws IOException {
-        List<Upload> result = new ArrayList<>(); long total = 0;
+        List<Upload> result = new ArrayList<>(); Set<String> targets = new HashSet<>(); long total = 0;
         try (ZipInputStream zip = new ZipInputStream(source)) {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
                 if (entry.isDirectory()) continue;
                 if (result.size() >= MAX_ENTRIES) throw new IOException("El ZIP contiene demasiados archivos.");
                 String path = safePath(entry.getName());
+                ArchiveUploadPaths.addUnique(targets, path);
                 byte[] bytes = readEntry(zip, MAX_UNCOMPRESSED_BYTES - total);
                 total += bytes.length;
                 if (total > MAX_UNCOMPRESSED_BYTES) throw new IOException("El ZIP supera el tamaño descomprimido permitido.");
@@ -83,10 +91,14 @@ public class DescriptionPackageController {
     }
 
     private String safePath(String name) throws IOException {
-        Path normalized = Path.of(name).normalize();
-        String path = normalized.toString().replace('\\', '/');
-        if (path.isBlank() || path.startsWith("/") || path.equals("..") || path.startsWith("../")) throw new IOException("El ZIP contiene una ruta no permitida.");
+        String path = ArchiveUploadPaths.clean(name);
+        if (path == null) throw new IOException("El ZIP contiene una ruta no permitida.");
         return path;
+    }
+
+    private String extension(String path) {
+        int dot = path.lastIndexOf('.');
+        return dot < 1 ? "" : path.substring(dot + 1).toLowerCase(Locale.ROOT);
     }
 
     private byte[] readEntry(InputStream input, long available) throws IOException {

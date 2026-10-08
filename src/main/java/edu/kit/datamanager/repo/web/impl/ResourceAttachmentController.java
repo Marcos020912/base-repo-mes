@@ -47,7 +47,7 @@ public class ResourceAttachmentController {
                                     @RequestParam(name = "package", defaultValue = "false") boolean packageMode,
                                     @RequestPart("file") MultipartFile file) {
         if (file == null || file.isEmpty()) return ResponseEntity.badRequest().body("Debe seleccionar un archivo.");
-        String cleanPath = cleanPath(path); if (cleanPath == null) return ResponseEntity.badRequest().body("Ruta de archivo no válida.");
+        String cleanPath = ArchiveUploadPaths.clean(path); if (cleanPath == null) return ResponseEntity.badRequest().body("Ruta de archivo no válida.");
         DataResource resource = DataResourceUtils.getResourceByIdentifierOrRedirect(repository, id, null, value -> value);
         Set<String> allowed = ALLOWED.get(resource.getResourceType().getTypeGeneral());
         try {
@@ -90,7 +90,7 @@ public class ResourceAttachmentController {
             } else if (!source.equals("description.md")) {
                 validate(allowed, source);
             }
-            if (!targets.add(target)) throw new IOException("El ZIP contiene nombres repetidos o en conflicto: " + target);
+            ArchiveUploadPaths.addUnique(targets, target);
             prepared.add(new Entry(target, entry.bytes()));
         }
         if (packageMode && !description) throw new IOException("El ZIP completo debe contener description/description.md.");
@@ -98,14 +98,7 @@ public class ResourceAttachmentController {
         return prepared;
     }
     private void validate(Set<String> allowed, String path) throws IOException { if (allowed != null && !allowed.contains(extension(path))) throw new IOException("El tipo de recurso no admite archivos ." + extension(path) + "."); }
-    private List<Entry> unzip(InputStream source) throws IOException { List<Entry> result=new ArrayList<>(); long total=0; try(ZipInputStream zip=new ZipInputStream(source)){ZipEntry entry;while((entry=zip.getNextEntry())!=null){if(entry.isDirectory())continue;if(result.size()>=200)throw new IOException("El ZIP contiene demasiados archivos.");String path=cleanPath(entry.getName());if(path==null)throw new IOException("El ZIP contiene una ruta no válida.");ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int read;while((read=zip.read(buffer))!=-1){total+=read;if(total>50L*1024*1024)throw new IOException("El ZIP supera el tamaño permitido.");out.write(buffer,0,read);}result.add(new Entry(path,out.toByteArray()));}}return result; }
-    private String cleanPath(String path) {
-        if (path == null) return null;
-        String value = path.replace('\\', '/');
-        if (value.isBlank() || value.startsWith("/") || value.matches("^[A-Za-z]:.*") || value.indexOf('\0') >= 0) return null;
-        for (String segment : value.split("/", -1)) if (segment.isEmpty() || segment.equals(".") || segment.equals("..")) return null;
-        return value;
-    }
+    private List<Entry> unzip(InputStream source) throws IOException { List<Entry> result=new ArrayList<>(); long total=0; try(ZipInputStream zip=new ZipInputStream(source)){ZipEntry entry;while((entry=zip.getNextEntry())!=null){if(entry.isDirectory())continue;if(result.size()>=200)throw new IOException("El ZIP contiene demasiados archivos.");String path=ArchiveUploadPaths.clean(entry.getName());if(path==null)throw new IOException("El ZIP contiene una ruta no válida.");ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int read;while((read=zip.read(buffer))!=-1){total+=read;if(total>50L*1024*1024)throw new IOException("El ZIP supera el tamaño permitido.");out.write(buffer,0,read);}result.add(new Entry(path,out.toByteArray()));}}return result; }
     private String extension(String path) { int dot = path.lastIndexOf('.'); return dot < 1 ? "" : path.substring(dot + 1).toLowerCase(Locale.ROOT); }
     private record Entry(String path, byte[] bytes) {}
     private static class BytesFile implements MultipartFile { private final String name; private final byte[] bytes; BytesFile(String name,byte[] bytes){this.name=name;this.bytes=bytes;} public String getName(){return "file";} public String getOriginalFilename(){return name;} public String getContentType(){String type=URLConnection.guessContentTypeFromName(name);return type==null?"application/octet-stream":type;} public boolean isEmpty(){return bytes.length==0;} public long getSize(){return bytes.length;} public byte[] getBytes(){return bytes.clone();} public InputStream getInputStream(){return new ByteArrayInputStream(bytes);} public void transferTo(java.io.File destination)throws IOException{java.nio.file.Files.write(destination.toPath(),bytes);} }

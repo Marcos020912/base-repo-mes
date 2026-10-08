@@ -60,6 +60,11 @@ No fusionar con `main` sin aprobación. Actualizar esta lista al terminar cada �
       desde su ficha y enviarlo después. Una versión publicada sintética en
       H2 permite probar «Crear nueva versión»: vínculo, DOI conceptual heredado
       y archivos seleccionados de nuevo; no registra un DOI real.
+- [x] Ambos endpoints ZIP rechazan rutas absolutas o con `..`, componentes
+      vacíos, caracteres de control y nombres duplicados o con conflicto
+      archivo/directorio. El ZIP de descripción solo acepta `description.md`
+      no vacío e imágenes auxiliares; validación previa evita cargas parciales
+      por estos errores. Pruebas unitarias de rutas y E2E con ZIP adversariales.
 - [x] Recuperación del registro cuando falla SMTP y rutas de verificación accesibles.
 - [x] Cambio de contraseña propia, revocación de tokens previos y respuesta 401 anónima.
 - [x] Ítem 7 (curación/preservación): auditorías SHA-256 manuales y programadas

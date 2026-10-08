@@ -24,6 +24,10 @@ Por último, publica una **versión sintética en H2** con un DOI ficticio de
 prueba, abre «Crear nueva versión» y comprueba que el nuevo borrador enlaza la
 anterior, conserva el DOI conceptual y no hereda archivos sin consentimiento.
 Esto no llama a DataCite ni valida un DOI institucional.
+Los ZIP adversariales generados con Python 3 comprueban rechazo de rutas con
+`..`, entradas duplicadas y archivos HTML dentro de la descripción, además de
+las extensiones no admitidas del dataset. Todas esas pruebas verifican que el
+contenido previamente cargado permanezca intacto.
 Al terminar detiene Java y elimina la base, credenciales y archivos temporales.
 No toca la configuración ni los datos del despliegue. `CHROME_BIN` y `JAVA_BIN`
 permiten indicar rutas alternativas.
