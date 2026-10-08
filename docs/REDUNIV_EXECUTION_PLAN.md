@@ -213,3 +213,10 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - Pendiente A07: fichas públicas/privadas y módulos de autores/financiación/relaciones/versiones/DOI, curación, vocabularios/perfiles administrativos, colecciones, ayuda y acceso de revisión. No se anuncia plataforma completa bilingüe ni se cierra A07.
 
 - E2E integrado detectó consumidor de transferencias con ruta absoluta sin runtime i18n (revisión temporal/público). Corregido orden de assets y añadido guard para rutas relativas/absolutas; no se modificaron permisos ni se ampliaron timeouts. Nueva validación integrada aprobada con JAR actual: PostgreSQL18/SMTP/Chrome, seguridad multiusuario, descargas públicas/revisor revocado y restauración con migración doble. Veinticuatro assets estáticos modificados comparados byte a byte con el JAR, sin discrepancias.
+
+### Historial público bilingüe — avance A07 (2026-10-08)
+- [x] Etiquetas, paginación, avisos de versión posterior y fallos recuperables del historial público en español/inglés. Versiones, DOI y fechas del servidor permanecen originales; cambiar idioma no dispara consultas.
+- [x] Validación inicial: seis pruebas de catálogos y sintaxis JavaScript aprobadas.
+- [ ] Regresión de navegador específica del historial y migración del resto de la ficha pública/privada. A07 y el objetivo global continúan pendientes.
+- [x] Editores de relaciones, financiación e identidades de autores bilingües; valores científicos, nombres y controles conservados. ORCID declarado sigue distinto de cuenta autenticada y de autoría contrastada.
+- [x] Fixture Chrome `node tools/e2e/record-editors-i18n.cjs`: historial y reintento, modales con valores preservados, payloads de relaciones/financiación, resultados ROR originales, sin nuevas consultas por idioma. Es prueba UI aislada, no prueba de autorización del backend.

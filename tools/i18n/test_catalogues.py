@@ -35,7 +35,7 @@ class CatalogueTest(unittest.TestCase):
         self.assertTrue(used);self.assertEqual(used-keys,set())
     def test_scientific_ui_literal_keys_exist(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
-        domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users'}
+        domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users','versions','relations','funding','creators'}
         used=set()
         for script in STATIC.glob('*.js'):
             if script.name=='ui-locales.js':continue
