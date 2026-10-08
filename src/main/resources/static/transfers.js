@@ -100,8 +100,14 @@ const transfers = (() => {
       xhr.upload.onload = waitingForServer;
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) { finish(task, 'Subida completada'); resolve(); return; }
-        let detail = xhr.responseText || 'No se pudo completar la subida.';
-        try { const body = JSON.parse(detail); detail = body.detail || body.message || detail; } catch { /* Plain error body. */ }
+        let detail = 'No se pudo completar la subida.';
+        if ((xhr.getResponseHeader('Content-Type') || '').includes('json')) {
+          try {
+            const body = JSON.parse(xhr.responseText);
+            const message = body.detail || body.message;
+            if (typeof message === 'string' && message.trim()) detail = message;
+          } catch { /* Invalid error body: keep the user-facing fallback. */ }
+        }
         finish(task, 'Error en la subida', false); reject(new Error(detail));
       };
       xhr.onerror = () => { finish(task, 'Error de red', false); reject(new Error('Se interrumpió la conexión durante la subida.')); };

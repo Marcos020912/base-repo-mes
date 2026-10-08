@@ -24,6 +24,9 @@ const server = http.createServer((request, response) => {
   } else if (request.url === '/upload-error') {
     request.resume(); response.writeHead(400, {'Content-Type':'application/json'});
     response.end(JSON.stringify({detail:'Archivo incompatible con el tipo de dataset.'}));
+  } else if (request.url === '/upload-proxy-error') {
+    request.resume(); response.writeHead(502, {'Content-Type':'text/html'});
+    response.end('<html><body>Internal proxy detail</body></html>');
   } else if (request.url === '/upload-slow') {
     uploadStarted = true; request.resume(); response.on('close', () => uploadClosed = true);
   } else if (request.url === '/slow') {
@@ -89,6 +92,12 @@ const server = http.createServer((request, response) => {
       catch (error) { return error.message; }
     });
     assert.equal(uploadFailure, 'Archivo incompatible con el tipo de dataset.');
+    const proxyUploadFailure = await page.evaluate(async () => {
+      try { await transfers.upload('/upload-proxy-error', new File(['x'], 'datos.csv')); return null; }
+      catch (error) { return error.message; }
+    });
+    assert.equal(proxyUploadFailure, 'No se pudo completar la subida.');
+
     assert.equal(await page.$eval('.transfer-item span', el => el.textContent), 'Error en la subida');
     await page.evaluate(() => {
       window.uploadResult = null;
