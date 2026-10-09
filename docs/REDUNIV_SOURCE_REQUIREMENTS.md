@@ -66,7 +66,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | C06 | Distinguir vacío, cero coincidencias, permisos y caída | Implementado local: vacío general, cero coincidencias, permiso y caída diferenciados en ambos catálogos; limpiar filtros/soporte/reintento y prueba Chrome de recuperación aprobados. |
 | C07 | Colecciones temáticas e institucionales | Implementado local: colecciones temáticas/institucionales persistentes, gestión curador/admin con modales y catálogo público paginado solo PUBLISHED. Cuatro pruebas JPA y E2E PostgreSQL/SMTP/Chrome/restauración aprobados; no duplica ni elimina datasets. |
 | C08 | Políticas, ayuda y guía de citación | Parcial: nueva `help.html` ofrece guía y condiciones técnicas; políticas institucionales formales aún no aprobadas. |
-| C09 | Métricas públicas con definiciones transparentes | Parcial: inventario público real de versiones PUBLISHED, política OPEN y colecciones públicas con definiciones/fecha; JPA y E2E aprobados. Uso/descargas y metodología COUNTER/DataCite aún pendientes. |
+| C09 | Métricas públicas con definiciones transparentes | Parcial: inventario público real de versiones PUBLISHED, política OPEN y colecciones públicas con definiciones/fecha; JPA y E2E aprobados. Uso local de consultas/descargas con deduplicación, retención90d y exportación editorial implementado; conformidad COUNTER y eventos DataCite no implementados. |
 
 ## Investigador y asistente — informe §5 y §7
 
@@ -99,8 +99,8 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | A09 | RO-Crate y W3C PROV | Implementado local: exportaciones incluyen declaración científica separada de eventos técnicos; PROV no inventa ejecuciones. Pruebas/paquete E2E aprobados; validación externa de perfiles sigue pendiente. |
 | A10 | Auditorías periódicas SHA-256 verificables | Base local: manual/programada opcional y alertas; política/volumen/buzón real pendientes. |
 | A11 | Métricas COUNTER/DataCite cuando corresponda | Pendiente: no confundir contadores locales con conformidad COUNTER o integración de eventos DataCite. |
-| A12 | Autoevaluación CoreTrustSeal | Pendiente: requiere expediente y evidencia organizativa/técnica; no afirmar certificación. |
-| A13 | OpenAPI como contrato y pruebas de compatibilidad | Parcial: contrato científico tipado, seguridad y binarios explícitos; gate estructural de 22 rutas y referencias locales integrado en E2E. Compatibilidad de clientes institucionales y auditoría del resto de endpoints pendientes. |
+| A12 | Autoevaluación CoreTrustSeal | Herramienta implementada: expediente interno de 16 requisitos 2026–2028, responsables, declaraciones, evidencias HTTPS, revisión optimista y exportación JSON; curadores leen y administradores editan. Evidencia institucional y certificación externa pendientes; no afirmar certificación. |
+| A13 | OpenAPI como contrato y pruebas de compatibilidad | Parcial: contrato científico tipado, seguridad y binarios explícitos; gate estructural de 26 rutas y referencias locales integrado en E2E. Compatibilidad de clientes institucionales y auditoría del resto de endpoints pendientes. |
 | A14 | WCAG2.2AA, teclado, foco, contraste, etiquetas, errores, lectores | Parcial: axe y teclado automatizados; revisión manual de recorridos/lectores pendiente. |
 | A15 | Diseño desde360px y estados no solo por color | Base local: pruebas320px y etiquetas; revisar cada flujo dinámico real. |
 | A16 | Prueba con investigadores, curadores, bibliotecarios y soporte | Institucional: organizar evaluación funcional sin sustituirla por smoke automatizado. |
@@ -121,16 +121,16 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | D10 | Sufijo generado por DataCite recomendado | Desviación documentada: sufijo UUID estable local para idempotencia; recomendación no obligatoria, requiere transparencia institucional. |
 | D11 | Cuenta Repository, prefijo, credenciales y validación Test→staging→production | Institucional: no resuelto únicamente con código; no dar integración externa por probada. |
 
-## Próximas implementaciones confirmadas
+## Pendientes actuales después de los avances locales
 
-1. Terminar ayuda pública y navegación, distinguir guías técnicas de políticas aprobadas.
-2. Colecciones temáticas/institucionales y métricas públicas reales con definición.
-3. Resumen/cobertura, metadatos multilingües y vista previa de cita en creación.
-4. Completar relaciones DOI de predecesores y mantenimiento seguro de URL.
-5. Auditar OpenAPI, perfiles curatoriales, datos sensibles e internacionalización.
-6. Preparar evidencias institucionales de preservación/medición y aceptación humana.
+- OIDC institucional de acceso: confirmar proveedor/issuer, registro de cliente y política de vinculación de cuentas; no confundirlo con ORCID OAuth.
+- Métricas certificadas COUNTER e integración de eventos DataCite, si la institución las requiere. La nueva medición local no satisface esa certificación/integración.
+- Definir/aprobar perfiles OAIS institucionales y reunir evidencia documental de los 16 requisitos de autoevaluación. La herramienta está disponible; completar el expediente y certificarlo no son tareas automáticas del código.
+- Validación DOI, correo y HAProxy en infraestructura institucional; aprobación de políticas, estilos bibliotecarios y recorridos de accesibilidad manual.
+- Evaluar/rotar secretos históricos y aceptación por clientes institucionales del contrato API.
 
-Este orden no elimina las demás filas ni sustituye la evaluación requerida.
+La matriz mantiene los alcances parciales explícitos; las casillas históricas del plan
+no prevalecen sobre los cierres posteriores documentados.
 
 ## Restricciones originales del usuario contrastadas adicionalmente
 

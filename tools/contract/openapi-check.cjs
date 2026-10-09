@@ -2,6 +2,8 @@
 /* Structural compatibility gate for the scientific HTTP v1 surface. Never sends writes. */
 function assert(value,message){if(!value)throw Error(message);}
 const expected={
+ '/api/v1/scientific/operations/self-assessment':['get'], '/api/v1/scientific/operations/self-assessment/{id}':['put'],
+ '/api/v1/public/usage':['get'], '/api/v1/scientific/operations/usage':['get'],
  '/api/v1/catalog':['get'], '/api/v1/scientific/{id}':['get','put'], '/api/v1/scientific/{id}/submit':['post'],
  '/api/v1/scientific/{id}/publish':['post'], '/api/v1/scientific/{id}/privacy':['get','put'],
  '/api/v1/scientific/{id}/privacy/review':['post'], '/api/v1/scientific/privacy-policy':['get'],

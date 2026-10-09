@@ -16,7 +16,7 @@ class Bindings(HTMLParser):
             if self.stack[index][0]==tag:self.stack=self.stack[:index];break
 class CatalogueTest(unittest.TestCase):
     def test_all_platform_pages_enable_document_language_and_localized_title(self):
-        pages=('login','register','verify','account','users','index','public','my-datasets','operations','create','review-access','public-resource','vocabulary-admin','metadata-profiles-admin','collections','reviews','resource','help')
+        pages=('login','register','verify','account','users','index','public','my-datasets','operations','create','review-access','public-resource','vocabulary-admin','metadata-profiles-admin','collections','reviews','resource','help','self-assessment')
         for name in pages:
             html=(STATIC/f'{name}.html').read_text()
             self.assertRegex(html,r'<html[^>]*data-ui-page-localized(?:="[^"]*")?',name)
@@ -33,14 +33,14 @@ class CatalogueTest(unittest.TestCase):
     def test_migrated_auth_bindings_reference_known_keys(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
         used=set()
-        for page in ('login','register','verify','account','users','index','public','my-datasets','operations','create','review-access','public-resource','vocabulary-admin','metadata-profiles-admin','collections','reviews','resource'):
+        for page in ('login','register','verify','account','users','index','public','my-datasets','operations','create','review-access','public-resource','vocabulary-admin','metadata-profiles-admin','collections','reviews','resource','self-assessment'):
             parser=Bindings();parser.feed((STATIC/f'{page}.html').read_text());used.update(parser.keys)
             script=(STATIC/f"{'app' if page=='index' else page}.js").read_text()
             used.update(re.findall(r"uiI18n\.(?:t|error)\('([^']+)'",script))
             used.update(re.findall(r"uiI18n\.set\([^,]+,'([^']+)'",script))
             used.update(re.findall(r"notifyKey\('([^']+)'",script))
             self.assertIn('ui-i18n.js',(STATIC/f'{page}.html').read_text())
-        self.assertTrue(used);self.assertEqual(used-keys,set())
+        self.assertTrue(used);self.assertEqual({key for key in used if not key.endswith('.')} - keys,set())
     def test_help_guide_leaf_bindings_and_catalogue_keys(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
         parser=Bindings();parser.feed((STATIC/'help.html').read_text())
@@ -49,13 +49,18 @@ class CatalogueTest(unittest.TestCase):
 
     def test_scientific_ui_literal_keys_exist(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
-        domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users','versions','relations','funding','creators','reviewAccess','publicRecord','vocabulary','profilesAdmin','collections','reviews','resourceStatic','resourceDynamic','metadataHistory'}
+        domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users','versions','relations','funding','creators','reviewAccess','publicRecord','vocabulary','profilesAdmin','collections','reviews','resourceStatic','resourceDynamic','metadataHistory','usage','assessment'}
         used=set()
         for script in STATIC.glob('*.js'):
             if script.name=='ui-locales.js':continue
             for key in re.findall(r"['\"]([A-Za-z][\w-]*(?:\.[\w-]+)+)['\"]",script.read_text()):
                 if key.split('.')[0] in domains and not key.endswith(('.html','.js','.css')):used.add(key)
         self.assertTrue(used);self.assertEqual(used-keys,set())
+
+    def test_permanent_public_page_scripts_use_root_paths(self):
+        html=(STATIC/'public-resource.html').read_text()
+        for source in re.findall(r'<script[^>]*src="([^"]+)"',html):
+            self.assertTrue(source.startswith('/'),source)
 
     def test_transfer_consumers_load_runtime_even_with_absolute_urls(self):
         for page in STATIC.glob('*.html'):

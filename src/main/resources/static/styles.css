@@ -181,3 +181,5 @@ main:focus { outline:none; }
 #task-list p, #task-list li { overflow-wrap:anywhere; }
 #deposit-tasks { margin-bottom:2rem; }
 #deposit-tasks nav { display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem; }
+
+.assessment-list{display:grid;gap:16px}.assessment-list .panel{min-width:0;overflow-wrap:anywhere}.assessment-list .panel p{white-space:pre-wrap}

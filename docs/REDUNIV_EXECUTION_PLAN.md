@@ -392,3 +392,22 @@ Resumen: `docs/TECHNICAL_CLOSEOUT.md`. Operación: `docs/SEARCH_INDEX_RECOVERY.m
 recrear datos. Validaciones DataCite institucional, HAProxy real, políticas, revisión
 bibliotecaria y accesibilidad manual siguen separadas de estos cuatro bloques.
 Este cierre no certifica automáticamente todos los otros requisitos de la matriz.
+
+## Nuevas funcionalidades pendientes implementadas — 2026-10-09
+
+Este avance no declara completadas las validaciones institucionales de la matriz.
+
+- [x] C09: métricas públicas reales de vistas/descargas, agregadas por versión y UTC; resumen 30 días y selección editorial hasta 90 días/exportación JSON.
+- [x] Privacidad/metodología: HMAC diario, sin IP/agente/cuenta originales; deduplicación deslizante30s, exclusión HEAD/inline/prefetch/robots conocidos; retención90d, timeout PG2000ms y fallo de métrica sin romper respuesta. No representa personas únicas ni recepción íntegra confirmada.
+- [x] A12 herramienta: expediente interno de 16 requisitos CoreTrustSeal2026–2028, responsable/declaración/evidencias HTTPS/estado, control de revisión y exportación. Curadores consultan; administradores editan; `certified:false` siempre.
+- [x] Interfaz: vista es/en, modal con nombre accesible, avisos traducibles, formulario conservado al cambiar idioma, separación de tarjetas y revisión visual320px. Sin refetch por cambio de idioma.
+- [x] Migración SQL idempotente y documentación de operación: `LOCAL_USAGE_AND_SELF_ASSESSMENT.md`; ninguna tabla existente se recrea.
+- [x] Java final:68 suites1363tests,0fallos/errores/omitidos; `/tmp/reduniv-features-approved-java.log`, terminal0,2m31s. Incluye permisos USER/CURATOR/ADMIN y contrato Jackson de listas vacías/revisión inicial.
+- [x] JAR final:18s,58assets idénticos a fuentes; `/tmp/reduniv-features-approved-jar.log`.
+- [x] 17 fixtures de navegador aprobados (primeros7 en `/tmp/reduniv-new-features-ui.log`, restantes10 en `/tmp/reduniv-new-features-ui-final-part.log`; nuevo fixture final tras ajuste visual en `/tmp/reduniv-assessment-final-ui.log`). Primer intento global falló por script relativo en ruta permanente, corregido y regresión nueva aprobada.
+- [x] 19 páginas/1322claveses/en;9tests de catálogos aprobados. Nueva prueba exige rutas absolutas de todos los scripts de ficha permanente.
+- [x] E2E final PG/SMTP/Chrome/2JVM/restauración terminal0: `/tmp/reduniv-features-final-e2e.log`. Métricas reales/deduplicación/exclusiones, permisos y guardado de expediente/modal/idioma aprobados; migración doble y todas las tablas restauradas idénticas, esquema validate y descarga. Ensayos previos detectaron NON_EMPTY (corregido con contrato Jackson) y expectativa incorrecta403anónimo (entrypoint existente401, corregido el harness). Sin errores JS.
+- [ ] A04: integración de login OIDC institucional, pendiente confirmar proveedor/issuer y registro de cliente. ORCID OAuth no es sustituto.
+- [ ] A11: conformidad COUNTER y envío de eventos DataCite, si se exige; las nuevas métricas locales no los implementan.
+- [ ] A08/A12 institucional: perfiles OAIS aprobados, evidencias/políticas completas y certificación externa. El expediente facilita el trabajo, no lo aprueba automáticamente.
+- [ ] Validaciones reales DOI/correo/HAProxy, revisión bibliotecaria, accesibilidad manual y evaluación/rotación de secretos históricos.

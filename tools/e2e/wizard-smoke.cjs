@@ -808,6 +808,44 @@ async function publicVersionHistory(base,published,nextId,token) {
   const context=await browser.createBrowserContext();try{const visitor=await context.newPage();await visitor.goto(base+'/datasets/'+published.id,{waitUntil:'load'});await visitor.waitForFunction(()=>document.querySelectorAll('#versions-list li').length===2);assert(await visitor.$eval('#versions-list',n=>n.textContent.includes('Retirada (ficha permanente)')),'Ficha no muestra versión retirada.');assert(await visitor.$eval('#versions-list [aria-current=page]',n=>n.href.endsWith('/datasets/'+new URL(location.href).pathname.split('/').pop())),'Ficha no identifica versión exacta.');}finally{await context.close();}
   process.stdout.write('Versiones OK: borradores ocultos, publicación, familia paginada y retirada retenida en ficha pública.\n');
 }
+async function usageAndAssessment(page,base,resource){
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
+  const usageUrl=base+'/api/v1/public/usage?resourceId='+resource.id;
+  const before=await (await fetch(usageUrl)).json();
+  assert(before.schema==='reduniv.local-usage.v1'&&before.collectionEnabled&&!before.counterCertified,'Usage report must be enabled and uncertified');
+  const agent={'User-Agent':'Mozilla/5.0 RedUniv Acceptance Human'};
+  const detail=base+'/api/v1/public/resources/'+resource.id;
+  for(let i=0;i<2;i++){const response=await fetch(detail,{headers:agent});assert(response.ok,'Public view failed');await response.arrayBuffer();}
+  const file=detail+'/file?path='+encodeURIComponent('datos-uno.csv');
+  const download=await fetch(file,{headers:agent});assert(download.ok,'Usage download failed');await download.arrayBuffer();
+  await fetch(detail,{method:'HEAD',headers:agent});
+  await fetch(detail,{headers:{'User-Agent':'crawler'}});
+  const inline=await fetch(file+'&inline=true',{headers:agent});await inline.arrayBuffer();
+  let after;
+  for(let n=0;n<30;n++){after=await(await fetch(usageUrl)).json();if(after.views===before.views+1&&after.downloads===before.downloads+1)break;await sleep(100);}
+  assert(after.views===before.views+1&&after.downloads===before.downloads+1&&after.rows.length===0,'Deduplication or exclusions failed');
+  const anonymousUsage=await fetch(base+'/api/v1/scientific/operations/usage');assert([401,403].includes(anonymousUsage.status),'Editorial usage exposed anonymously, status '+anonymousUsage.status);
+  const editorial=await(await fetch(base+'/api/v1/scientific/operations/usage',{headers})).json();assert(editorial.rows.length>0,'Editorial detail missing');
+  await page.goto(base+'/self-assessment.html',{waitUntil:'load'});
+  await page.waitForFunction(()=>document.querySelectorAll('#assessment-list article').length===16);
+  await page.click('#assessment-list article button');
+  await page.type('[name=responsible]','Editorial team');await page.type('[name=statement]','Internal mission evidence');
+  await page.type('[name=evidence]','https://example.org/mission');await page.select('[name=state]','READY_FOR_REVIEW');
+  await page.select('[data-ui-locale]','en');
+  assert(await page.$eval('[name=statement]',n=>n.value)==='Internal mission evidence','Locale change lost modal input');
+  const saved=observeResponse(page,r=>r.url().endsWith('/self-assessment/R01')&&r.request().method()==='PUT');
+  await page.click('#assessment-form [type=submit]');assert((await saved).ok(),'Self-assessment save failed');
+  await page.waitForFunction(()=>!document.querySelector('#assessment-modal').open&&document.querySelector('#assessment-list').textContent.includes('Internal mission evidence'));
+  const report=await(await fetch(base+'/api/v1/scientific/operations/self-assessment',{headers})).json();
+  assert(report.items.length===16&&report.certified===false&&report.items[0].state==='READY_FOR_REVIEW','Dossier not persisted correctly');
+  assert((await fetch(base+'/api/v1/scientific/operations/self-assessment/R01',{method:'PUT',headers,body:JSON.stringify({...report.items[0],revision:null})})).status===409,'Stale evidence overwrote dossier');
+  const anonymousDossier=await fetch(base+'/api/v1/scientific/operations/self-assessment');assert([401,403].includes(anonymousDossier.status),'Private dossier exposed, status '+anonymousDossier.status);
+  if(verifiedAccount){const userHeaders={Authorization:'Bearer '+verifiedAccount.token,'Content-Type':'application/json'};assert((await fetch(base+'/api/v1/scientific/operations/self-assessment',{headers:userHeaders})).status===403,'Normal user read internal dossier');assert((await fetch(base+'/api/v1/scientific/operations/self-assessment/R01',{method:'PUT',headers:userHeaders,body:JSON.stringify(report.items[0])})).status===403,'Normal user edited internal dossier');}
+  await page.select('[data-ui-locale]','es');
+  process.stdout.write('Usage and internal self-assessment OK: real PostgreSQL, private access, deduplication, modal and locale preservation.\n');
+}
+
 async function publicDownloads(base, resource) {
   const metricsResponse=await fetch(base+'/api/v1/public/metrics');
   assert(metricsResponse.ok,'Métricas públicas no accesibles.');
@@ -1309,6 +1347,7 @@ async function main() {
     await privacyFlow(page,base,zipped);
     await publicVersionHistory(base,markdown,newVersionId,await page.evaluate(()=>localStorage.getItem('base-repo-token')));
     await publicDownloads(base, markdown);
+    await usageAndAssessment(page,base,markdown);
     await collectionsFlow(page, base, markdown, packaged);
     await vocabularyFlow(page,base);
     await metadataProfilesFlow(page,base,packaged);

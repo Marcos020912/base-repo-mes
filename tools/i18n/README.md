@@ -4,12 +4,12 @@ Fuente: `src/main/resources/static/locales/es.json` y `en.json`; bundle determin
 `ui-locales.js`. No editar traducciones en el bundle. Todas las claves y parámetros
 `{nombre}` deben coincidir; los parámetros se insertan como texto, nunca HTML.
 
-## Alcance implementado (8 octubre 2026)
+## Alcance implementado (9 octubre 2026)
 
-Las 18 páginas de la plataforma tienen idioma de documento, título y selector es/en:
+Las 19 páginas de la plataforma tienen idioma de documento, título y selector es/en:
 acceso, registro, verificación, cuenta, catálogos, Mis depósitos, asistente, fichas
 públicas/privadas, curación/revisor, usuarios, operaciones, vocabularios, perfiles,
-colecciones y ayuda. Se traducen estados propios de loading/vacío/permiso/error,
+colecciones, ayuda y autoevaluación interna. Se traducen estados propios de loading/vacío/permiso/error,
 modales, acciones, avisos locales, atributos accesibles y módulos compartidos.
 
 Cambiar idioma no consulta otra vez la API, no borra formularios ni traduce contenido
@@ -23,13 +23,13 @@ Si localStorage está bloqueado, el selector sigue funcionando en memoria.
 ```sh
 python3 tools/i18n/build_catalogues.py --check
 python3 -m unittest discover -s tools/i18n -p 'test_*.py'
-for f in auth-pages-smoke catalog-history collections-i18n deposit-i18n help-i18n operations-i18n profiles-admin-i18n public-record-i18n record-editors-i18n resource-dynamic-i18n resource-static-i18n review-access-i18n reviews-i18n users-i18n vocabulary-i18n wizard-i18n; do
+for f in auth-pages-smoke catalog-history collections-i18n deposit-i18n help-i18n operations-i18n profiles-admin-i18n public-record-i18n record-editors-i18n resource-dynamic-i18n resource-static-i18n review-access-i18n reviews-i18n users-i18n vocabulary-i18n wizard-i18n usage-assessment-i18n; do
   node "tools/e2e/$f.cjs" || exit 1
 done
 ```
 
-Ocho pruebas de coherencia verifican claves, parámetros, orden de assets, seguridad
-de bindings hoja y cobertura de las 18 páginas. Los 16 fixtures Chrome ejercitan
+Nueve pruebas de coherencia verifican claves, parámetros, orden de assets, seguridad
+de bindings hoja y cobertura de las 19 páginas. Los 17 fixtures Chrome ejercitan
 estados dinámicos, formularios preservados, cambios de idioma sin solicitudes,
 recarga de curación, Markdown/datos no traducidos, fallos y restauración.
 Los fixtures usan API simulada; la E2E integrada PostgreSQL/SMTP/JAR/restauración

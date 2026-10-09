@@ -285,3 +285,14 @@ CREATE INDEX IF NOT EXISTS search_index_tasks_created_idx ON search_index_tasks(
 ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS doi_publication_pending boolean NOT NULL DEFAULT false;
 ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS doi_publication_owner varchar(255);
 ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS doi_publication_running boolean NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS usage_observations (
+ id varchar(64) PRIMARY KEY, resource_id varchar(255) NOT NULL, kind varchar(16) NOT NULL,
+ usage_day date NOT NULL, last_seen_at timestamp(6) with time zone NOT NULL, requests bigint NOT NULL
+);
+CREATE INDEX IF NOT EXISTS usage_observations_day_idx ON usage_observations(usage_day);
+CREATE TABLE IF NOT EXISTS repository_self_assessments (
+ requirement_id varchar(3) PRIMARY KEY, revision bigint NOT NULL DEFAULT 0, state varchar(32) NOT NULL,
+ responsible varchar(255), statement varchar(5000), evidence varchar(4000), updated_by varchar(80) NOT NULL,
+ updated_at timestamp(6) with time zone NOT NULL
+);
