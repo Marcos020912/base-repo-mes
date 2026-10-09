@@ -333,3 +333,10 @@ El objetivo global no se da por terminado con esta regresión.
 - [x] E2E guard/archivo final terminal0, PostgreSQL/SMTP/Chrome/restauración y guard JS aprobados: /tmp/reduniv-contentguard-final-e2e.log. Autor conserva ZIP de borrador/retirado; anónimo y ajeno rechazados.
 - [ ] Pruebas adicionales ZIP101 archivos y preflight antes de headers en ejecución, /tmp/reduniv-archive-guards-tests.log.
 - [x] Pruebas ZIP101/paginación/preflight terminal0, junto a matrices y citas: 615 casos dirigidos aprobados; /tmp/reduniv-archive-guards-tests.log. No sustituye auditoría de todas las rutas.
+
+### Lectura científica completa y regresión ampliada — 2026-10-08
+- [x] Guard extendido a ficha legacy GET/HEAD: DRAFT/IN_REVIEW/RESTRICTED/WITHDRAWN no pueden exponerse por ACL residual; PUBLISHED conserva metadatos públicos sin abrir archivos restringidos.
+- [x] Suite Java completa: 55 suites, 1318 tests, cero fallos/errores/omitidos, 1m18s; /tmp/reduniv-expanded-full-java.log. Incluye matriz600, matriz210, citas3 y ZIP2.
+- [ ] E2E ampliado con rechazo HTTP de metadatos no publicados y ZIP editorial consumido/validado por Python zipfile (description.md y datos-dos.csv): /tmp/reduniv-rootguard-e2e.log, en ejecución.
+- [ ] Descubierto riesgo concurrente F15: escritura de tablas separadas no incrementa/bloquea ScientificRecord; comprobar y corregir serialización frente a envío/publicación y escrituras legacy. No cerrar F15 por matriz secuencial.
+- [x] E2E raíz/ZIP terminal0: metadatos de borrador/retirado no accesibles por usuario ajeno, archivo editorial consumido y validado con Python zipfile (CRC, description.md y CSV), autor conserva acceso tras retirada, todos los flujos y restauración completos. /tmp/reduniv-rootguard-e2e.log. No errores JS finales.

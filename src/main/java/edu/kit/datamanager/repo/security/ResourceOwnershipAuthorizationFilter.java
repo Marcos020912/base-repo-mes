@@ -29,9 +29,8 @@ public class ResourceOwnershipAuthorizationFilter extends OncePerRequestFilter {
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI(); String method = request.getMethod();
         if (!path.startsWith("/api/v1/dataresources/")) return true;
-        boolean contentRead = (HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method))
-                && (path.contains("/data/") || path.endsWith("/archive"));
-        return !(contentRead || HttpMethod.PUT.matches(method) || HttpMethod.PATCH.matches(method) || HttpMethod.DELETE.matches(method)
+        boolean read = HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method);
+        return !(read || HttpMethod.PUT.matches(method) || HttpMethod.PATCH.matches(method) || HttpMethod.DELETE.matches(method)
                 || (HttpMethod.POST.matches(method) && (path.contains("/data/") || path.endsWith("/description") || path.endsWith("/attachments"))));
     }
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
@@ -39,12 +38,13 @@ public class ResourceOwnershipAuthorizationFilter extends OncePerRequestFilter {
         String resourceId = remainder.split("/", 2)[0];
         boolean contentRead = (HttpMethod.GET.matches(request.getMethod()) || HttpMethod.HEAD.matches(request.getMethod()))
                 && (remainder.contains("/data/") || remainder.endsWith("/archive"));
-        if (contentRead) {
+        boolean read = HttpMethod.GET.matches(request.getMethod()) || HttpMethod.HEAD.matches(request.getMethod());
+        if (read) {
             var record = scientificRecords.findById(resourceId);
             if (record.isPresent()) {
                 var science = record.get();
                 boolean published = science.getStatus() == PublicationStatus.PUBLISHED;
-                boolean publiclyReadable = published && ("OPEN".equals(science.getAccessLevel()) ||
+                boolean publiclyReadable = published && (!contentRead || "OPEN".equals(science.getAccessLevel()) ||
                         ("EMBARGOED".equals(science.getAccessLevel()) && science.getEmbargoUntil() != null
                                 && !science.getEmbargoUntil().isAfter(Instant.now())));
                 if (!publiclyReadable) {
@@ -55,7 +55,7 @@ public class ResourceOwnershipAuthorizationFilter extends OncePerRequestFilter {
                             "ROLE_CURATOR".equals(authority.getAuthority()) || "ROLE_ADMINISTRATOR".equals(authority.getAuthority()));
                     logger.debug("Scientific content guard: status=" + science.getStatus() + ", owner=" + owner + ", curator=" + curator);
                     if (!owner && !curator) {
-                        // A legacy/public ACL must not reopen draft or withdrawn scientific files.
+                        // A legacy/public ACL must not reopen draft or withdrawn scientific records.
                         response.setStatus(published ? HttpServletResponse.SC_FORBIDDEN : HttpServletResponse.SC_NOT_FOUND);
                         response.setContentType("application/json");
                         json.writeValue(response.getWriter(), java.util.Map.of("message", published

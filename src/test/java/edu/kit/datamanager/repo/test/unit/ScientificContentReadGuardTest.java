@@ -25,7 +25,7 @@ public class ScientificContentReadGuardTest {
         for(PublicationStatus state:PublicationStatus.values())
             for(String access:List.of("OPEN","RESTRICTED","FUTURE","EXPIRED"))
                 for(String method:List.of("GET","HEAD"))
-                    for(String path:List.of("/data/file.csv","/archive"))
+                    for(String path:List.of("/data/file.csv","/archive",""))
                         for(String actor:List.of("anonymous","other","author","curator","admin"))
                             values.add(new Object[]{state,access,method,path,actor});
         return values;
@@ -52,7 +52,7 @@ public class ScientificContentReadGuardTest {
         var response=new MockHttpServletResponse();var chain=mock(FilterChain.class);
         new ResourceOwnershipAuthorizationFilter(ownership,records).doFilter(request,response,chain);
         boolean privileged=List.of("author","curator","admin").contains(actor);
-        boolean publicRead=state==PublicationStatus.PUBLISHED&&(access.equals("OPEN")||access.equals("EXPIRED"));
+        boolean publicRead=state==PublicationStatus.PUBLISHED&&(path.isEmpty()||access.equals("OPEN")||access.equals("EXPIRED"));
         if(privileged||publicRead)verify(chain).doFilter(request,response);
         else {verifyNoInteractions(chain);assertEquals(state==PublicationStatus.PUBLISHED?403:404,response.getStatus());}
     }

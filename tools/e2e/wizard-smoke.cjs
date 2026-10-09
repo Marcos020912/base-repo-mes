@@ -520,7 +520,14 @@ async function publicVersionHistory(base,published,nextId,token) {
   const before=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions')).json();assert(before.total===1&&!JSON.stringify(before).includes(nextId),'Familia pública expone sucesora en borrador.');
   const next=await (await fetch(base+'/api/v1/scientific/'+nextId,{headers})).json();
   const contentUrl=base+'/api/v1/dataresources/'+nextId+'/archive';
-  assert((await fetch(contentUrl,{headers})).ok,'Autor no puede recuperar archivos de su borrador.');
+  async function ownedArchive() {
+    const response=await fetch(contentUrl,{headers});assert(response.ok,'Archivo editorial del autor rechazado.');
+    const buffer=Buffer.from(await response.arrayBuffer());const archivePath=path.join(temp,'editorial-version.zip');fs.writeFileSync(archivePath,buffer);
+    const check=spawnSync('python3',['-c',"import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None; assert 'description.md' in z.namelist(); assert 'datos-dos.csv' in z.namelist()",archivePath],{encoding:'utf8'});
+    assert(check.status===0,'ZIP editorial inválido o incompleto: '+check.stderr);
+  }
+  await ownedArchive();
+  if(verifiedAccount)assert((await fetch(base+'/api/v1/dataresources/'+nextId,{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===404,'Ruta legacy expone metadatos de borrador ajeno.');
   assert(!(await fetch(contentUrl)).ok,'Ruta legacy expone archivo de borrador anónimamente.');
   if(verifiedAccount)assert((await fetch(contentUrl,{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===404,'Ruta legacy expone borrador a usuario ajeno.');
 
@@ -532,7 +539,8 @@ async function publicVersionHistory(base,published,nextId,token) {
   assert((await fetch(base+'/api/v1/scientific/'+nextId+'/withdraw',{method:'POST',headers,body:JSON.stringify({reason:'Retirada sintética para prueba de historial'})})).ok,'No se pudo retirar sucesora sintética.');
   assert(!(await fetch(contentUrl)).ok,'ACL legacy expone archivos retirados anónimamente.');
   if(verifiedAccount)assert((await fetch(contentUrl,{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===404,'ACL legacy expone retirado a usuario ajeno.');
-  assert((await fetch(contentUrl,{headers})).ok,'Retirada destruyó acceso editorial del autor a archivos conservados.');
+  await ownedArchive();
+  if(verifiedAccount)assert((await fetch(base+'/api/v1/dataresources/'+nextId,{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===404,'Ruta legacy expone metadatos completos de versión retirada.');
   history=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions')).json();assert(history.items.some(v=>v.id===nextId&&v.status==='WITHDRAWN')&&history.items.some(v=>v.id===published.id&&v.current),'Retirada desapareció de familia pública.');
   const context=await browser.createBrowserContext();try{const visitor=await context.newPage();await visitor.goto(base+'/datasets/'+published.id,{waitUntil:'load'});await visitor.waitForFunction(()=>document.querySelectorAll('#versions-list li').length===2);assert(await visitor.$eval('#versions-list',n=>n.textContent.includes('Retirada (ficha permanente)')),'Ficha no muestra versión retirada.');assert(await visitor.$eval('#versions-list [aria-current=page]',n=>n.href.endsWith('/datasets/'+new URL(location.href).pathname.split('/').pop())),'Ficha no identifica versión exacta.');}finally{await context.close();}
   process.stdout.write('Versiones OK: borradores ocultos, publicación, familia paginada y retirada retenida en ficha pública.\n');

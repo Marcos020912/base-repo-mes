@@ -39,3 +39,27 @@ legacy de recursos/archivos, Markdown/ZIP, DOI, retirada, perfiles, privacidad n
 administración. Sus pruebas específicas y el E2E real complementan esta matriz;
 no permiten cerrar S04/S06/F15 globalmente. La matriz HTTP de esos endpoints y
 la concurrencia publicación-escritura siguen pendientes.
+
+## Guard de lectura de rutas legacy
+
+`ScientificContentReadGuardTest`: 600 combinaciones (cinco estados × cuatro
+políticas OPEN/RESTRICTED/embargo futuro/expirado × GET/HEAD × ficha/data/archive
+× cinco actores). Una ACL legacy pública no basta para leer fichas o contenido
+no publicados: solo autor, curador o administrador pueden hacerlo. En PUBLISHED
+los metadatos siguen públicos; los archivos respetan acceso/embargo. El guard
+no reemplaza ACL upstream: aun si permite continuar, el servicio aplica sus ACL.
+
+`DatasetArchiveControllerTest` verifica paginación de 101 archivos, ZIP legible
+con contenido exacto, y rechazo de traversal antes de comprometer headers.
+
+Suite Java completa ampliada: 55 suites, 1318 casos, sin fallos/errores/omitidos;
+`/tmp/reduniv-expanded-full-java.log`. La matriz HTTP ampliada y validación ZIP
+con parser independiente están en el E2E real, no solo en mocks. Su resultado
+se registra separadamente en el plan.
+
+### Riesgo concurrente aún pendiente
+
+Los controladores de tablas separadas comprueban DRAFT antes de escribir, pero
+no bloquean ni incrementan la versión de ScientificRecord. La matriz secuencial
+no prueba serialización con envío/publicación. Falta prueba de carrera y estrategia
+coordinada de bloqueo, incluyendo archivos legacy; F15 sigue abierto.
