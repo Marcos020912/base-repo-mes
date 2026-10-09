@@ -88,6 +88,21 @@ public class WebSecurityConfig {
     public WebSecurityConfig() {
     }
 
+    // These components belong only to the ordered Spring Security chain. Boot's
+    // servlet registration would execute them again outside the security context.
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<LocalJwtAuthenticationFilter> localJwtServletRegistration() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(localJwtAuthenticationFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<ResourceOwnershipAuthorizationFilter> ownershipServletRegistration() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(resourceOwnershipAuthorizationFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         HttpSecurity httpSecurity = http.authorizeHttpRequests(

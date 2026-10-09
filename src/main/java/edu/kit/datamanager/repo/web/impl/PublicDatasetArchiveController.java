@@ -86,7 +86,7 @@ public class PublicDatasetArchiveController {
         }
     }
 
-    private static boolean safeRelativePath(String name) {
+    static boolean safeRelativePath(String name) {
         if (name == null || name.isBlank() || name.startsWith("/") || name.contains("\\") ||
                 name.indexOf('\r') >= 0 || name.indexOf('\n') >= 0) return false;
         try {

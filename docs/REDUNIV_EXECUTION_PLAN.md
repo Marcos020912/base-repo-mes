@@ -319,3 +319,17 @@ El objetivo global no se da por terminado con esta regresión.
 - Diagnóstico F13: primera integración falló porque el módulo nuevo no estaba en allowlist de assets anónimos de Spring Security. Corregido; JAR y E2E repetidos, resultado aún pendiente. /tmp/reduniv-f13-retry-e2e.log.
 
 - [x] Repetición F13 terminal 0: comparación pública real, todos los flujos existentes y restauración PostgreSQL completos; guard final sin errores JS. /tmp/reduniv-f13-retry-e2e.log. JAR reconstruido tras allowlist, 11s.
+
+### Citación y autorización de metadatos/archivos — 2026-10-08
+- [x] BibTeX deja de borrar llaves/backslash: escapa símbolos TeX y agrupa organizaciones literales; CSL representa organizaciones con literal, RIS personas como apellido/nombres; formato normalizado Locale.ROOT.
+- [x] Tres pruebas de citas: caracteres especiales, DOI/versión exactos, CSL parseado y siete formatos rechazados en los cuatro estados no publicados sin leer recursos. No acredita estilos bibliotecarios ni round-trip externo.
+- [x] Matriz 210 casos para relaciones/financiación/identidades: cinco estados × siete identidades × seis operaciones; solo autor puede cambiar DRAFT y no hay escrituras/eventos tras rechazo.
+- [x] Descubierto y corregido bypass potencial de ACL legacy: guard de archivos solo comprobaba PUBLISHED; ahora toda ficha no publicada exige autor/curador, incluso WITHDRAWN. No altera ACL de registros legacy sin ficha científica.
+- [x] 400 casos del guard GET/HEAD data/archive, cinco estados, cuatro políticas de acceso y cinco actores, todos aprobados. Total dirigido 613 tests sin fallos; /tmp/reduniv-security-citation-final.log.
+- [ ] E2E real con archivo/archive borrador y retirado: rechazo anónimo/usuario ajeno, acceso editorial del autor conservado. En ejecución /tmp/reduniv-contentguard-e2e.log, no aprobado hasta terminal.
+- [ ] Auditoría de todos los endpoints, carreras y revisión institucional siguen pendientes. Evidencia detallada: SCIENTIFIC_METADATA_AUTHORIZATION_EVIDENCE.md.
+
+- Diagnóstico de integración: primeras corridas guard fallaron por ZIP editorial, no por rechazo del guard. Stack completo mostró UnsupportedOperationException en Unpaged.getPageSize. Corregido paginado100 estable y preflight de rutas/archivos antes de respuesta, evitando truncamiento o salida parcial. Filtros JWT/ownership registrados exclusivamente en SecurityFilterChain.
+- [x] E2E guard/archivo final terminal0, PostgreSQL/SMTP/Chrome/restauración y guard JS aprobados: /tmp/reduniv-contentguard-final-e2e.log. Autor conserva ZIP de borrador/retirado; anónimo y ajeno rechazados.
+- [ ] Pruebas adicionales ZIP101 archivos y preflight antes de headers en ejecución, /tmp/reduniv-archive-guards-tests.log.
+- [x] Pruebas ZIP101/paginación/preflight terminal0, junto a matrices y citas: 615 casos dirigidos aprobados; /tmp/reduniv-archive-guards-tests.log. No sustituye auditoría de todas las rutas.

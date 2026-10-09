@@ -218,6 +218,7 @@ async function startApp(port, files) {
     `spring.jpa.hibernate.ddl-auto=${postgres?.restored ? 'validate' : 'update'}`,
     `repo.basepath=${pathToFileUrl(files.data)}`,
     'repo.auth.enabled=true',
+    'logging.level.edu.kit.datamanager.repo.security.ResourceOwnershipAuthorizationFilter=DEBUG',
     `repo.auth.jwtSecret=${crypto.randomBytes(48).toString('hex')}`,
     `repo.auth.bootstrap-admin-username=${username}`,
     `repo.auth.bootstrap-admin-password=${password}`,
@@ -518,12 +519,20 @@ async function publicVersionHistory(base,published,nextId,token) {
   assert((await fetch(base+'/api/v1/public/resources/'+nextId+'/versions')).status===404,'Historial expone borrador.');
   const before=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions')).json();assert(before.total===1&&!JSON.stringify(before).includes(nextId),'Familia pública expone sucesora en borrador.');
   const next=await (await fetch(base+'/api/v1/scientific/'+nextId,{headers})).json();
+  const contentUrl=base+'/api/v1/dataresources/'+nextId+'/archive';
+  assert((await fetch(contentUrl,{headers})).ok,'Autor no puede recuperar archivos de su borrador.');
+  assert(!(await fetch(contentUrl)).ok,'Ruta legacy expone archivo de borrador anónimamente.');
+  if(verifiedAccount)assert((await fetch(contentUrl,{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===404,'Ruta legacy expone borrador a usuario ajeno.');
+
   assert((await fetch(base+'/api/v1/scientific/'+nextId,{method:'PUT',headers,body:JSON.stringify({...next,versionDoi:`10.99999/version-history-${Date.now()}`})})).ok,'No se pudo preparar sucesora sintética.');
   assert((await fetch(base+'/api/v1/scientific/'+nextId+'/submit',{method:'POST',headers})).ok,'No se pudo enviar sucesora sintética.');
   assert((await fetch(base+'/api/v1/scientific/'+nextId+'/publish',{method:'POST',headers,body:'{"doiRegisteredExternally":true}'})).ok,'No se pudo publicar sucesora sintética.');
   let history=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions?size=1')).json();assert(history.latestPublishedId===nextId&&history.newerPublicationAvailable,'No informa publicación más reciente en la familia.');assert(history.total===2&&history.pages===2&&history.items.length===1&&history.items[0].id===nextId,'Historial paginado no incluye nueva versión.');
   const beforeWithdrawalContext=await browser.createBrowserContext();try{const visitor=await beforeWithdrawalContext.newPage();await visitor.goto(base+'/datasets/'+published.id,{waitUntil:'load'});await visitor.waitForSelector('#family-version-warning a');assert(await visitor.$eval('#family-version-warning a',n=>n.href).then(href=>href.endsWith('/datasets/'+nextId)),'Aviso no apunta a última publicación de familia.');await visitor.waitForSelector('#versions-list button');await visitor.click('#versions-list button');await visitor.waitForSelector('.metadata-difference');assert(await visitor.$eval('.metadata-differences',n=>n.textContent.includes('2.0')),'Comparación pública no muestra cambio de versión.');assert(!await visitor.$eval('.metadata-differences',n=>n.textContent.includes('reviewNote')),'Comparación expone auditoría privada.');}finally{await beforeWithdrawalContext.close();}
   assert((await fetch(base+'/api/v1/scientific/'+nextId+'/withdraw',{method:'POST',headers,body:JSON.stringify({reason:'Retirada sintética para prueba de historial'})})).ok,'No se pudo retirar sucesora sintética.');
+  assert(!(await fetch(contentUrl)).ok,'ACL legacy expone archivos retirados anónimamente.');
+  if(verifiedAccount)assert((await fetch(contentUrl,{headers:{Authorization:`Bearer ${verifiedAccount.token}`}})).status===404,'ACL legacy expone retirado a usuario ajeno.');
+  assert((await fetch(contentUrl,{headers})).ok,'Retirada destruyó acceso editorial del autor a archivos conservados.');
   history=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions')).json();assert(history.items.some(v=>v.id===nextId&&v.status==='WITHDRAWN')&&history.items.some(v=>v.id===published.id&&v.current),'Retirada desapareció de familia pública.');
   const context=await browser.createBrowserContext();try{const visitor=await context.newPage();await visitor.goto(base+'/datasets/'+published.id,{waitUntil:'load'});await visitor.waitForFunction(()=>document.querySelectorAll('#versions-list li').length===2);assert(await visitor.$eval('#versions-list',n=>n.textContent.includes('Retirada (ficha permanente)')),'Ficha no muestra versión retirada.');assert(await visitor.$eval('#versions-list [aria-current=page]',n=>n.href.endsWith('/datasets/'+new URL(location.href).pathname.split('/').pop())),'Ficha no identifica versión exacta.');}finally{await context.close();}
   process.stdout.write('Versiones OK: borradores ocultos, publicación, familia paginada y retirada retenida en ficha pública.\n');
@@ -1033,8 +1042,10 @@ async function main() {
     process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered}; nueva versión ${newVersionId}.\n`);
   } catch (error) {
     process.stderr.write(`${error.stack || error}\n`);
+    if(error.cause)process.stderr.write(`${error.cause.stack || error.cause}\n`);
     const log = path.join(temp, 'application.log');
     if (fs.existsSync(log)) {
+      fs.copyFileSync(log, '/tmp/reduniv-last-failed-application.log');fs.chmodSync('/tmp/reduniv-last-failed-application.log',0o600);
       const relevant = fs.readFileSync(log, 'utf8').split('\n')
         .filter(line => /ERROR|Exception|APPLICATION FAILED/.test(line)).slice(-12);
       if (relevant.length) process.stderr.write(relevant.join('\n') + '\n');

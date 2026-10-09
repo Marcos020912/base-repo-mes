@@ -41,21 +41,25 @@ public class ResourceOwnershipAuthorizationFilter extends OncePerRequestFilter {
                 && (remainder.contains("/data/") || remainder.endsWith("/archive"));
         if (contentRead) {
             var record = scientificRecords.findById(resourceId);
-            if (record.isPresent() && record.get().getStatus() == PublicationStatus.PUBLISHED) {
+            if (record.isPresent()) {
                 var science = record.get();
-                boolean publiclyReadable = "OPEN".equals(science.getAccessLevel()) ||
+                boolean published = science.getStatus() == PublicationStatus.PUBLISHED;
+                boolean publiclyReadable = published && ("OPEN".equals(science.getAccessLevel()) ||
                         ("EMBARGOED".equals(science.getAccessLevel()) && science.getEmbargoUntil() != null
-                                && !science.getEmbargoUntil().isAfter(Instant.now()));
+                                && !science.getEmbargoUntil().isAfter(Instant.now())));
                 if (!publiclyReadable) {
                     var authentication = SecurityContextHolder.getContext().getAuthentication();
                     String username = authentication == null ? "" : authentication.getName();
                     boolean owner = ownership.findById(resourceId).filter(item -> item.getUsername().equalsIgnoreCase(username)).isPresent();
                     boolean curator = authentication != null && authentication.getAuthorities().stream().anyMatch(authority ->
                             "ROLE_CURATOR".equals(authority.getAuthority()) || "ROLE_ADMINISTRATOR".equals(authority.getAuthority()));
+                    logger.debug("Scientific content guard: status=" + science.getStatus() + ", owner=" + owner + ", curator=" + curator);
                     if (!owner && !curator) {
-                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        // A legacy/public ACL must not reopen draft or withdrawn scientific files.
+                        response.setStatus(published ? HttpServletResponse.SC_FORBIDDEN : HttpServletResponse.SC_NOT_FOUND);
                         response.setContentType("application/json");
-                        json.writeValue(response.getWriter(), java.util.Map.of("message", "Los archivos no son de acceso abierto."));
+                        json.writeValue(response.getWriter(), java.util.Map.of("message", published
+                                ? "Los archivos no son de acceso abierto." : "Contenido científico no disponible."));
                         return;
                     }
                 }
