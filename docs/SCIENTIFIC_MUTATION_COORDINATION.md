@@ -73,3 +73,44 @@ F15 de forma robusta faltan guardas transaccionales sobre la fila del recurso/es
 serialización dentro de las transacciones de datos, prueba de pérdida de sesión
 mientras hay una subida activa y auditoría de escritores internos/externos.
 No dar publicado inmutable por acreditado únicamente con este mutex.
+
+## Segunda barrera: transacción primaria (avance posterior)
+
+`ScientificResourceWriteLock` requiere una transacción existente y writable; no abre
+una transacción separada ni acepta un uso sin transacción. Bloquea la fila `DataResource`
+con `PESSIMISTIC_WRITE` antes de leer la ficha/estado y modificar tablas científicas.
+Esta fila existe incluso cuando aún no existe `ScientificRecord`, evitando el hueco de
+bloquear solo la ficha opcional. La base libera el bloqueo al commit/rollback primario,
+no cuando se pierde la sesión del pool de leases.
+
+Integrado en edición científica y aplicación de perfil, envío, devolución a borrador,
+publicación **manual**, retirada, derivación de versiones, autores/afiliaciones,
+financiación, relaciones y escritura/revisión de privacidad. La derivación toma ambos
+IDs en orden para evitar bloquearlos en orden inverso. Autoría se verifica antes de
+bloquear en los endpoints de autor; los endpoints curatoriales mantienen su seguridad
+de método. El bloqueo no concede permisos.
+
+La espera de lock está acotada a 2000ms. PostgreSQL usa `set_config('lock_timeout',
+'2000ms',true)` dentro de la transacción, ya que no se debe confiar solo en el hint
+portable JPA; esto limita espera de bloqueo, **no la duración completa de la transacción**.
+Contención produce 409 seguro y rollback de la operación. El timeout se reinicia al
+terminar la transacción; no cambia la configuración global de PostgreSQL.
+
+### Alcance no completado
+
+Los controladores legacy de archivos y el flujo DOI automatizado aún no usan esta
+segunda barrera. Siguen bajo el gate normal; la muerte de su sesión dedicada durante
+una subida/llamada externa sigue siendo un caso pendiente. Integrar DOI dentro de sus
+transacciones cortas conservando commits de intención antes de llamadas externas;
+**no envolver todo el flujo en una transacción HTTP larga**. Auditar commits, caché JPA,
+rollback de filesystem/versiones y respuestas HTTP antes de extender la barrera legacy.
+No afirmar F15 completo ni publicación inmutable bajo todos los fallos por esta mejora.
+
+### Prueba adicional
+
+E2E con una sesión PostgreSQL independiente que bloquea únicamente `data_resource`
+(sin advisory lock) confirma que el gate de petición pasa pero la operación científica
+no puede escribir hasta que la transacción primaria lo permita. Se verifican 409 con
+espera acotada, ausencia de cambios, independencia de otro dataset y recuperación tras
+rollback. Esto no es todavía una prueba de dos JVM ni de matar una sesión mientras
+una subida multipart sigue activa.

@@ -43,7 +43,7 @@ public class ScientificRecordControllerTest {
         when(records.save(any(ScientificRecord.class))).thenAnswer(call -> call.getArgument(0));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("author", null));
         when(quality.inspect(any(ScientificRecord.class))).thenReturn(new ScientificQualityService.QualityReport(100, java.util.List.of(), java.util.List.of()));
-        controller = new ScientificRecordController(records, owners, resources, quality, events);
+        controller = new ScientificRecordController(records, owners, resources, quality, events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
     }
 
     @After

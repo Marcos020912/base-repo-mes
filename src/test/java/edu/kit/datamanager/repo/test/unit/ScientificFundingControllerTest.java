@@ -29,7 +29,7 @@ public class ScientificFundingControllerTest {
         when(records.findById("r1")).thenReturn(Optional.of(record));
         when(ownership.findById("r1")).thenReturn(Optional.of(new ResourceOwnership("r1", "author")));
         when(funding.saveAll(any())).thenAnswer(call -> call.getArgument(0));
-        var controller = new ScientificFundingController(funding, records, ownership, events);
+        var controller = new ScientificFundingController(funding, records, ownership, events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
         var item = new ScientificFundingController.FundingInput("Agencia", "03yrm5c26", "A-1", "Proyecto");
         try {
             SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("author", "", List.of()));
@@ -49,7 +49,7 @@ public class ScientificFundingControllerTest {
         when(records.findById("r1")).thenReturn(Optional.of(new ScientificRecord("r1")));
         when(ownership.findById("r1")).thenReturn(Optional.of(new ResourceOwnership("r1", "author")));
         var controller = new ScientificFundingController(funding, records, ownership,
-                mock(ScientificRecordEventRepository.class));
+                mock(ScientificRecordEventRepository.class), org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
         try {
             SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("author", "", List.of()));
             assertThrows(ResponseStatusException.class, () -> controller.replace("r1", List.of(
@@ -68,7 +68,7 @@ public class ScientificFundingControllerTest {
         when(ownership.findById("r1")).thenReturn(Optional.of(new ResourceOwnership("r1", "author")));
         when(funding.saveAll(any())).thenAnswer(call -> call.getArgument(0));
         var controller = new ScientificFundingController(funding, records, ownership,
-                mock(ScientificRecordEventRepository.class));
+                mock(ScientificRecordEventRepository.class), org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
         try {
             SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("author", "", List.of()));
             assertEquals(2, controller.replace("r1", List.of(

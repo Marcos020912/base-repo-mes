@@ -353,3 +353,10 @@ El objetivo global no se da por terminado con esta regresión.
 - [x] Fixtures del exportador Java pasan parsers independientes: Pybtex interpreta identidades; Bibtexparser conserva campos/escapes en round-trip; Rispy conserva DOI/versión/autores/título. CSL coincide. Cuatro pruebas positivas/negativas del verificador aprobadas.
 - [x] Regresión Java completa aprobada: 59 suites, 1331 tests sin fallos/errores/omitidos; /tmp/reduniv-citation-full-java.log, terminal0.
 - [ ] F05 sigue parcial: revisión bibliotecaria de estilos, importación visual por gestor y auditoría de dos acciones. Procedimiento tools/citations/README.md.
+
+### Fencing primario científico — avance F15 (2026-10-08)
+- [x] Servicio mandatory/writable bloquea DataResource primario antes de leer estado en ficha/perfil/envío/devolución/manualpublish/retirada/derivación, funding/relations/creators y privacidad; doble ID ordenado. Espera PG2000ms transaction-local, no duración total.
+- [x] Cuatro pruebas unitarias de contrato/rowlock/timeout/errores aprobadas. Matrices/controller tests anteriores aprobados.
+- [x] E2E inicial terminal0: funding bloqueado por rowlock SQL independiente (sin advisory), espera acotada, otro dataset editable, ficha intacta, recuperación tras rollback y todos los demás flujos/restauración aprobados. /tmp/reduniv-rowfence-e2e.log.
+- [x] Regresión final Java60suites1335tests0fallos/errores/omitidos y JAR aprobados, /tmp/reduniv-rowfence-final-{java,jar}.log. E2E final ampliado a nueve escrituras y privacidad terminal0: /tmp/reduniv-rowfence-nine-e2e.log, restauración completa y sin errores JS.
+- [ ] No cerrar F15: extender fencing a legacy/DOI sin romper transacciones recuperables, probar sesión perdida en multipart/dos JVM, auditar writers internos/filesystem.

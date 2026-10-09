@@ -25,13 +25,15 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/v1/scientific/{id}/relations")
 public class ScientificRelationController {
+    private final edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock;
     private final ScientificRelationRepository relations;
     private final ScientificRecordRepository records;
     private final ResourceOwnershipRepository ownership;
     private final ScientificRecordEventRepository events;
 
     public ScientificRelationController(ScientificRelationRepository relations, ScientificRecordRepository records,
-            ResourceOwnershipRepository ownership, ScientificRecordEventRepository events) {
+            ResourceOwnershipRepository ownership, ScientificRecordEventRepository events, edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock) {
+        this.writeLock = writeLock;
         this.relations = relations; this.records = records; this.ownership = ownership; this.events = events;
     }
 
@@ -47,8 +49,9 @@ public class ScientificRelationController {
     @PutMapping
     @Transactional
     public List<ScientificRelation> replace(@PathVariable String id, @RequestBody List<RelationInput> input) {
-        var record = records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (!isOwner(id)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el autor puede editar relaciones.");
+        writeLock.acquire(id);
+        var record = records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (record.getStatus() != PublicationStatus.DRAFT)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se pueden editar relaciones de un borrador.");
         if (input == null || input.size() > 30)

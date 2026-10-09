@@ -30,7 +30,7 @@ public class ScientificRelationControllerTest {
         when(records.findById("r1")).thenReturn(Optional.of(record));
         when(ownership.findById("r1")).thenReturn(Optional.of(new ResourceOwnership("r1", "author")));
         when(relations.saveAll(any())).thenAnswer(call -> call.getArgument(0));
-        var controller = new ScientificRelationController(relations, records, ownership, events);
+        var controller = new ScientificRelationController(relations, records, ownership, events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
         var input = new ScientificRelationController.RelationInput(ScientificRelation.Kind.ARTICLE,
                 ScientificRelation.IdentifierType.DOI, ScientificRelation.RelationType.IsReferencedBy,
                 "https://doi.org/10.1234/article", "Artículo asociado");
@@ -52,7 +52,7 @@ public class ScientificRelationControllerTest {
         var ownership = mock(ResourceOwnershipRepository.class);
         when(records.findById("r1")).thenReturn(Optional.of(new ScientificRecord("r1")));
         when(ownership.findById("r1")).thenReturn(Optional.of(new ResourceOwnership("r1", "author")));
-        var controller = new ScientificRelationController(relations, records, ownership, mock(ScientificRecordEventRepository.class));
+        var controller = new ScientificRelationController(relations, records, ownership, mock(ScientificRecordEventRepository.class), org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
         try {
             SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("author", "", List.of()));
             var bad = new ScientificRelationController.RelationInput(ScientificRelation.Kind.SOFTWARE,

@@ -61,18 +61,18 @@ public class ScientificMetadataAuthorizationMatrixTest {
     }
     @Test public void relationsMutation() {
         var repository=mock(ScientificRelationRepository.class);when(repository.saveAll(any())).thenReturn(List.of());
-        var controller=new ScientificRelationController(repository,records,ownership,events);
+        var controller=new ScientificRelationController(repository,records,ownership,events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
         mutation(()->controller.replace("r1",List.of()),repository);
     }
     @Test public void fundingMutation() {
         var repository=mock(ScientificFundingRepository.class);when(repository.saveAll(any())).thenReturn(List.of());
-        var controller=new ScientificFundingController(repository,records,ownership,events);
+        var controller=new ScientificFundingController(repository,records,ownership,events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
         mutation(()->controller.replace("r1",List.of()),repository);
     }
     private ScientificCreatorController creators(ScientificCreatorRepository repository) {
         var resources=mock(IDataResourceDao.class);var resource=mock(DataResource.class);
         when(resources.findById("r1")).thenReturn(Optional.of(resource));when(resource.getCreators()).thenReturn(Set.of());
-        return new ScientificCreatorController(resources,records,repository,mock(ScientificAffiliationRepository.class),ownership,events);
+        return new ScientificCreatorController(resources,records,repository,mock(ScientificAffiliationRepository.class),ownership,events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
     }
     @Test public void creatorsMutation() {
         var repository=mock(ScientificCreatorRepository.class);
@@ -80,11 +80,11 @@ public class ScientificMetadataAuthorizationMatrixTest {
     }
     @Test public void relationsVisibility() {
         var repository=mock(ScientificRelationRepository.class);
-        reading(()->new ScientificRelationController(repository,records,ownership,events).list("r1"),repository);
+        reading(()->new ScientificRelationController(repository,records,ownership,events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class)).list("r1"),repository);
     }
     @Test public void fundingVisibility() {
         var repository=mock(ScientificFundingRepository.class);
-        reading(()->new ScientificFundingController(repository,records,ownership,events).list("r1"),repository);
+        reading(()->new ScientificFundingController(repository,records,ownership,events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class)).list("r1"),repository);
     }
     @Test public void creatorsVisibility() {
         var repository=mock(ScientificCreatorRepository.class);

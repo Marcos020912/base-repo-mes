@@ -32,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/v1/scientific/{id}/creators")
 public class ScientificCreatorController {
+    private final edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock;
     private final IDataResourceDao resources;
     private final ScientificRecordRepository records;
     private final ScientificCreatorRepository creators;
@@ -42,7 +43,8 @@ public class ScientificCreatorController {
     public ScientificCreatorController(IDataResourceDao resources, ScientificRecordRepository records,
             ScientificCreatorRepository creators, ScientificAffiliationRepository affiliations,
             ResourceOwnershipRepository ownership,
-            ScientificRecordEventRepository events) {
+            ScientificRecordEventRepository events, edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock) {
+        this.writeLock = writeLock;
         this.resources = resources; this.records = records; this.creators = creators;
         this.affiliations = affiliations; this.ownership = ownership; this.events = events;
     }
@@ -74,8 +76,9 @@ public class ScientificCreatorController {
     @PutMapping
     @Transactional
     public List<CreatorView> replace(@PathVariable String id, @RequestBody List<CreatorInput> input) {
-        var record = records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (!isOwner(id)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el autor puede editar identidades.");
+        writeLock.acquire(id);
+        var record = records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (record.getStatus() != PublicationStatus.DRAFT)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede editar un borrador.");
         var resource = resources.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));

@@ -29,7 +29,7 @@ public class ScientificPrivacyServiceTest {
         when(owners.findById("r1")).thenReturn(Optional.of(new ResourceOwnership("r1","author")));
         when(assessments.findById(anyString())).thenAnswer(call->Optional.ofNullable(stored.get(call.getArgument(0))));
         when(assessments.saveAndFlush(any())).thenAnswer(call->{ScientificPrivacyAssessment a=call.getArgument(0);if(stored.containsKey(a.getResourceId()))a.setRevision(a.getRevision()+1);stored.put(a.getResourceId(),a);return a;});
-        privacy=new ScientificPrivacyService(assessments,records,resources,owners,events,false);
+        privacy=new ScientificPrivacyService(assessments,records,resources,owners,events,false,org.mockito.Mockito.mock(ScientificResourceWriteLock.class));
     }
     @After public void cleanup() {SecurityContextHolder.clearContext();}
     @Test public void draftDeclarationIsAuthorOnlyAndPrivateToOthers() {
@@ -70,7 +70,7 @@ public class ScientificPrivacyServiceTest {
         assertThrows(ResponseStatusException.class,()->privacy.save("r1",ScientificPrivacyAssessment.Classification.NONE,null,stored.get("r1").getRevision()));
     }
     @Test public void strictPolicyRequiresDeclarationAndRejectedReviewBlocksEvenNonSensitive() {
-        privacy=new ScientificPrivacyService(assessments,records,resources,owners,events,true);
+        privacy=new ScientificPrivacyService(assessments,records,resources,owners,events,true,org.mockito.Mockito.mock(ScientificResourceWriteLock.class));
         assertThrows(ResponseStatusException.class,()->privacy.requireSubmissionAllowed("r1","OPEN"));
         var a=privacy.save("r1",ScientificPrivacyAssessment.Classification.NONE,null,null);
         privacy.requireSubmissionAllowed("r1","OPEN");science.setStatus(PublicationStatus.IN_REVIEW);actor("curator","CURATOR");

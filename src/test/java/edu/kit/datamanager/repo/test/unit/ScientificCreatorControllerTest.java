@@ -48,7 +48,7 @@ public class ScientificCreatorControllerTest {
         when(ownership.findById("r1")).thenReturn(Optional.of(owner));
         when(creators.findByResourceId("r1")).thenReturn(List.of());
         when(affiliations.findByResourceIdOrderByCreatorIdAscSortOrderAsc("r1")).thenReturn(List.of());
-        controller = new ScientificCreatorController(resources, records, creators, affiliations, ownership, events);
+        controller = new ScientificCreatorController(resources, records, creators, affiliations, ownership, events, org.mockito.Mockito.mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class));
     }
 
     @After public void clear() { SecurityContextHolder.clearContext(); }

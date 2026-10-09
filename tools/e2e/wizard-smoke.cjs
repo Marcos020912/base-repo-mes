@@ -514,6 +514,46 @@ async function deriveNewVersion(page, base, files, previous) {
     'La nueva versión no conservó el DOI conceptual del conjunto.');
   return id;
 }
+async function verifyPrimaryRowFence(page,base,dataset,other) {
+  if(!postgres)return;
+  assert(/^[a-zA-Z0-9-]+$/.test(dataset.id),'Synthetic resource ID must be SQL-safe.');
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  const args=['-X','-At','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-p',String(postgres.port),'-U','e2e_admin','-d',postgres.database];
+  const holder=spawn(path.join(postgres.bin,'psql'),args,{env:{...process.env,PGPASSWORD:postgres.secret},stdio:['pipe','pipe','pipe']});
+  const before=await (await fetch(base+'/api/v1/scientific/'+dataset.id,{headers})).json();
+  try {
+    await new Promise((resolve,reject)=>{
+      let output='',errors='';const timer=setTimeout(()=>reject(new Error('Primary row lock unavailable: '+errors)),10000);
+      holder.stderr.on('data',chunk=>{errors+=chunk;});
+      holder.stdout.on('data',chunk=>{output+=chunk;if(output.includes('PRIMARY_ROW_HELD')){clearTimeout(timer);resolve();}});
+      holder.once('error',error=>{clearTimeout(timer);reject(error);});
+      holder.once('exit',code=>{if(!output.includes('PRIMARY_ROW_HELD')){clearTimeout(timer);reject(new Error('Primary row holder exited: '+code+' '+errors));}});
+      holder.stdin.write(`BEGIN;\nSELECT id FROM data_resource WHERE id='${dataset.id}' FOR UPDATE;\nSELECT 'PRIMARY_ROW_HELD';\n`);
+    });
+    // No advisory lease is held by the independent SQL session: only the primary
+    // transaction fence can stop this request after the normal request gate passes.
+    for(const [method,suffix,body] of [
+      ['PUT','',{}],['PUT','/funding',[]],['PUT','/relations',[]],['PUT','/creators',[]],
+      ['PUT','/privacy',{}],['POST','/submit',{}],['POST','/publish',{doiRegisteredExternally:true}],
+      ['POST','/return-to-draft',{}],['POST','/withdraw',{reason:'Synthetic blocked request'}]
+    ]) {
+      const started=Date.now();
+      const response=await fetch(base+'/api/v1/scientific/'+dataset.id+suffix,{method,headers,body:JSON.stringify(body)});
+      const result=await response.text();
+      assert(response.status===409 && result.includes('operación en curso'),'Primary row fence did not reject '+suffix+': '+response.status+' '+result);
+      assert(Date.now()-started>=1500 && Date.now()-started<10000,'Primary lock timeout was not bounded near 2 seconds: '+suffix);
+    }
+    assert((await fetch(base+'/api/v1/scientific/'+other.id+'/funding',{method:'PUT',headers,body:'[]'})).ok,'Primary row fence blocked a different dataset.');
+    assert(JSON.stringify(await (await fetch(base+'/api/v1/scientific/'+dataset.id,{headers})).json())===JSON.stringify(before),'Blocked primary transaction changed the record.');
+  } finally {
+    holder.stdin.end('ROLLBACK;\n\\q\n');
+    await new Promise(resolve=>{if(holder.exitCode!==null)return resolve();holder.once('exit',resolve);setTimeout(()=>{holder.kill('SIGTERM');resolve();},5000).unref();});
+  }
+  assert((await fetch(base+'/api/v1/scientific/'+dataset.id+'/funding',{method:'PUT',headers,body:'[]'})).ok,'Primary row fence failed to recover after rollback.');
+  process.stdout.write('Primary row fence OK: independent SQL transaction, nine writes bounded without advisory lock, unrelated dataset and recovery.\n');
+}
+
 async function verifyMutationCoordination(page,base,dataset,other) {
   if(!postgres)return;
   const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
@@ -1031,6 +1071,7 @@ async function main() {
     const zipped = await deposit(page, base, files, 'zip');
     const packaged = await deposit(page, base, files, 'package');
     await verifyMutationCoordination(page,base,markdown,zipped);
+    await verifyPrimaryRowFence(page,base,markdown,zipped);
     const before = await page.$eval('#download-list', element => element.textContent);
     await rejectPackage(page, base, packaged.id, files.missingDescriptionZip, 'description/description.md');
     await rejectPackage(page, base, packaged.id, files.invalidTypeZip, 'no admite archivos .exe');

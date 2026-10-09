@@ -35,6 +35,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/v1/scientific")
 public class ScientificRecordController {
+    private final edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock;
     private static final Pattern DOI = Pattern.compile("^10\\.\\d{4,9}/\\S+$");
     private static final Pattern ORCID = Pattern.compile("^(?:https://orcid.org/)?\\d{4}-\\d{4}-\\d{4}-[\\dX]{4}$");
     private static final Pattern ROR = Pattern.compile("^(?:https://ror.org/)?0[0-9a-hjkmnp-tv-z]{6}[0-9]{2}$");
@@ -49,7 +50,8 @@ public class ScientificRecordController {
     private boolean automatedDoiEnabled;
     @Autowired(required=false) private edu.kit.datamanager.repo.service.ScientificPrivacyService privacy;
 
-    public ScientificRecordController(ScientificRecordRepository records, ResourceOwnershipRepository ownership, IDataResourceDao resources, ScientificQualityService quality, ScientificRecordEventRepository events) {
+    public ScientificRecordController(ScientificRecordRepository records, ResourceOwnershipRepository ownership, IDataResourceDao resources, ScientificQualityService quality, ScientificRecordEventRepository events, edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock) {
+        this.writeLock = writeLock;
         this.records = records;
         this.ownership = ownership;
         this.resources = resources;
@@ -83,6 +85,7 @@ public class ScientificRecordController {
     @Transactional
     public ScientificRecord applyMetadataProfile(@PathVariable String id,@RequestBody MetadataProfileApplication input){
         requireOwner(id);
+        writeLock.acquire(id);
         ScientificRecord saved=metadataProfiles.apply(id,input.profileId(),input.profileRevision(),input.resourceRevision());
         audit(id,"METADATA_PROFILE_APPLIED",saved.getMetadataProfileId());
         return saved;
@@ -94,6 +97,7 @@ public class ScientificRecordController {
     @Transactional
     public ScientificRecord update(@PathVariable String id, @RequestBody UpdateRequest input) {
         requireOwner(id);
+        writeLock.acquire(id);
         ScientificRecord record = records.findById(id).orElseGet(() -> new ScientificRecord(id));
         if (record.getStatus() != PublicationStatus.DRAFT) throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede editar un borrador.");
         record.setVersionLabel(clean(input.versionLabel(), 40));
@@ -156,6 +160,7 @@ public class ScientificRecordController {
     @Transactional
     public ScientificRecord submit(@PathVariable String id) {
         requireOwner(id);
+        writeLock.acquire(id);
         ScientificRecord record = records.findById(id).orElseGet(() -> new ScientificRecord(id));
         if (record.getStatus() != PublicationStatus.DRAFT) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso no está en borrador.");
         if(privacy!=null)privacy.requireSubmissionAllowed(id,record.getAccessLevel());
@@ -182,6 +187,7 @@ public class ScientificRecordController {
         if (id.equals(previousId)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La nueva versión debe ser otro recurso.");
         requireOwner(id);
         requireOwner(previousId);
+        for (String resourceId : java.util.stream.Stream.of(id, previousId).sorted().toList()) writeLock.acquire(resourceId);
         ScientificRecord current = records.findById(id).orElseGet(() -> new ScientificRecord(id));
         ScientificRecord previous = records.findById(previousId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Versión anterior no encontrada."));
         if (current.getStatus() != PublicationStatus.DRAFT || current.getPreviousResourceId() != null || previous.getStatus() != PublicationStatus.PUBLISHED) {
@@ -220,6 +226,7 @@ public class ScientificRecordController {
     @Transactional
     @PreAuthorize("hasAnyAuthority('ROLE_CURATOR','ROLE_ADMINISTRATOR')")
     public ScientificRecord returnToDraft(@PathVariable String id) {
+        writeLock.acquire(id);
         ScientificRecord record = current(id);
         if (record.getStatus() != PublicationStatus.IN_REVIEW) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso no está en revisión.");
         if(privacy!=null)privacy.clearReview(id);
@@ -235,6 +242,7 @@ public class ScientificRecordController {
     public ScientificRecord publish(@PathVariable String id, @RequestBody PublicationApproval approval) {
         if (automatedDoiEnabled) throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Use la publicación DataCite del flujo editorial; la confirmación manual está desactivada.");
+        writeLock.acquire(id);
         ScientificRecord record = current(id);
         if (record.getStatus() != PublicationStatus.IN_REVIEW) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso debe pasar por revisión.");
         if(privacy!=null)privacy.requirePublicationAllowed(id,record.getAccessLevel());
@@ -257,6 +265,7 @@ public class ScientificRecordController {
     @Transactional
     @PreAuthorize("hasAnyAuthority('ROLE_CURATOR','ROLE_ADMINISTRATOR')")
     public ScientificRecord withdraw(@PathVariable String id, @RequestBody WithdrawalRequest input) {
+        writeLock.acquire(id);
         ScientificRecord record = current(id);
         if (record.getStatus() != PublicationStatus.PUBLISHED && record.getStatus() != PublicationStatus.RESTRICTED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede retirar un recurso publicado.");

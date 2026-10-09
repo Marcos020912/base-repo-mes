@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service @Transactional
 public class ScientificPrivacyService {
+    private final ScientificResourceWriteLock writeLock;
     private final ScientificPrivacyAssessmentRepository assessments;
     private final ScientificRecordRepository records;
     private final IDataResourceDao resources;
@@ -21,7 +22,8 @@ public class ScientificPrivacyService {
     private final boolean required;
     public ScientificPrivacyService(ScientificPrivacyAssessmentRepository assessments,ScientificRecordRepository records,
             IDataResourceDao resources,ResourceOwnershipRepository owners,ScientificRecordEventRepository events,
-            @Value("${repo.privacy.require-assessment:false}") boolean required) {
+            @Value("${repo.privacy.require-assessment:false}") boolean required, ScientificResourceWriteLock writeLock) {
+        this.writeLock=writeLock;
         this.assessments=assessments;this.records=records;this.resources=resources;this.owners=owners;this.events=events;this.required=required;
     }
     public boolean isRequired() {return required;}
@@ -60,8 +62,9 @@ public class ScientificPrivacyService {
         return value.trim();
     }
     public Assessment save(String id,ScientificPrivacyAssessment.Classification classification,String assessmentNote,Long revision) {
-        var science=resource(id);
         if(!owner(id))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Solo el autor puede evaluar el borrador.");
+        writeLock.acquire(id);
+        var science=resource(id);
         if(science.getStatus()!=PublicationStatus.DRAFT)throw new ResponseStatusException(HttpStatus.CONFLICT,"Solo puede evaluarse un borrador editable.");
         if(classification==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Indique la clasificación de privacidad.");
         var existing=assessments.findById(id);var assessment=existing.orElseGet(()->new ScientificPrivacyAssessment(id));
@@ -76,8 +79,9 @@ public class ScientificPrivacyService {
         return view(id);
     }
     public Assessment review(String id,boolean approved,String reviewNote,Long revision) {
-        var science=resource(id);
         if(!curator())throw new ResponseStatusException(HttpStatus.FORBIDDEN,"La revisión de privacidad requiere curación.");
+        writeLock.acquire(id);
+        var science=resource(id);
         if(science.getStatus()!=PublicationStatus.IN_REVIEW)throw new ResponseStatusException(HttpStatus.CONFLICT,"El depósito debe estar en revisión.");
         var assessment=assessments.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.CONFLICT,"Falta la evaluación del autor."));
         if(revision==null || revision!=assessment.getRevision())throw new ResponseStatusException(HttpStatus.CONFLICT,"La evaluación cambió. Actualice antes de revisar.");
@@ -89,7 +93,7 @@ public class ScientificPrivacyService {
         assessment.setReviewedAt(Instant.now());assessment.setReviewedBy(username());assessment.setReviewNote(normalized);assessments.saveAndFlush(assessment);
         events.save(new ScientificRecordEvent(id,username(),approved?"PRIVACY_APPROVED":"PRIVACY_CHANGES_REQUIRED",null));return view(id);
     }
-    public void clearReview(String id) {assessments.findById(id).ifPresent(a->{a.clearReview();assessments.save(a);});}
+    public void clearReview(String id) {writeLock.acquire(id);assessments.findById(id).ifPresent(a->{a.clearReview();assessments.save(a);});}
     public void requireSubmissionAllowed(String id,String access) {
         var assessment=assessments.findById(id);
         if(required && assessment.isEmpty())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Complete la evaluación de privacidad antes de enviar.");

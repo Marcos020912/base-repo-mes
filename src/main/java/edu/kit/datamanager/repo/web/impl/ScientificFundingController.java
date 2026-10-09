@@ -24,13 +24,15 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/v1/scientific/{id}/funding")
 public class ScientificFundingController {
+    private final edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock;
     private final ScientificFundingRepository funding;
     private final ScientificRecordRepository records;
     private final ResourceOwnershipRepository ownership;
     private final ScientificRecordEventRepository events;
 
     public ScientificFundingController(ScientificFundingRepository funding, ScientificRecordRepository records,
-            ResourceOwnershipRepository ownership, ScientificRecordEventRepository events) {
+            ResourceOwnershipRepository ownership, ScientificRecordEventRepository events, edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock) {
+        this.writeLock = writeLock;
         this.funding = funding; this.records = records; this.ownership = ownership; this.events = events;
     }
 
@@ -46,8 +48,9 @@ public class ScientificFundingController {
     @PutMapping
     @Transactional
     public List<ScientificFunding> replace(@PathVariable String id, @RequestBody List<FundingInput> input) {
-        var record = records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (!isOwner(id)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el autor puede editar financiación.");
+        writeLock.acquire(id);
+        var record = records.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (record.getStatus() != PublicationStatus.DRAFT)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede editar un borrador.");
         if (input == null || input.size() > 20)
