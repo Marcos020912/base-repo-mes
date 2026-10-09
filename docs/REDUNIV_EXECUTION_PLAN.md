@@ -296,3 +296,14 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] reviews.load/preview ahora desregistran y limpian contenido antes del mensaje loading; fixture reproduce recarga y preview repetido sin errores.
 - [x] JAR reconstruido después del fix, 10s; /tmp/reduniv-i18n-final-jar.log. Axe baseline: 66 estados y cero infracciones automáticas; no certifica WCAG.
 - [ ] Tercera integración aislada PostgreSQL/SMTP/restauración iniciada; resultado pendiente, fuentes congeladas.
+
+## Estado actual verificable (prevalece sobre notas históricas anteriores)
+Actualizado 2026-10-08 tras tercera corrida integrada; las listas anteriores registran el avance a esa fecha, no nuevos pendientes duplicados.
+- [x] Implementación es/en extendida a 18 páginas, 1262 claves fuente; contenido científico, notas privadas y códigos preservados.
+- [x] E2E final PostgreSQL/SMTP/Chrome/restauración aprobado, guard de errores JS incluido; /tmp/reduniv-i18n-final-e2e.log. Corridas previas fallidas se conservan como diagnóstico, no aprobación.
+- [x] Los 54 archivos estáticos del JAR coinciden byte a byte con las fuentes actuales.
+- [x] Java 504 tests, 16 fixtures Chrome más regresión específica de recarga, y baseline axe 66 estados sin infracciones automáticas. No equivalen a revisión manual/aceptación institucional.
+- [ ] A07: auditoría de cobertura total de estados y revisión institucional del inglés.
+- [ ] F13: comparación pública de cambios de metadatos entre versiones publicadas, separada del historial editorial privado; retirada/borradores/notas y cuentas no deben filtrarse.
+- [ ] Auditorías de seguridad/estados y demás requisitos no cerrados de la matriz de fuentes; integraciones institucionales y pruebas externas requieren evidencia propia.
+El objetivo global no se da por terminado con esta regresión.
