@@ -37,8 +37,9 @@ JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew --offline --no-daemon tes
 No cubre filtros JWT/verificación/rate limiting, carreras transaccionales, endpoints
 legacy de recursos/archivos, Markdown/ZIP, DOI, retirada, perfiles, privacidad ni
 administración. Sus pruebas específicas y el E2E real complementan esta matriz;
-no permiten cerrar S04/S06/F15 globalmente. La matriz HTTP de esos endpoints y
-la concurrencia publicación-escritura siguen pendientes.
+no permiten cerrar S04/S06/F15 globalmente. El inventario HTTP anónimo, los guards legacy y las pruebas PostgreSQL/dosJVM
+posteriores constan en LOCAL_COMPLETION.md y REDUNIV_EXECUTION_PLAN.md.
+Cada prueba conserva su alcance; no equivale a aceptación productiva.
 
 ## Guard de lectura de rutas legacy
 

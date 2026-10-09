@@ -30,6 +30,23 @@ public class DoiRegistration {
     @Column(nullable = false, length = 20)
     private String state;
     private Instant lastSyncedAt;
+    private Instant lastAttemptAt;
+    private Instant registeredAt;
+    private Instant publishedAt;
+    @Column(length=2000)
+    private String landingPageUrl;
+    private Long metadataVersion;
+
+    /** Local acknowledgements, not a claim about remote timestamps or remote revision numbers. */
+    public void observe(String action, String result, String detail, String landing, boolean metadataChanged, Instant at) {
+        state=result; lastError=detail; lastAttemptAt=at;
+        if ("ERROR".equals(result)) return;
+        lastSyncedAt=at;
+        if (registeredAt==null) registeredAt=at;
+        if ("FINDABLE".equals(result)&&publishedAt==null) publishedAt=at;
+        if (landing!=null) landingPageUrl=landing;
+        if (metadataChanged) metadataVersion=metadataVersion==null?1:metadataVersion+1;
+    }
     @Column(length = 500)
     private String lastError;
 
@@ -40,5 +57,6 @@ public class DoiRegistration {
         this.doi = doi;
         this.apiHost = apiHost;
         this.state = "PENDING";
+        this.metadataVersion = 0L;
     }
 }

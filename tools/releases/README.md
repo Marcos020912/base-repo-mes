@@ -1,0 +1,69 @@
+# Artefactos y respaldo privado
+
+## Verificación antes de actualizar
+
+`update.sh` exige ahora tres argumentos:
+
+```bash
+sudo ./update.sh vX.Y.Z /ruta/candidato.jar SHA256_DE_LA_RELEASE_APROBADA
+```
+
+El checksum se recibe por un canal de Release aprobado, no se calcula del JAR
+recibido para demostrar su autenticidad. El script verifica antes de descargar
+código o detener Java: SHA-256, estructura bootJar, rutas inequívocas, patrones
+conocidos de secretos en entradas propias y ausencia de configuración privada
+`application.properties` embebida. Ante un fallo, aborta sin cambiar el servicio.
+
+También puede comprobarlo sin actualizar:
+
+```bash
+python3 tools/releases/verify_artifact.py /ruta/candidato.jar SHA256_ESPERADO
+```
+
+No demuestra firma del editor ni correspondencia con un commit. No audita todos
+los secretos arbitrarios ni las dependencias anidadas. No imprime los valores
+de hallazgos. Conservar revisión de Release y análisis institucional de historial.
+
+## Respaldo
+
+En mantenimiento, detener **todas** las instancias/escrituras y obtener un dump
+custom con `pg_dump -Fc`, usando `.pgpass`/servicio PostgreSQL privado; no poner
+contraseñas en comandos ni Git. Después empaquetar la misma copia de datos:
+
+```bash
+python3 tools/releases/package_backup.py \
+  --dump /ruta/privada/database.dump --files /var/lib/base-repo/data \
+  --config /ruta/config/application.properties \
+  --output /ruta/privada/backup-nuevo.tar.gz --writes-stopped
+```
+
+`--writes-stopped` es una confirmación del operador, no una comprobación remota.
+La herramienta nunca se conecta a PostgreSQL, detiene servicios ni restaura.
+Comprueba `pg_restore --list`, archivos regulares y ausencia de enlaces; rechaza
+sobrescribir o colocar el respaldo dentro de los datos. Salida0600 y manifiesto
+SHA-256 por entrada. Es **confidencial**, incluye usuarios/hashes/configuración:
+no subir a Git/GitHub ni compartirlo como evidencia pública. No está cifrado;
+proteger almacenamiento, acceso y transferencia institucionalmente.
+
+Comprobar hashes no sustituye restaurar. Ensayar dump/archivos en una instalación
+separada con `tools/migrations/rehearse.sh` y el recorrido E2E, antes de actualizar.
+No ejecutar SQL de respaldos no confiables; inspeccionarlos y usar entorno aislado.
+No hay restauración automática a producción ni reversión automática del esquema.
+
+## Pruebas
+
+```bash
+python3 -m unittest discover -s tools/releases -p 'test_*.py'
+E2E_POSTGRES=1 E2E_MAIL=1 E2E_POSTGRES_RESTORE=1 node tools/e2e/wizard-smoke.cjs
+```
+
+La E2E usa dump/archivos/configuración sintéticos privados y verifica el manifiesto
+junto al ensayo PostgreSQL. No prueba la consistencia de una copia de producción
+ni todos los esquemas históricos.
+
+La comprobación de arranque exige además que **el PID del candidato** tenga un
+socket de escucha en el puerto comprobado (`ss`), antes de aceptar el HTTP200.
+Así una página de otro proceso no basta. `APP_CHECK_URL` se valida antes de parar
+servicios: HTTP interno, sin credenciales/query/fragmento. El operador debe indicar
+la dirección de esta instalación, no el HAProxy remoto. Sigue sin sustituir las
+pruebas funcionales de DB/SMTP/ES ni demostrar actualización sin interrupción.

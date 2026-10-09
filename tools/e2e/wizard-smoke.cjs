@@ -9,6 +9,7 @@ const {spawn, spawnSync} = require('node:child_process');
 const puppeteer = require('../a11y/node_modules/puppeteer-core');
 const axe=require('../a11y/node_modules/axe-core');
 const {validate:validateOpenApi}=require('../contract/openapi-check.cjs');
+const contractCompatibility=require('../contract/compatibility-check.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const jar = path.join(root, 'build/libs/base-repo.jar');
@@ -217,7 +218,7 @@ async function startApp(port, files) {
     ...await smtpProperties(),
     `spring.jpa.hibernate.ddl-auto=${postgres?.restored ? 'validate' : 'update'}`,
     `repo.basepath=${pathToFileUrl(files.data)}`,
-    'repo.auth.enabled=true',
+    'repo.auth.enabled=true', 'management.endpoints.web.exposure.include=health,info,metrics',
     'logging.level.edu.kit.datamanager.repo.security.ResourceOwnershipAuthorizationFilter=DEBUG',
     `repo.auth.jwtSecret=${crypto.randomBytes(48).toString('hex')}`,
     `repo.auth.bootstrap-admin-username=${username}`,
@@ -622,6 +623,15 @@ async function verifyTwoJvmFence(page,base,dataset,other) {
       await sleep(1000);
     }
     assert(ready,'Second JVM never became healthy.');
+    // No real accounts: unknown identity exercises shared counters without password work.
+    const rateIdentity='rate-two-jvm-'+crypto.randomBytes(8).toString('hex');
+    const attempt=host=>fetch(host+'/api/v1/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:rateIdentity,password:'invalid-fixture'})});
+    assert((await attempt(base)).status===401,'Initial rate bucket not available.');
+    const burst=await Promise.all(Array.from({length:19},(_,i)=>attempt(i%2?base:secondBase)));
+    const allowed=burst.filter(r=>r.status===401).length;
+    assert(allowed===9&&burst.every(r=>[401,429].includes(r.status)),'Concurrent two-JVM rate limit exceeded ten or failed unexpectedly: '+burst.map(r=>r.status));
+    for(const host of [base,secondBase]){const limited=await attempt(host);assert(limited.status===429&&Number(limited.headers.get('retry-after'))>0,'Rate limit not shared across JVMs.');}
+    process.stdout.write('Rate limit PostgreSQL/two JVMs OK: twenty concurrent attempts, exactly ten allowed, both instances return429/Retry-After.\n');
     const rootResponse=await fetch(base+'/api/v1/dataresources/'+dataset.id,{headers});
     const resource=await rootResponse.json();const etag=rootResponse.headers.get('etag');
     holder=spawn(path.join(postgres.bin,'psql'),args,{env,stdio:['pipe','pipe','pipe']});
@@ -1070,10 +1080,33 @@ async function collectionsFlow(page, base, published, draft) {
   assert((await fetch(base+'/api/v1/public/collections/'+collection.id)).status===404,'Colección eliminada sigue pública.');
   process.stdout.write('Colecciones OK: formularios, privado/público, membresía única, borradores ocultos y eliminación sin borrar datasets.\n');
 }
+async function verifyAnonymousApiSurface(base,document,draft) {
+  let checked=0;
+  for(const [route,item]of Object.entries(document.paths))for(const [method,op]of Object.entries(item)) {
+    if(!['get','post','put','patch','delete'].includes(method)||!route.startsWith('/api/v1/'))continue;
+    if(!op.security?.some(rule=>'bearer-jwt'in rule)||route.endsWith('/citation'))continue;
+    const url=route.replace(/\{[^}]+\}/g,encodeURIComponent(draft.id));
+    const options={method:method.toUpperCase(),redirect:'manual',signal:AbortSignal.timeout(10000)};
+    if(['post','put','patch'].includes(method)){options.headers={'Content-Type':method==='patch'?'application/json-patch+json':'application/json'};options.body=method==='patch'?'[]':'{}';}
+    const response=await fetch(base+url,options);
+    assert([401,403,404].includes(response.status),'Anonymous access boundary failed: '+method+' '+route+' '+response.status);
+    checked++;
+    if(method==='get'){const head=await fetch(base+url,{method:'HEAD',redirect:'manual',signal:AbortSignal.timeout(10000)});assert([401,403,404].includes(head.status),'HEAD bypass: '+route+' '+head.status);checked++;}
+  }
+  assert(checked>60,'API surface unexpectedly incomplete: '+checked);
+  process.stdout.write('Anonymous API inventory OK: '+checked+' private operations deny access before mutation.\n');
+}
+
 async function verifyMultiuserAccess(page, base, published, otherDraft) {
   if (!verifiedAccount) return;
   let userHeaders={Authorization:`Bearer ${verifiedAccount.token}`};
+  for(const [url,method]of [['/api/v1/dataresources/','GET'],['/api/v1/dataresources/search','POST'],['/api/v1/dataresources/search/data','POST']]){const options={method,headers:{...userHeaders,'Content-Type':'application/json'}};if(method==='POST')options.body='{}';assert((await fetch(base+url,options)).status===403,'Legacy collection bypasses publication guard: '+url);}
+  assert((await fetch(base+'/api/v1/search')).status===401,'Raw search exposed anonymously');
+  assert((await fetch(base+'/api/v1/search',{headers:userHeaders})).status===403,'Raw search exposed to normal user');
+  assert((await fetch(base+'/actuator/metrics')).status===401,'Actuator metrics exposed to anonymous');
+  assert((await fetch(base+'/actuator/metrics',{headers:userHeaders})).status===403,'Actuator metrics exposed to normal user');
   const adminTasksToken=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  assert((await fetch(base+'/actuator/metrics',{headers:{Authorization:'Bearer '+adminTasksToken}})).ok,'Administrator cannot inspect actuator metrics');
   const taskResponse=await fetch(base+'/api/v1/my-deposit-tasks?page=0&size=1',{headers:{Authorization:`Bearer ${adminTasksToken}`}});
   assert(taskResponse.ok,'No se pudieron consultar tareas del autor.');const tasks=await taskResponse.json();assert(tasks.total>1&&tasks.items.length===1&&tasks.pages===tasks.total,'Paginación de tareas inválida.');
   assert(tasks.items.every(item=>['DRAFT','IN_REVIEW'].includes(item.status)&&item.resourceId!==published.id),'Tareas incluye publicado.');
@@ -1143,6 +1176,32 @@ async function verifyMultiuserAccess(page, base, published, otherDraft) {
     'Login no informa cuenta restringida.');
   process.stdout.write('Multiusuario OK: catálogo compartido, administración/edición denegadas y token bloqueado al suspender.\n');
 }
+async function verifyCatalogVolume(page,base) {
+  if(!postgres)return;
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const marker='catalog-volume-'+crypto.randomBytes(8).toString('hex');
+  for(let start=0;start<221;start+=4)await Promise.all(Array.from({length:Math.min(4,221-start)},async(_,offset)=>{
+    const response=await fetch(base+'/api/v1/dataresources/',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({publisher:marker,publicationYear:'2025',resourceType:{value:'DATASET',typeGeneral:'DATASET'},creators:[{givenName:'Volume',familyName:'Fixture'}],titles:[{value:marker+' '+(start+offset)}]})});
+    assert(response.status===201,'Could not create volume fixture: '+response.status+' '+await response.text());
+  }));
+  const sql=`UPDATE scientific_records SET status='PUBLISHED', license_id='CC-BY-4.0', access_level='OPEN', discipline='Volume fixture', institution='Fixture University', language='es' WHERE resource_id IN (SELECT id FROM data_resource WHERE publisher='${marker}' ORDER BY id LIMIT 217)`;
+  const result=spawnSync(path.join(postgres.bin,'psql'),['-X','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-p',String(postgres.port),'-U','e2e_admin','-d',postgres.database,'-c',sql],{env:{...process.env,PGPASSWORD:postgres.secret},encoding:'utf8'});
+  assert(result.status===0,'Could not publish synthetic local SQL fixture: '+result.stderr);
+  const ids=new Set();
+  for(let pageIndex=0;pageIndex<11;pageIndex++) {
+    const params=new URLSearchParams({q:marker,year:'2025',license:'CC-BY-4.0',access:'OPEN',author:'Volume Fixture',institution:'Fixture University',discipline:'Volume fixture',language:'es',sort:'year_asc',page:String(pageIndex),size:'20'});
+    const response=await fetch(base+'/api/v1/public/catalog?'+params);assert(response.ok,'Volume catalogue query failed');const body=await response.json();
+    assert(body.total===217&&body.pages===11&&body.page===pageIndex&&body.items.length===(pageIndex===10?17:20),'Volume pagination omitted entries beyond200.');
+    for(const item of body.items){assert(!ids.has(item.id),'Duplicate across pages');ids.add(item.id);}
+    const repeat=await(await fetch(base+'/api/v1/public/catalog?'+params)).json();assert(JSON.stringify(body.items)===JSON.stringify(repeat.items),'Unstable page ordering.');
+  }
+  assert(ids.size===217,'Volume fixture is incomplete.');
+  const facets=await(await fetch(base+'/api/v1/public/catalog/facets?q='+marker)).json();
+  assert(facets.author.some(e=>e.value.trim()==='Volume Fixture'&&e.count===217),'Facet counts duplicate or expose drafts.');
+  assert((await(await fetch(base+'/api/v1/public/catalog?q='+marker+'&license=CC0-1.0')).json()).total===0,'Combined filter ignored license.');
+  process.stdout.write('PostgreSQL catalogue volume OK:221 records,217 public,11 stable pages,combined filters,distinct facet counts and no drafts.\n');
+}
+
 async function restorePostgresFixture(page, base, files, published, profiledDraft) {
   if (!postgres || process.env.E2E_POSTGRES_RESTORE !== '1') return;
   await stopApp();
@@ -1180,6 +1239,8 @@ async function restorePostgresFixture(page, base, files, published, profiledDraf
   const originalData = dataFingerprints(postgres.database);
   const dump = path.join(temp,'fixture.dump');
   pg('pg_dump',['-Fc','--no-owner','--no-acl','-d',postgres.database,'-f',dump]);
+  const backup=spawnSync('python3',[path.join(root,'tools/releases/package_backup.py'),'--dump',dump,'--files',files.data,'--config',path.join(temp,'application.properties'),'--output',path.join(temp,'private-backup.tar.gz'),'--writes-stopped','--pg-restore',path.join(postgres.bin,'pg_restore')],{encoding:'utf8'});assert(backup.status===0,'Private backup package failed: '+backup.stdout);
+  const verifiedBackup=spawnSync('python3',['-c',"import sys,tarfile,json,hashlib,os,stat; assert stat.S_IMODE(os.stat(sys.argv[1]).st_mode)==0o600; z=tarfile.open(sys.argv[1]); m=json.load(z.extractfile('manifest.json')); assert all(hashlib.sha256(z.extractfile(e['path']).read()).hexdigest()==e['sha256'] for e in m['files'])",path.join(temp,'private-backup.tar.gz')]);assert(verifiedBackup.status===0,'Backup hashes differ from packaged content');
   pg('createdb',['reduniv_restored']);
   pg('pg_restore',['--no-owner','--no-acl','--exit-on-error','-d','reduniv_restored',dump]);
   assert(JSON.stringify(dataFingerprints('reduniv_restored')) === JSON.stringify(originalData),
@@ -1244,11 +1305,14 @@ async function main() {
     page.on('pageerror', error => pageErrors.push(error.stack || error.message));
     const base = `http://127.0.0.1:${port}`;
     const apiDocs=await fetch(base+'/v3/api-docs');assert(apiDocs.ok,'No se pudo generar OpenAPI local.');
-    const contract=validateOpenApi(await apiDocs.json());process.stdout.write(`Contrato OpenAPI OK: ${contract.paths} rutas científicas y ${contract.localReferences} referencias locales.\n`);
+    const apiDocument=await apiDocs.json();const contract=validateOpenApi(apiDocument);
+    const baselinePath=path.join(root,'tools/contract/v1-baseline.json');if(fs.existsSync(baselinePath))process.stdout.write('API baseline compatibility: '+JSON.stringify(contractCompatibility.check(apiDocument,JSON.parse(fs.readFileSync(baselinePath,'utf8'))))+'\n');
+    if(process.env.E2E_CONTRACT_OUTPUT)fs.writeFileSync(process.env.E2E_CONTRACT_OUTPUT,JSON.stringify(contractCompatibility.snapshot(apiDocument),null,2)+'\n',{mode:0o600});process.stdout.write(`Contrato OpenAPI OK: ${contract.paths} rutas científicas y ${contract.localReferences} referencias locales.\n`);
     await login(page, base);
     const markdown = await deposit(page, base, files, 'md');
     const zipped = await deposit(page, base, files, 'zip');
     const packaged = await deposit(page, base, files, 'package');
+    await verifyAnonymousApiSurface(base,apiDocument,markdown);
     await verifyTypeTransitionPolicy(page,base);
     await verifyMutationCoordination(page,base,markdown,zipped);
     await verifyPrimaryRowFence(page,base,markdown,zipped);
@@ -1353,6 +1417,7 @@ async function main() {
     await vocabularyFlow(page,base);
     await metadataProfilesFlow(page,base,packaged);
     await verifyMultiuserAccess(page,base,markdown,newVersionId);
+    await verifyCatalogVolume(page,base);
     await restorePostgresFixture(page,base,files,markdown,packaged);
     assert(pageErrors.length === 0, `Errores JavaScript: ${pageErrors.join('; ')}`);
     process.stdout.write(`Asistente OK: ${markdown.title}; ${zipped.title}; ${packaged.title}; ${recovered}; nueva versión ${newVersionId}.\n`);

@@ -129,10 +129,10 @@ public class WebSecurityConfig {
                                 InfoEndpoint.class,
                                 HealthEndpoint.class
                         )).permitAll().
-                        requestMatchers(EndpointRequest.toAnyEndpoint()).hasAnyRole("ANONYMOUS", "ADMIN", "ACTUATOR", "SERVICE_WRITE").
+                        requestMatchers(EndpointRequest.toAnyEndpoint()).hasAnyRole("ADMINISTRATOR", "ADMIN", "ACTUATOR").
                         requestMatchers(new AntPathRequestMatcher("/oaipmh")).permitAll().
                         requestMatchers(new AntPathRequestMatcher("/static/**")).permitAll().
-                        requestMatchers(new AntPathRequestMatcher("/api/v1/search")).permitAll().
+                        requestMatchers("/api/v1/search", "/api/v1/search/**").hasAnyRole("ADMINISTRATOR", "CURATOR").
                         requestMatchers(AUTH_WHITELIST_SWAGGER_UI).permitAll().
                         anyRequest().authenticated()
         ).

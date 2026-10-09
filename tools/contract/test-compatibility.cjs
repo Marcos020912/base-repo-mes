@@ -1,0 +1,7 @@
+const assert=require('node:assert/strict');const {snapshot,check}=require('./compatibility-check.cjs');
+const original={paths:{'/api/v1/example':{get:{operationId:'example',security:[],parameters:[{name:'page',in:'query',schema:{type:'integer'}}],responses:{200:{content:{'application/json':{schema:{$ref:'#/components/schemas/Example'}}}}}}}},components:{schemas:{Example:{type:'object',properties:{id:{type:'string'}},required:['id']}}}};
+const baseline=snapshot(original);assert.equal(check(original,baseline).operations,1);
+const mutate=fn=>{const copy=structuredClone(original);fn(copy);return copy;};
+assert.doesNotThrow(()=>check(mutate(d=>{d.components.schemas.Example.properties.optional={type:'string'};}),baseline));
+for(const change of [d=>delete d.paths['/api/v1/example'],d=>d.paths['/api/v1/example'].get.operationId='changed',d=>d.paths['/api/v1/example'].get.security=[{'bearer-jwt':[]}],d=>delete d.components.schemas.Example.properties.id,d=>d.components.schemas.Example.properties.id.type='integer',d=>d.paths['/api/v1/example'].get.parameters.push({name:'must',in:'query',required:true,schema:{type:'string'}}),d=>{d.components.schemas.Example.properties.must={type:'string'};d.components.schemas.Example.required.push('must');}])assert.throws(()=>check(mutate(change),baseline));
+console.log('Structural compatibility: unchanged/additive pass; seven breaking changes rejected.');

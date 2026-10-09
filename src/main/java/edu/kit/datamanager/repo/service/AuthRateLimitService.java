@@ -27,12 +27,24 @@ public class AuthRateLimitService {
     private final TransactionTemplate transactions;
     private final byte[] key;
     private final boolean enabled;
+    private jakarta.persistence.EntityManager entities;
+    private boolean postgres;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AuthRateLimitService(AuthRateWindowRepository windows, PlatformTransactionManager manager,
+            @Value("${repo.auth.jwtSecret}") String secret,
+            @Value("${repo.auth.rate-limit.enabled:true}") boolean enabled,
+            jakarta.persistence.EntityManager entities, org.springframework.boot.autoconfigure.jdbc.DataSourceProperties database) {
+        this(windows, manager, secret, enabled);
+        this.entities=entities; this.postgres=database.determineUrl().startsWith("jdbc:postgresql:");
+    }
 
     public AuthRateLimitService(AuthRateWindowRepository windows, PlatformTransactionManager manager,
             @Value("${repo.auth.jwtSecret}") String secret,
             @Value("${repo.auth.rate-limit.enabled:true}") boolean enabled) {
         this.windows = windows;
         this.transactions = new TransactionTemplate(manager);
+        this.transactions.setTimeout(5);
         this.key = secret.getBytes(StandardCharsets.UTF_8);
         this.enabled = enabled;
     }
@@ -72,6 +84,7 @@ public class AuthRateLimitService {
         for (int attempt = 0; attempt < 4; attempt++) {
             try {
                 long wait = transactions.execute(status -> {
+                    if (postgres) entities.createNativeQuery("select set_config('lock_timeout', '2000ms', true)").getSingleResult();
                     Instant now = Instant.now();
                     var existing = windows.lockByKey(bucketKey);
                     if (existing.isEmpty()) {

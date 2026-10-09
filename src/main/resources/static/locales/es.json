@@ -1334,5 +1334,12 @@
   "dataciteUsage.blocked": "No se contactará a DataCite: el navegador solicita no ser rastreado.",
   "dataciteUsage.export": "Exportar estadísticas de DataCite",
   "dataciteUsage.monthly": "Últimos doce meses con datos",
-  "dataciteUsage.month": "Mes"
+  "dataciteUsage.month": "Mes",
+  "doiEvidence.registered": "Primera reserva confirmada localmente",
+  "doiEvidence.published": "Primera publicación DOI confirmada localmente",
+  "doiEvidence.synced": "Última sincronización confirmada",
+  "doiEvidence.attempt": "Último intento de sincronización",
+  "doiEvidence.landing": "Última URL enviada y aceptada",
+  "doiEvidence.revision": "Revisión local de envíos de metadatos confirmados",
+  "doiEvidence.unknown": "Sin evidencia local"
 }

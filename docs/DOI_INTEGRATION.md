@@ -121,3 +121,19 @@ geográfica textual usa `geoLocations.geoLocationPlace`; las fechas declaradas
 usan `dates` Collected y `dateInformation` distingue rango o extremo conocido.
 No se infieren coordenadas ni traducciones automáticamente.
 Referencia: [mapeo oficial XML/JSON de DataCite](https://support.datacite.org/docs/datacite-xml-to-json-mapping).
+
+## Evidencia local detallada
+
+El estado autenticado incluye prefijo/sufijo/id DOI y, por registro conceptual y
+versión, primera reserva/publicación confirmadas localmente, última sincronización
+exitosa, último intento, última URL enviada y aceptada y contador local de envíos
+de metadatos completos confirmados. También conserva el historial de eventos.
+La ficha del autor muestra los datos de su registro de versión en es/en.
+
+Las fechas son observaciones **locales**, no fechas certificadas de DataCite;
+`metadataVersion` es un contador local, no la revisión interna de la agencia ni
+la versión científica del dataset. Una conciliación que solo confirma Findable
+no acredita qué URL/metadatos quedaron remotos; no inventa esos campos. Los errores
+actualizan el último intento sin sobrescribir la última sincronización exitosa.
+Datos históricos desconocidos quedan NULL. La migración añade columnas sin borrar
+ni recrear registros. Comprobar contra DataCite autorizado sigue siendo externo.

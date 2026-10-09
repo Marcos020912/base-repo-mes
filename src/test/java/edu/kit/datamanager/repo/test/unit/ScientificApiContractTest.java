@@ -20,6 +20,7 @@ public class ScientificApiContractTest {
         var api=new OpenApiDefinitions().customOpenAPI();api.setPaths(new Paths());
         var citation=new Operation().addParametersItem(new Parameter().name("format"));
         api.getPaths().addPathItem("/api/v1/public/resources/{id}/archive",new PathItem().get(new Operation()));api.getPaths().addPathItem("/api/v1/public/resources/{id}",new PathItem().get(new Operation()));api.getPaths().addPathItem("/api/v1/scientific/{id}/citation",new PathItem().get(citation));new ScientificApiContract().customize(api);
+        assertTrue(citation.getSecurity().isEmpty());
         var binary=api.getPaths().get("/api/v1/public/resources/{id}/archive").getGet().getResponses().get("200");assertEquals("binary",binary.getContent().get("application/zip").getSchema().getFormat());assertTrue(binary.getHeaders().containsKey("Content-Disposition"));assertTrue(citation.getResponses().get("200").getContent().containsKey("application/json"));assertTrue(citation.getParameters().get(0).getSchema().getEnum().contains("bibtex"));assertTrue(api.getPaths().get("/api/v1/public/resources/{id}").getGet().getResponses().containsKey("410"));
     }
     @Test public void identifiersDoNotDependOnRegistrationOrder(){
@@ -35,4 +36,17 @@ public class ScientificApiContractTest {
         assertEquals(identifier,second.getPaths().get(target).getGet().getOperationId());
         assertNotEquals(identifier,second.getPaths().get(target).getPut().getOperationId());
     }
+    @Test public void everyV1OperationHasExplicitTransportBoundaryIncludingLegacyAndAuth(){
+        var api=new OpenApiDefinitions().customOpenAPI();api.setPaths(new Paths());
+        for(String path:List.of("/api/v1/dataresources/{id}","/api/v1/auth/login","/api/v1/auth/change-password","/api/v1/public/catalog","/api/v1/reviewer/file","/api/v1/search"))api.getPaths().addPathItem(path,new PathItem().get(new Operation()).post(new Operation()));
+        new ScientificApiContract().customize(api);
+        assertTrue(api.getPaths().get("/api/v1/dataresources/{id}").getGet().getSecurity().get(0).containsKey("bearer-jwt"));
+        assertTrue(api.getPaths().get("/api/v1/auth/login").getPost().getSecurity().isEmpty());
+        assertFalse(api.getPaths().get("/api/v1/auth/login").getGet().getSecurity().isEmpty());
+        assertFalse(api.getPaths().get("/api/v1/public/catalog").getPost().getSecurity().isEmpty());
+        assertFalse(api.getPaths().get("/api/v1/reviewer/file").getPost().getSecurity().isEmpty());
+        assertTrue(api.getPaths().get("/api/v1/search").getGet().getSecurity().get(0).containsKey("bearer-jwt"));
+        for(var item:api.getPaths().values())for(var operation:item.readOperations())assertNotNull(operation.getSecurity());
+    }
+
 }

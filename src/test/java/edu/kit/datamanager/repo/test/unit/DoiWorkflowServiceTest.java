@@ -306,4 +306,21 @@ public class DoiWorkflowServiceTest {
         verify(datacite,never()).lookup(anyString());verify(datacite,never()).reserveDraft(anyString());
         assertEquals(PublicationStatus.IN_REVIEW,science.getStatus());
     }
+    @Test public void statusExposesLocalAcknowledgementsAndStableMetadataCounter() {
+        var reserved=workflow.reserve("r1");
+        assertEquals("10.1234",reserved.versionRegistration().prefix());
+        assertEquals(reserved.versionDoi(),reserved.versionRegistration().dataciteId());
+        assertNotNull(reserved.versionRegistration().registeredAt());
+        assertNull(reserved.versionRegistration().publishedAt());
+        assertNull(reserved.versionRegistration().landingPageUrl());
+        assertEquals(Long.valueOf(0),reserved.versionRegistration().metadataVersion());
+        science.setStatus(PublicationStatus.IN_REVIEW);workflow.publish("r1","curator");
+        var published=workflow.status("r1");
+        assertNotNull(published.versionRegistration().publishedAt());
+        assertEquals("https://datos.reduniv.edu.cu/datasets/r1",published.versionRegistration().landingPageUrl());
+        assertEquals(Long.valueOf(1),published.versionRegistration().metadataVersion());
+        workflow.publish("r1","curator");
+        assertEquals(Long.valueOf(1),workflow.status("r1").versionRegistration().metadataVersion());
+    }
+
 }

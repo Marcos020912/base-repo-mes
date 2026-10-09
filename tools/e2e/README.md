@@ -1,3 +1,12 @@
+# Pruebas de navegador e integración
+
+Estado actualizado: `docs/LOCAL_COMPLETION.md` y último apartado de
+`docs/REDUNIV_EXECUTION_PLAN.md`. Las descripciones históricas H2/cuatro etapas
+de abajo corresponden al primer incremento; el asistente actual tiene nueve etapas
+y la E2E opcional PostgreSQL/SMTP/dosJVM/restauración cubre el flujo completo.
+Añade inventario anónimo/HEAD API, baseline estructural, Actuator/listados legacy,
+rate limit compartido20intentos y volumen221registros/217publicados/11páginas.
+
 # Smoke test del asistente en navegador real
 
 Ejecute en la rama de desarrollo, **sin sudo**:

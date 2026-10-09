@@ -284,7 +284,7 @@ public class DoiWorkflowService {
             var updated=datacite.updateUrl(doi,URI.create(url));
             if(!"findable".equalsIgnoreCase(updated.state()))
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"DataCite no confirmó el estado público del DOI.");
-            recordSync(key,"UPDATE_URL","FINDABLE",null);
+            recordSync(key,"UPDATE_URL","FINDABLE",null,url,false);
         } catch(RuntimeException failure) {
             recordSync(key,"UPDATE_URL","ERROR","No se pudo confirmar la URL; reintente la operación para conciliar.");
             throw failure;
@@ -299,7 +299,7 @@ public class DoiWorkflowService {
         return new DoiStatus(resourceId, rootId, concept == null ? null : concept.getDoi(),
                 concept == null ? "NOT_REQUESTED" : concept.getState(),
                 version == null ? null : version.getDoi(),
-                version == null ? "NOT_REQUESTED" : version.getState(), science.getStatus().name());
+                version == null ? "NOT_REQUESTED" : version.getState(), science.getStatus().name(), registrationView(concept), registrationView(version));
     }
 
     private void reconcileDraft(String key, String doi) {
@@ -335,7 +335,7 @@ public class DoiWorkflowService {
                     ? datacite.updateMetadata(doi, metadata) : datacite.publish(doi, metadata);
             if (!"findable".equalsIgnoreCase(updated.state()))
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "DataCite no confirmó DOI público.");
-            recordSync(key, "PUBLISH", "FINDABLE", null);
+            recordSync(key, "PUBLISH", "FINDABLE", null, java.util.Objects.toString(metadata.get("url"), null), true);
         } catch (RuntimeException failure) {
             // The remote transition might have succeeded even if its HTTP response was lost.
             // For metadata updates of an already Findable DOI, state alone cannot prove success.
@@ -354,11 +354,12 @@ public class DoiWorkflowService {
     }
 
     private void recordSync(String key, String action, String result, String detail) {
+        recordSync(key,action,result,detail,null,false);
+    }
+    private void recordSync(String key, String action, String result, String detail, String landing, boolean metadataChanged) {
         transactions.executeWithoutResult(status -> {
             DoiRegistration registration = registrations.findById(key).orElseThrow();
-            registration.setState(result);
-            registration.setLastSyncedAt(Instant.now());
-            registration.setLastError(detail);
+            registration.observe(action,result,detail,landing,metadataChanged,Instant.now());
             registrations.save(registration);
             syncEvents.save(new DoiSyncEvent(key, action, result, detail));
         });
@@ -421,6 +422,16 @@ public class DoiWorkflowService {
         return Map.of("relatedIdentifier", doi, "relatedIdentifierType", "DOI", "relationType", type);
     }
 
+    private static RegistrationView registrationView(DoiRegistration registration) {
+        if(registration==null)return null;
+        String doi=registration.getDoi(); int slash=doi.indexOf('/');
+        return new RegistrationView(doi,slash<0?doi:doi.substring(0,slash),slash<0?"":doi.substring(slash+1),
+            registration.getRegisteredAt(),registration.getPublishedAt(),registration.getLastSyncedAt(),registration.getLastAttemptAt(),registration.getLandingPageUrl(),registration.getMetadataVersion());
+    }
+    @io.swagger.v3.oas.annotations.media.Schema(name="LocalDoiRegistrationStatus")
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)
+    public record RegistrationView(String dataciteId,String prefix,String suffix,Instant registeredAt,Instant publishedAt,Instant lastSyncedAt,Instant lastAttemptAt,String landingPageUrl,Long metadataVersion){}
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)
     public record DoiStatus(String resourceId, String rootResourceId, String conceptualDoi,
-                            String conceptualState, String versionDoi, String versionState, String publicationStatus) {}
+                            String conceptualState, String versionDoi, String versionState, String publicationStatus, RegistrationView conceptualRegistration, RegistrationView versionRegistration) {}
 }

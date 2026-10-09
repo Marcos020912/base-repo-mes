@@ -4,6 +4,12 @@
 el informe, prototipo HTML ni especificación DOI del usuario. No autoriza
 merge, push o despliegue; el trabajo permanece en `develop-reduniv`.
 
+## Estado posterior — 9 octubre 2026
+
+El trabajo local posterior y sus límites están en [LOCAL_COMPLETION.md](LOCAL_COMPLETION.md).
+Las listas siguientes son históricas, no pendientes nuevos que prevalezcan sobre
+pruebas/cierres posteriores. Aceptación institucional y certificaciones siguen externas.
+
 ## Actualización: fuentes recuperadas el 2026-10-08
 
 El usuario volvió a aportar los tres documentos sin sufijos `(1)`. Se han leído

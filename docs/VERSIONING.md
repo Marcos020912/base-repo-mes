@@ -27,16 +27,16 @@ modificar el esquema: revisar ddl-auto y migraciones antes de actualizar.
    contra el publicado en la Release. Nunca incluir configuración local en el JAR.
 3. Programar mantenimiento y respaldar PostgreSQL con pg_dump, archivos subidos
    y configuración. Probar restauración. Para consistencia, detener escrituras.
-4. Ejecutar: sudo ./update.sh vX.Y.Z /ruta/candidato.jar
+4. Ejecutar: sudo ./update.sh vX.Y.Z /ruta/candidato.jar SHA256_RELEASE
    Si el puerto/IP difiere: sudo APP_CHECK_URL=http://IP:PUERTO/login.html ./update.sh ...
-5. El script descarga el tag, valida estructura básica del JAR, guarda configuración,
+5. El script verifica SHA-256 y audita el JAR antes de descargar el tag o detener Java; luego guarda configuración,
    JAR previo y commit en .releases, detiene solo Java de esta instalación,
    cambia a tag detached e inicia candidato. No ejecuta deploy.sh ni Gradle.
 6. Verifica HTTP 200 de login; esto NO prueba DB, SMTP ni Elasticsearch.
    Hacer las pruebas funcionales antes de abrir el servicio a usuarios.
 
 El script exige confirmar procedencia del JAR y respaldo: no realiza pg_dump ni
-verifica automáticamente la correspondencia binaria entre JAR y commit.
+verifica automáticamente la correspondencia binaria entre JAR y commit. Sí compara el SHA-256 suministrado con los bytes del candidato. Ver tools/releases/README.md.
 Hay una interrupción de servicio; no se promete actualización sin downtime.
 Si falla, revisar log. Para volver: detener candidato, recuperar JAR previo,
 configuración y commit anotados en .releases. Restaurar DB/archivos solo mediante

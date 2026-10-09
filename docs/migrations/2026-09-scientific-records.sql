@@ -169,6 +169,12 @@ CREATE TABLE IF NOT EXISTS doi_registrations (
     last_synced_at timestamptz,
     last_error varchar(500)
 );
+-- Unknown historical timestamps/revisions stay NULL; never invent remote evidence.
+ALTER TABLE doi_registrations ADD COLUMN IF NOT EXISTS last_attempt_at timestamptz;
+ALTER TABLE doi_registrations ADD COLUMN IF NOT EXISTS registered_at timestamptz;
+ALTER TABLE doi_registrations ADD COLUMN IF NOT EXISTS published_at timestamptz;
+ALTER TABLE doi_registrations ADD COLUMN IF NOT EXISTS landing_page_url varchar(2000);
+ALTER TABLE doi_registrations ADD COLUMN IF NOT EXISTS metadata_version bigint;
 CREATE INDEX IF NOT EXISTS idx_doi_registrations_resource ON doi_registrations(resource_id);
 
 CREATE TABLE IF NOT EXISTS doi_sync_events (

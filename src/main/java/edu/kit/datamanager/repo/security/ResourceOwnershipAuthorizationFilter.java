@@ -26,14 +26,27 @@ public class ResourceOwnershipAuthorizationFilter extends OncePerRequestFilter {
         this.ownership = ownership;
         this.scientificRecords = scientificRecords;
     }
+    private static boolean legacyCollection(String path,String method) {
+        return ((HttpMethod.GET.matches(method)||HttpMethod.HEAD.matches(method))&&path.matches("/api/v1/dataresources/?")) ||
+            (HttpMethod.POST.matches(method)&&path.matches("/api/v1/dataresources/search(?:/data)?/?"));
+    }
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = ResourceRequestPath.path(request); String method = request.getMethod();
+        if (legacyCollection(path,method)) return false;
         if (!path.startsWith("/api/v1/dataresources/")) return true;
         boolean read = HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method);
         return !(read || HttpMethod.PUT.matches(method) || HttpMethod.PATCH.matches(method) || HttpMethod.DELETE.matches(method)
                 || (HttpMethod.POST.matches(method) && (path.contains("/data/") || path.endsWith("/description") || path.endsWith("/attachments"))));
     }
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+        if (legacyCollection(ResourceRequestPath.path(request),request.getMethod())) {
+            var actor=SecurityContextHolder.getContext().getAuthentication();
+            if (actor instanceof UsernamePasswordAuthenticationToken && actor.getAuthorities().stream().noneMatch(a->java.util.Set.of("ROLE_CURATOR","ROLE_ADMINISTRATOR").contains(a.getAuthority()))) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);response.setContentType("application/json;charset=UTF-8");
+                json.writeValue(response.getWriter(),java.util.Map.of("message","Utilice el catálogo científico o Mis depósitos para consultar recursos."));return;
+            }
+            chain.doFilter(request,response);return;
+        }
         String remainder = ResourceRequestPath.path(request).substring("/api/v1/dataresources/".length());
         String resourceId = remainder.split("/", 2)[0];
         boolean contentRead = (HttpMethod.GET.matches(request.getMethod()) || HttpMethod.HEAD.matches(request.getMethod()))

@@ -20,8 +20,15 @@ function resolve(document,ref){return ref.slice(2).split('/').map(k=>k.replace(/
 function dereference(document,schema){return schema?.$ref?resolve(document,schema.$ref):schema;}
 function validate(document){
  assert(/^3\./.test(document.openapi),'No es un contrato OpenAPI3.');
- for(const [path,methods]of Object.entries(expected))for(const method of methods){const operation=document.paths?.[path]?.[method];assert(operation,`Falta operación ${method.toUpperCase()} ${path}`);if(path.startsWith('/api/v1/public/'))assert(Array.isArray(operation.security)&&operation.security.length===0,'Operación pública requiere JWT: '+path);else assert(operation.security?.some(rule=>'bearer-jwt'in rule),'Operación privada sin JWT documentado: '+path);}
+ for(const [path,methods]of Object.entries(expected))for(const method of methods){const operation=document.paths?.[path]?.[method];assert(operation,`Falta operación ${method.toUpperCase()} ${path}`);if(path.startsWith('/api/v1/public/')||path==='/api/v1/scientific/{id}/citation')assert(Array.isArray(operation.security)&&operation.security.length===0,'Operación pública requiere JWT: '+path);else assert(operation.security?.some(rule=>'bearer-jwt'in rule),'Operación privada sin JWT documentado: '+path);}
  const ids=new Set();for(const path of Object.values(document.paths))for(const [method,operation]of Object.entries(path)){if(!['get','post','put','patch','delete','options','head','trace'].includes(method))continue;assert(operation.operationId,'Operación sin identificador estable.');assert(!ids.has(operation.operationId),'operationId duplicado: '+operation.operationId);ids.add(operation.operationId);}
+ let operations=0;for(const [path,item]of Object.entries(document.paths))for(const [method,op]of Object.entries(item)) {
+  if(!['get','post','put','patch','delete','options','head'].includes(method)||!path.startsWith('/api/v1/'))continue;
+  operations++;assert(Array.isArray(op.security),'Missing explicit transport security: '+method+' '+path);
+  assert(op.responses&&Object.keys(op.responses).length,'Missing responses: '+path);
+  for(const parameter of op.parameters||[])if(parameter.in==='path')assert(parameter.required===true,'Optional path parameter: '+path);
+  for(const requirement of op.security)for(const name of Object.keys(requirement))assert(document.components?.securitySchemes?.[name],'Unknown security scheme: '+name);
+ }
  let references=0;function walk(value){if(!value||typeof value!=='object')return;if(value.$ref?.startsWith('#/')){assert(resolve(document,value.$ref),'Referencia local inexistente: '+value.$ref);references++;}Object.values(value).forEach(walk);}walk(document);
  const schema=document.components?.schemas?.ScientificRecordUpdate;assert(schema,'Falta ScientificRecordUpdate.');for(const key of ['summary','temporalStart','temporalEnd','geographicCoverage','translations','productionDescription','processingDescription','processingTools'])assert(schema.properties?.[key],'Campo científico fuera del contrato: '+key);
  const privateSchema=document.components.schemas.PrivatePrivacyAssessment;assert(privateSchema?.properties?.assessmentNote,'Falta evaluación privada.');
@@ -32,7 +39,7 @@ function validate(document){
  const callback=document.paths['/api/v1/scientific/orcid/callback']?.get;assert(callback?.security?.length===0&&callback.responses['303'],'Callback ORCID documentado incorrectamente.');
  const reviewer=document.paths['/api/v1/reviewer/file']?.get;assert(reviewer?.security?.some(rule=>'reviewer-token'in rule),'Enlace revisor confundido con JWT.');
  const declaration=document.components.schemas.PrivacyDeclaration;assert(declaration?.required?.includes('classification'),'Clasificación obligatoria no documentada.');
- return {paths:Object.keys(expected).length,localReferences:references,openapi:document.openapi};
+ return {paths:Object.keys(expected).length,operations,localReferences:references,openapi:document.openapi};
 }
 module.exports={validate};
 if(require.main===module)(async()=>{try{const base=new URL(process.argv[2]);assert(['127.0.0.1','localhost','[::1]'].includes(base.hostname)&&base.protocol==='http:','Este comprobador CLI solo consulta un backend local HTTP explícito.');const response=await fetch(new URL('/v3/api-docs',base));assert(response.ok,'No se pudo obtener el contrato local.');console.log(validate(await response.json()));}catch(error){console.error(error.message);process.exitCode=1;}})();

@@ -1334,5 +1334,12 @@
   "dataciteUsage.blocked": "DataCite will not be contacted: the browser requests no tracking.",
   "dataciteUsage.export": "Export DataCite statistics",
   "dataciteUsage.monthly": "Latest twelve months with data",
-  "dataciteUsage.month": "Month"
+  "dataciteUsage.month": "Month",
+  "doiEvidence.registered": "First locally confirmed reservation",
+  "doiEvidence.published": "First locally confirmed DOI publication",
+  "doiEvidence.synced": "Last confirmed synchronization",
+  "doiEvidence.attempt": "Last synchronization attempt",
+  "doiEvidence.landing": "Last submitted and acknowledged URL",
+  "doiEvidence.revision": "Local revision of acknowledged metadata submissions",
+  "doiEvidence.unknown": "No local evidence"
 }

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 
 public interface AuthRateWindowRepository extends JpaRepository<AuthRateWindow, String> {
+    @org.springframework.data.jpa.repository.QueryHints(@jakarta.persistence.QueryHint(name = "jakarta.persistence.lock.timeout", value = "2000"))
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select window from AuthRateWindow window where window.bucketKey = :key")
     Optional<AuthRateWindow> lockByKey(@Param("key") String key);

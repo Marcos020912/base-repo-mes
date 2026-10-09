@@ -1,6 +1,6 @@
 # Requisitos RedUniv contrastados con las fuentes originales
 
-Revisión: 2026-10-08. Rama: `develop-reduniv`. **No equivale a cierre, ni autoriza producción.**
+Revisión: 2026-10-09. Rama: `develop-reduniv`. **No equivale a cierre, ni autoriza producción.**
 
 ## Fuentes recuperadas
 
@@ -21,6 +21,14 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 = requiere además decisiones, credenciales o validación externas. Ninguna fila
 «Base local» acredita por sí sola todos los criterios del informe.
 
+## Cierre local posterior
+
+Consultar [LOCAL_COMPLETION.md](LOCAL_COMPLETION.md) y el último apartado del plan
+para el trabajo técnico independiente cerrado el9octubre. Las filas históricas
+«Base local/Parcial» conservan sus límites de aceptación institucional, no deben
+usarse para resucitar como código pendiente una corrección ya probada después.
+No transformar este cierre en certificación o autorización productiva.
+
 ## Seguridad y permisos — informe §8 P0 y §9
 
 | ID | Requisito | Estado / evidencia / siguiente acción |
@@ -28,8 +36,8 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | S01 | Rotar contraseña expuesta en revisión | Institucional: no modificar cuentas reales sin autorización. |
 | S02 | Suite automática corregida y ejecutable | Implementado local: Gradle JUnit4, E2E PostgreSQL18/SMTP/Chrome/restauración y axe ejecutables; evidencia por bloque en plan. No sustituye validación externa. |
 | S03 | Eliminar secretos/credenciales predeterminados | Parcial: retiradas credenciales literales de plantillas; gate local del árbol sin hallazgos y cuatro tests aprobados. Historial contiene 102 ocurrencias de propiedades literales en blobs únicos (incluye defaults de desarrollo), requiere evaluación/rotación y autorización de limpieza; artefactos aún pendientes. |
-| S04 | Autorización por recurso, no solo autenticación | Parcial verificado: matriz 210 casos de lectura/escritura identidades/relaciones/financiación y 600 casos guard GET/HEAD ficha/archivos/archive. Controladores no equivalen a filtros HTTP ni concurrencia; ampliar a todos los endpoints. |
-| S05 | Rate limiting, auditoría y políticas seguras | Base local: limitador PostgreSQL y plantilla HAProxy; prueba real multiinstancia y rotación pendientes. |
+| S04 | Autorización por recurso, no solo autenticación | Parcial verificado: matriz 210 casos de lectura/escritura identidades/relaciones/financiación y 600 casos guard GET/HEAD ficha/archivos/archive. Complementada con inventario HTTP privado/HEAD, guards legacy y E2E de roles/revocación/dos JVM; véase LOCAL_COMPLETION.md. Aceptación de infraestructura y clientes externos separada. |
+| S05 | Rate limiting, auditoría y políticas seguras | Base local: limitador PostgreSQL y plantilla HAProxy; prueba PostgreSQL real de20intentos entre dosJVM y Retry-After compartido aprobada; rotación institucional pendiente. |
 | S06 | Lectura, depósito, curación, publicación y administración separados | Base local: roles USER/CURATOR/ADMINISTRATOR y controles por estado; verificar matriz completa. |
 | S07 | Ocultar acciones destructivas no permitidas | Base local: vistas de autor/curación; comprobar cada estado, rol y endpoint. |
 
@@ -59,7 +67,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | ID | Requisito | Estado / evidencia / siguiente acción |
 |---|---|---|
 | C01 | Inicio y búsqueda global con identidad institucional | Base local: catálogo público y hero; revisar maqueta sin copiar cifras ficticias. |
-| C02 | Facetas: área, institución, autor, año, tipo, licencia | Base local: API catálogo/facetas y vistas; pruebas de combinaciones/volumen pendientes. |
+| C02 | Facetas: área, institución, autor, año, tipo, licencia | Base local: API catálogo/facetas y vistas; pruebas JPA y PostgreSQL de filtros combinados/217publicados en11páginas aprobadas; capacidad institucional real pendiente. |
 | C03 | Facetas: acceso, formato, proyecto/financiador, DOI, idioma | Base local: API/funding; comprobar todas visibles y utilizables en catálogo público. |
 | C04 | Búsqueda, orden y paginación en servidor | Base local: catálogo; no sustituir por filtro de 200 registros en cliente. |
 | C05 | Filtros, página y orden reproducibles en URL | Implementado local: URL reproducible, historial de filtros/orden/página y restauración en popstate; prueba Chrome de ambos catálogos aprobada (API fixture, no prueba de búsqueda backend). |
@@ -100,7 +108,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | A10 | Auditorías periódicas SHA-256 verificables | Base local: manual/programada opcional y alertas; política/volumen/buzón real pendientes. |
 | A11 | Métricas COUNTER/DataCite cuando corresponda | Integración local implementada: tracker DataCite oficial0.0.5 con SRI y consentimiento/DNT/GPC, consulta de totales/series mensuales y exportación con fuente. Biblioteca real probada contra APIs interceptadas, no envíos reales. Falta autorización/data-repoid y evidencia de recepción/informe mensual; no certificación COUNTER. |
 | A12 | Autoevaluación CoreTrustSeal | Herramienta implementada: expediente interno de 16 requisitos 2026–2028, responsables, declaraciones, evidencias HTTPS, revisión optimista y exportación JSON; curadores leen y administradores editan. Evidencia institucional y certificación externa pendientes; no afirmar certificación. |
-| A13 | OpenAPI como contrato y pruebas de compatibilidad | Parcial: contrato científico tipado, seguridad y binarios explícitos; gate estructural de 27 rutas y referencias locales integrado en E2E. Compatibilidad de clientes institucionales y auditoría del resto de endpoints pendientes. |
+| A13 | OpenAPI como contrato y pruebas de compatibilidad | Cierre estructural local: toda superficie v1 con seguridad explícita, baseline110operaciones/103esquemas, gate27rutas críticas/referencias y rechazos de cambios incompatibles en E2E. Aceptación de clientes institucionales reales pendiente. |
 | A14 | WCAG2.2AA, teclado, foco, contraste, etiquetas, errores, lectores | Parcial: axe y teclado automatizados; revisión manual de recorridos/lectores pendiente. |
 | A15 | Diseño desde360px y estados no solo por color | Base local: pruebas320px y etiquetas; revisar cada flujo dinámico real. |
 | A16 | Prueba con investigadores, curadores, bibliotecarios y soporte | Institucional: organizar evaluación funcional sin sustituirla por smoke automatizado. |
@@ -116,7 +124,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | D05 | DOI conceptual y específico de versión | Base local: workflow/mapper; no reutilizar DOI de versión para contenidos distintos. |
 | D06 | HasVersion/IsVersionOf/IsNewVersionOf/IsPreviousVersionOf | Implementado local: sincroniza IsPreviousVersionOf del predecesor gestionado, preserva sucesores y relaciones locales y permite reintento sin publicar localmente antes de confirmar. Pruebas mock aprobadas; DataCite real pendiente. |
 | D07 | reserve/publish/updateMetadata/get/createVersion/updateUrl | Base local: operaciones existentes y mantenimiento admin de URLs con vista previa/confirmación contra origen configurado y auditoría. Cuatro pruebas nuevas mock aprobadas; validación institucional y auditoría contractual pendientes. |
-| D08 | Estado, fechas, última sincronización, URL, versión metadatos e historial local | Base local/parcial: registros/eventos DOI; contrastar todos los campos sugeridos y semántica de retirada. |
+| D08 | Estado, fechas, última sincronización, URL, versión metadatos e historial local | Implementado local: registro/eventos con fechas de éxito/intento separadas, primeras confirmaciones, URL aceptada y contador local de envíos de metadatos; statusprefijo/sufijo/id y fichaautor es/en. Retirada científica conserva DOI/FINDABLE y tombstone, no inventa estado remoto WITHDRAWN; contraste real DataCite pendiente. |
 | D09 | Secretos solo backend, nunca JS/Git | Parcial: gate readonly sin valores en salida; árbol actual sin hallazgos, historial con propiedades literales por evaluar y sin reescritura automática. Artefactos/releases reales y rotación institucional pendientes. |
 | D10 | Sufijo generado por DataCite recomendado | Desviación documentada: sufijo UUID estable local para idempotencia; recomendación no obligatoria, requiere transparencia institucional. |
 | D11 | Cuenta Repository, prefijo, credenciales y validación Test→staging→production | Institucional: no resuelto únicamente con código; no dar integración externa por probada. |

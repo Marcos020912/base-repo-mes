@@ -18,9 +18,10 @@ public class ScientificApiContract {
         api.getComponents().addSecuritySchemes("reviewer-token",new SecurityScheme().type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.QUERY).name("token").description("Enlace de revisión temporal y revocable. No es una sesión de usuario; no comparta ni registre el token."));
         if(api.getPaths()==null)return;
         api.getPaths().forEach((path,item)->item.readOperationsMap().forEach((method,operation)->{
-            boolean publicPath=path.startsWith("/api/v1/public/")||path.equals("/api/v1/scientific/orcid/callback");
-            boolean reviewer=path.startsWith("/api/v1/reviewer/");
-            boolean privatePath=path.startsWith("/api/v1/scientific/")||path.startsWith("/api/v1/my-")||path.startsWith("/api/v1/users")||path.startsWith("/api/v1/catalog")||path.startsWith("/api/v1/account")||path.startsWith("/api/v1/collections")||path.equals("/api/v1/auth/change-password");
+            boolean publicPath=(method==PathItem.HttpMethod.GET && (path.startsWith("/api/v1/public/") || path.equals("/api/v1/scientific/orcid/callback") || path.equals("/api/v1/scientific/{id}/citation"))) ||
+                    (method==PathItem.HttpMethod.POST && Set.of("/api/v1/auth/login","/api/v1/auth/register","/api/v1/auth/verify","/api/v1/auth/resend-verification").contains(path));
+            boolean reviewer=method==PathItem.HttpMethod.GET && path.startsWith("/api/v1/reviewer/");
+            boolean privatePath=path.startsWith("/api/v1/")&&!publicPath&&!reviewer;
             if(publicPath)operation.setSecurity(List.of());
             else if(reviewer)operation.setSecurity(List.of(new SecurityRequirement().addList("reviewer-token")));
             else if(privatePath)operation.setSecurity(List.of(new SecurityRequirement().addList("bearer-jwt")));

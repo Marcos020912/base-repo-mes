@@ -31,4 +31,15 @@ public class EncodedScientificResourceGuardTest {
         new ResourceOwnershipAuthorizationFilter(mock(ResourceOwnershipRepository.class),records).doFilter(request,response,chain);
         assertEquals(404,response.getStatus());verifyNoInteractions(chain);
     }
+    @Test public void localUsersCannotUseLegacyCollectionsToBypassScientificVisibility() throws Exception {
+        for(String actor:List.of("USER","CURATOR","ADMINISTRATOR"))for(String path:List.of("/api/v1/dataresources/","/api/v1/dataresources/search","/api/v1/dataresources/search/data","/api/v1/dataresources/%73earch")) {
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("local","",List.of(new SimpleGrantedAuthority("ROLE_"+actor))));
+            var request=new MockHttpServletRequest(path.endsWith("/")?"GET":"POST",path);var response=new MockHttpServletResponse();var chain=mock(FilterChain.class);
+            var records=mock(ScientificRecordRepository.class);var ownership=mock(ResourceOwnershipRepository.class);
+            new ResourceOwnershipAuthorizationFilter(ownership,records).doFilter(request,response,chain);
+            if(actor.equals("USER")){assertEquals(403,response.getStatus());verifyNoInteractions(chain);}else verify(chain).doFilter(request,response);
+            verifyNoInteractions(records,ownership);
+        }
+    }
+
 }

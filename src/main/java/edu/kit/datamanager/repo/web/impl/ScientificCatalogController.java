@@ -20,6 +20,7 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import org.springframework.data.domain.Page;
@@ -69,6 +70,7 @@ public class ScientificCatalogController {
                             HttpServletRequest request) {
         final boolean publicOnly = request.getRequestURI().startsWith("/api/v1/public/");
         if (page < 0 || page > 100000 || size < 1 || size > 100 || q.length() > 200 || author.length() > 200 ||
+                year.length() > 4 || license.length() > 100 || discipline.length() > 255 ||
                 institution.length() > 200 || language.length() > 16 || funder.length() > 255 || project.length() > 500 ||
                 !format.matches("[a-zA-Z0-9]{0,16}") ||
                 !validMimeFilter(mimeType) ||
@@ -124,7 +126,7 @@ public class ScientificCatalogController {
             query.distinct(true);
             List<Predicate> predicates = new ArrayList<>();
             if (!q.isBlank()) {
-                String needle = "%" + q.trim().toLowerCase() + "%";
+                String needle = "%" + q.trim().toLowerCase(Locale.ROOT) + "%";
                 var titles = root.join("titles", JoinType.LEFT);
                 var creators = root.join("creators", JoinType.LEFT);
                 predicates.add(cb.or(
@@ -136,7 +138,7 @@ public class ScientificCatalogController {
                         cb.like(cb.lower(root.join("identifier", JoinType.LEFT).get("value")), needle)));
             }
             if (!author.isBlank()) {
-                String needle = "%" + author.trim().toLowerCase() + "%";
+                String needle = "%" + author.trim().toLowerCase(Locale.ROOT) + "%";
                 var creator = root.join("creators", JoinType.INNER);
                 Expression<String> fullName = cb.concat(cb.concat(cb.coalesce(creator.get("givenName"), ""), " "),
                         cb.coalesce(creator.get("familyName"), ""));
@@ -151,10 +153,10 @@ public class ScientificCatalogController {
                 Root<ScientificRecord> scientific = subquery.from(ScientificRecord.class);
                 List<Predicate> terms = new ArrayList<>();
                 terms.add(cb.equal(scientific.get("resourceId"), root.get("id")));
-                if (!license.isBlank()) terms.add(cb.equal(cb.lower(scientific.get("licenseId")), license.trim().toLowerCase()));
-                if (!discipline.isBlank()) terms.add(cb.like(cb.lower(scientific.get("discipline")), "%" + discipline.trim().toLowerCase() + "%"));
-                if (!institution.isBlank()) terms.add(cb.like(cb.lower(scientific.get("institution")), "%" + institution.trim().toLowerCase() + "%"));
-                if (!language.isBlank()) terms.add(cb.equal(cb.lower(scientific.get("language")), language.trim().toLowerCase()));
+                if (!license.isBlank()) terms.add(cb.equal(cb.lower(scientific.get("licenseId")), license.trim().toLowerCase(Locale.ROOT)));
+                if (!discipline.isBlank()) terms.add(cb.like(cb.lower(scientific.get("discipline")), "%" + discipline.trim().toLowerCase(Locale.ROOT) + "%"));
+                if (!institution.isBlank()) terms.add(cb.like(cb.lower(scientific.get("institution")), "%" + institution.trim().toLowerCase(Locale.ROOT) + "%"));
+                if (!language.isBlank()) terms.add(cb.equal(cb.lower(scientific.get("language")), language.trim().toLowerCase(Locale.ROOT)));
                 if (!access.isBlank()) terms.add(cb.equal(scientific.get("accessLevel"), access));
                 if (hasDoi) terms.add(cb.isNotNull(scientific.get("versionDoi")));
                 if (withoutDoi) terms.add(cb.isNull(scientific.get("versionDoi")));
@@ -169,7 +171,7 @@ public class ScientificCatalogController {
                 Root<ContentInformation> content = subquery.from(ContentInformation.class);
                 subquery.select(content.get("id")).where(
                         cb.equal(content.get("parentResource"), root),
-                        cb.like(cb.lower(content.get("relativePath")), "%." + format.toLowerCase()));
+                        cb.like(cb.lower(content.get("relativePath")), "%." + format.toLowerCase(Locale.ROOT)));
                 predicates.add(cb.exists(subquery));
             }
             if (!mimeType.isBlank()) {
@@ -177,7 +179,7 @@ public class ScientificCatalogController {
                 Root<ContentInformation> content = subquery.from(ContentInformation.class);
                 subquery.select(content.get("id")).where(
                         cb.equal(content.get("parentResource"), root),
-                        cb.equal(cb.lower(content.get("mediaType")), mimeType.toLowerCase()));
+                        cb.equal(cb.lower(content.get("mediaType")), mimeType.toLowerCase(Locale.ROOT)));
                 predicates.add(cb.exists(subquery));
             }
             if (!funder.isBlank() || !project.isBlank()) {
@@ -185,8 +187,8 @@ public class ScientificCatalogController {
                 Root<ScientificFunding> grant = subquery.from(ScientificFunding.class);
                 List<Predicate> terms = new ArrayList<>();
                 terms.add(cb.equal(grant.get("resourceId"), root.get("id")));
-                if (!funder.isBlank()) terms.add(cb.equal(cb.lower(grant.get("funderName")), funder.trim().toLowerCase()));
-                if (!project.isBlank()) terms.add(cb.equal(cb.lower(grant.get("awardTitle")), project.trim().toLowerCase()));
+                if (!funder.isBlank()) terms.add(cb.equal(cb.lower(grant.get("funderName")), funder.trim().toLowerCase(Locale.ROOT)));
+                if (!project.isBlank()) terms.add(cb.equal(cb.lower(grant.get("awardTitle")), project.trim().toLowerCase(Locale.ROOT)));
                 subquery.select(grant.get("id")).where(terms.toArray(Predicate[]::new));
                 predicates.add(cb.exists(subquery));
             }

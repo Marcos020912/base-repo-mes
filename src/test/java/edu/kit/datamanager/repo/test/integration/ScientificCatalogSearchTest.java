@@ -118,4 +118,40 @@ public class ScientificCatalogSearchTest {
         assertEquals("Proyecto A", landing.funding().get(0).getAwardTitle());
         assertEquals(2, landing.authorIdentities().get(0).affiliations().size());
     }
+    @Test @Transactional
+    public void pagingBeyondTwoHundredIsCompleteStableAndExcludesUnpublished() {
+        String marker = "catalog-volume-" + java.util.UUID.randomUUID();
+        for (int i=0; i<221; i++) {
+            var data=DataResource.factoryNewDataResource(marker + "-" + i);
+            data.setPublisher(marker); data.setPublicationYear("2025");
+            data.getTitles().add(Title.factoryTitle(marker, Title.TYPE.OTHER));
+            data=resources.save(data);
+            var record=new ScientificRecord(data.getId());
+            record.setStatus(i<217?PublicationStatus.PUBLISHED:PublicationStatus.DRAFT);
+            record.setAccessLevel("OPEN"); record.setLicenseId("CC-BY-4.0");
+            records.save(record);
+        }
+        records.flush(); resources.flush();
+        var request=new MockHttpServletRequest("GET", "/api/v1/public/catalog");
+        var ids=new java.util.HashSet<String>();
+        for(int page=0;page<11;page++) {
+            var result=catalog.list(marker,"","","2025","CC-BY-4.0","","","","OPEN","","",false,false,"year_asc",page,20,request);
+            assertEquals(217,result.total()); assertEquals(11,result.pages()); assertEquals(page,result.page());
+            assertEquals(page==10?17:20,result.items().size());
+            for(var item:result.items())assertTrue("Duplicate item across pages",ids.add(item.id()));
+            assertEquals(result.items(),catalog.list(marker,"","","2025","CC-BY-4.0","","","","OPEN","","",false,false,"year_asc",page,20,request).items());
+        }
+        assertEquals(217,ids.size());
+        assertTrue(catalog.list(marker,"","","2025","CC-BY-4.0","","","","OPEN","","",false,false,"year_asc",11,20,request).items().isEmpty());
+        assertEquals(0,catalog.list(marker,"","","2025","CC0-1.0","","","","OPEN","","",false,false,"year_asc",0,20,request).total());
+    }
+
+    @Test public void rejectsOversizedFiltersBeforeQuerying() {
+        var request=new MockHttpServletRequest("GET", "/api/v1/public/catalog");
+        for(int field=0;field<3;field++) {
+            final int which=field;
+            assertThrows(org.springframework.web.server.ResponseStatusException.class,()->catalog.list("","","",which==0?"20255":"",which==1?"x".repeat(101):"",which==2?"x".repeat(256):"","","","","","",false,false,"newest",0,20,request));
+        }
+    }
+
 }
