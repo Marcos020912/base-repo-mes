@@ -76,7 +76,19 @@ si existen. Reutilizar configuración no la reescribe. El preflight falla **ante
 hace en staging, sin sobrescribir el JAR activo. Solo se detiene el Java de esta
 instalación. HTTP200 debe pertenecer al PID candidato antes de anunciar éxito.
 
-Actualización desde Release aprobada, sin descargar Gradle en VM:
+Actualización desde código (requiere JDK21, acceso a Gradle y dependencias):
+
+```bash
+sudo ./update.sh vX.Y.Z
+# Sin argumento usa main; no representa por sí solo una Release aprobada.
+```
+
+Actualiza mediante fast-forward y ejecuta deploy.sh en modo reconstrucción,
+reutilizando configuración sin instalar/configurar PostgreSQL, Elasticsearch ni
+firewall. Confirme respaldo comprobado; no existe rollback automático. No ejecutar
+este flujo en el clon de desarrollo para fusionar ramas.
+
+Alternativa desde Release aprobada, sin descargar Gradle en VM:
 
 ```bash
 sudo ./update.sh vX.Y.Z /ruta/candidato.jar SHA256_DE_RELEASE

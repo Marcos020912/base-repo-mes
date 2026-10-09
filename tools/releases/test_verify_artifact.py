@@ -42,7 +42,7 @@ class ArtifactTest(unittest.TestCase):
         finally:
             process.terminate();process.wait(timeout=5);process.stdout.close()
     def test_update_verifies_before_fetch_or_stopping_service(self):
-        source=(Path(__file__).resolve().parents[2]/'update.sh').read_text()
+        source=(Path(__file__).resolve().parents[2]/'update.sh').read_text().split('[[ $# == 3 ]]',1)[1]
         self.assertLess(source.index('tools/releases/verify_artifact.py'),source.index('git fetch'))
         self.assertLess(source.index('tools/releases/verify_artifact.py'),source.index('kill -TERM'))
         self.assertNotIn('eval ',source)

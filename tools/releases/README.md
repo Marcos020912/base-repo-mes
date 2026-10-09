@@ -2,7 +2,27 @@
 
 ## Verificación antes de actualizar
 
-`update.sh` exige ahora tres argumentos:
+`update.sh` ofrece dos modos. Para descargar código de `main`, reconstruir y
+reiniciar con la configuración existente:
+
+```bash
+sudo ./update.sh
+# O una versión estable aprobada:
+sudo ./update.sh vX.Y.Z
+```
+
+Descarga la referencia y avanza solo con fast-forward (rechaza cambios locales
+versionados e historiales divergentes). Solicita confirmar respaldo de BD/archivos,
+guarda configuración/JAR anterior y llama a `deploy.sh --update-from-source`
+bajo el mismo bloqueo. Este modo omite instalación/configuración de PostgreSQL,
+Elasticsearch y firewall, conserva las propiedades y **fuerza compilación** en
+staging antes de detener Java. Requiere JDK21 y acceso a Gradle/dependencias.
+`main` no equivale a una Release aprobada; en producción se recomienda un tag.
+Un fallo de compilación conserva la aplicación anterior ejecutándose, aunque el
+código ya esté actualizado. No se revierten automáticamente datos ni esquema.
+No debe utilizarse desde la rama de desarrollo para fusionarla con producción.
+
+Para una VM sin acceso a Gradle se conserva el modo de tres argumentos:
 
 ```bash
 sudo ./update.sh vX.Y.Z /ruta/candidato.jar SHA256_DE_LA_RELEASE_APROBADA

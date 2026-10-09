@@ -4,13 +4,28 @@ set -euo pipefail
 # Interactive deployment for Debian/Ubuntu. Run from the project directory.
 if [[ $EUID -ne 0 ]]; then echo "Ejecute con sudo: sudo ./deploy.sh"; exit 1; fi
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
+UPDATE_FROM_SOURCE=false
+INHERITED_LOCK=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --update-from-source) UPDATE_FROM_SOURCE=true ;;
+    --inherited-lock) INHERITED_LOCK=true ;;
+    *) echo "Argumento desconocido: $1" >&2; exit 1 ;;
+  esac
+  shift
+done
 command -v flock >/dev/null || { echo "Se requiere flock (util-linux)."; exit 1; }
-exec 9>"$APP_DIR/.update.lock"
+if [[ "$INHERITED_LOCK" == true ]]; then
+  [[ "$UPDATE_FROM_SOURCE" == true && "$(readlink /proc/$$/fd/9)" == "$APP_DIR/.update.lock" ]] || { echo "Bloqueo heredado no válido" >&2; exit 1; }
+else
+  exec 9>"$APP_DIR/.update.lock"
+fi
 flock -n 9 || { echo "Ya hay un despliegue o actualización en curso."; exit 1; }
 CONF="$APP_DIR/config/application.properties"
 REPO_DATA_DIR="/var/lib/base-repo/data"
 # application.properties contiene secretos de cada instalación y no se publica
 # en Git. En un clon nuevo se genera desde la plantilla versionada.
+if [[ "$UPDATE_FROM_SOURCE" == true && ! -s "$CONF" ]]; then echo "Actualización requiere configuración existente" >&2; exit 1; fi
 if [[ ! -s "$CONF" ]]; then
   [[ -e "$CONF" ]] && cp "$CONF" "$CONF.empty.$(date +%s)"
   cp "$APP_DIR/config/application-default.properties" "$CONF"
@@ -163,6 +178,7 @@ EOF
   systemctl enable --now base-repo-elasticsearch
 }
 
+if [[ "$UPDATE_FROM_SOURCE" != true ]]; then
 install_if_missing java openjdk-21-jdk
 ask SETUP_POSTGRES "¿Instalar y configurar PostgreSQL? (s/N)" "N"
 ask SETUP_ELASTIC "¿Configurar Elasticsearch? (s/N)" "N"
@@ -403,11 +419,17 @@ fi
 
 fi # Conservar configuración y firewall intactos al reutilizar.
 
+else
+  # Actualización: no instaladores, preguntas, escritura de configuración ni firewall.
+  for command in java curl python3 ss; do command -v "$command" >/dev/null || { echo "Falta $command" >&2; exit 1; }; done
+  APP_PORT="$(property_value 'server.port')"; APP_PORT=${APP_PORT:-8090}
+  APP_BIND="$(property_value 'server.address')"; APP_BIND=${APP_BIND:-127.0.0.1}
+fi
 cd "$APP_DIR"
 python3 tools/releases/production_preflight.py --config "$CONF"
 REBUILD_APPLICATION="S"
 APP_JAR="$(find_application_jar)"
-if [[ -n "$APP_JAR" ]]; then
+if [[ -n "$APP_JAR" && "$UPDATE_FROM_SOURCE" != true ]]; then
   ask REBUILD_APPLICATION "Se encontró build/libs/base-repo.jar. ¿Reconstruir la aplicación? (s/N)" "N"
 fi
 if [[ "${REBUILD_APPLICATION,,}" == "s" || "${REBUILD_APPLICATION,,}" == "si" || "${REBUILD_APPLICATION,,}" == "sí" ]]; then
@@ -433,7 +455,7 @@ if [[ -n "${STAGING:-}" ]]; then
   mv "$APP_DIR/build/libs/base-repo.jar.new" "$APP_DIR/build/libs/base-repo.jar"
   APP_JAR="$APP_DIR/build/libs/base-repo.jar"
 fi
-nohup java -jar "$APP_JAR" --spring.config.location="file:$CONF" --spring.profiles.active=production > "$APP_DIR/base-repo.log" 2>&1 &
+nohup java -jar "$APP_JAR" --spring.config.location="file:$CONF" --spring.profiles.active=production > "$APP_DIR/base-repo.log" 2>&1 9>&- &
 APP_PID=$!
 echo "$APP_PID" > "$APP_DIR/base-repo.pid"
 CHECK_HOST="$APP_BIND"; [[ "$CHECK_HOST" == 0.0.0.0 || "$CHECK_HOST" == :: ]] && CHECK_HOST=127.0.0.1

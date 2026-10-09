@@ -1,9 +1,47 @@
 #!/usr/bin/env bash
-# Actualización manual controlada. No instala ni configura PostgreSQL/Elastic.
+# Actualización controlada desde código o JAR. No reinstala PostgreSQL/Elastic.
 set -euo pipefail
 umask 077
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
+# Sin argumentos: actualizar main y reconstruir mediante deploy.sh.
+# Un argumento: main o un tag estable aprobado. Tres: modo JAR precompilado.
+if [[ $# -le 1 ]]; then
+  [[ $EUID -eq 0 ]] || { echo "Ejecute con sudo: sudo ./update.sh [main|vX.Y.Z]" >&2; exit 1; }
+  REF=${1:-main}
+  [[ "$REF" == main || "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Use main o un tag estable vX.Y.Z" >&2; exit 1; }
+  [[ -s config/application.properties ]] || { echo "Falta configuración; ejecute deploy.sh para la instalación inicial." >&2; exit 1; }
+  command -v flock >/dev/null
+  exec 9>"$ROOT/.update.lock"
+  flock -n 9 || { echo "Ya hay un despliegue o actualización en curso" >&2; exit 1; }
+  [[ -z "$(git status --porcelain --untracked-files=no)" ]] || { echo "Hay cambios locales versionados; no se sobrescriben." >&2; exit 1; }
+  python3 "$ROOT/tools/releases/production_preflight.py" --config "$ROOT/config/application.properties" --strict-schema
+  if [[ "$REF" == main ]]; then REMOTE_REF=refs/heads/main; else REMOTE_REF=refs/tags/$REF; fi
+  git fetch https://github.com/Marcos020912/base-repo-mes.git "$REMOTE_REF"
+  COMMIT=$(git rev-parse 'FETCH_HEAD^{commit}')
+  git merge-base --is-ancestor HEAD "$COMMIT" || { echo "Historial divergente: no se fuerza ni se fusionan ramas. Use el clon de producción." >&2; exit 1; }
+  echo "Actualizar a $REF ($COMMIT), compilar y reiniciar. Requiere acceso a Gradle/dependencias."
+  echo "PostgreSQL, Elasticsearch, firewall y configuración no se modificarán."
+  read -r -p "¿Respaldo de base de datos/archivos comprobado y versión aprobada? Escriba SI: " CONFIRM </dev/tty
+  [[ "$CONFIRM" == SI ]] || exit 1
+  BACKUP="$ROOT/.releases/$(date +%Y%m%d-%H%M%S)-source"
+  mkdir -p "$BACKUP"
+  cp -p config/application.properties "$BACKUP/application.properties"
+  git rev-parse HEAD > "$BACKUP/previous-commit"
+  for f in build/libs/base-repo.jar build/libs/base_repo.jar; do
+    if [[ -s "$f" ]]; then cp "$f" "$BACKUP/previous.jar"; break; fi
+  done
+  git merge --ff-only "$COMMIT"
+  echo "Código actualizado. Respaldo privado: $BACKUP"
+  # Heredar el mismo flock evita una ventana sin exclusión o bloqueo mutuo.
+  if bash "$ROOT/deploy.sh" --update-from-source --inherited-lock; then
+    echo "Actualización y reconstrucción completadas: $REF ($COMMIT)."
+    exit 0
+  fi
+  echo "Falló el despliegue; revise base-repo.log. Código actualizado, respaldo: $BACKUP" >&2
+  echo "No se revierte automáticamente el código, esquema ni datos." >&2
+  exit 1
+fi
 [[ $# == 3 ]] || { echo "Uso: sudo ./update.sh vX.Y.Z /ruta/base-repo.jar SHA256_RELEASE"; exit 1; }
 TAG=$1
 [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Se requiere un tag estable vX.Y.Z"; exit 1; }
@@ -78,7 +116,7 @@ done
 git checkout --detach "$COMMIT"
 cp "$BACKUP/candidate.jar" "$OLD.new"
 mv "$OLD.new" "$OLD"
-nohup java -jar "$ROOT/$OLD" --spring.config.location="file:$ROOT/config/application.properties" --spring.profiles.active=production > "$ROOT/base-repo.log" 2>&1 &
+nohup java -jar "$ROOT/$OLD" --spring.config.location="file:$ROOT/config/application.properties" --spring.profiles.active=production > "$ROOT/base-repo.log" 2>&1 9>&- &
 PID=$!
 echo "$PID" > "$BACKUP/new-pid"
 candidate_listens(){
