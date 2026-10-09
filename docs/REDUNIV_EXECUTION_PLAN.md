@@ -277,3 +277,9 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Vista previa privada es/en con contenido, lista de archivos, bloqueos y confirmación explícita; errores locales traducibles y detalles API originales. Se activa idioma global en ficha privada tras migración principal.
 - [x] Chrome fixture dinámica ampliada: preview conserva título/nombre archivo al idioma, cero consultas por cambio de idioma y ningún POST hasta confirmación; exactamente un envío confirmado. Backend stubbed: no sustituye revisión real de permisos/estado.
 - [ ] Regresión Java integral iniciada, resultado pendiente; JAR/E2E integrado y auditoría de requisitos globales restantes no cerrados.
+
+### Regresión completa tras migración de fichas — 2026-10-08
+- [x] Java21 offline: 52 suites, 504 tests, cero fallos/errores/omitidos. Log /tmp/reduniv-i18n-full-java.log.
+- [x] Dieciséis fixtures Chrome secuenciales aprobados, acceso/catálogo/depósito/operaciones/fichas/administración/ayuda; log /tmp/reduniv-i18n-all-fixtures.log. No equivalen a permisos reales de servidor.
+- [x] JAR minimal Java21 construido correctamente (12s); log /tmp/reduniv-i18n-full-jar.log.
+- [ ] E2E aislado PostgreSQL/SMTP/restore en ejecución; resultado pendiente. A07 requiere además auditoría textual/estados y revisión institucional, sin cerrar objetivo global.
