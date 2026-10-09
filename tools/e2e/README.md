@@ -259,3 +259,7 @@ axe y ausencia de escrituras; datos sintéticos. `E2E_SCREENSHOT_PATH` opcional.
 El fixture compartido también comprueba que «Mi cuenta» no aparezca en el menú
 para ningún rol; el nombre abre un modal, los campos se vacían y ocultan al
 cerrarlo y el modal pasa axe. No envía cambios de contraseña.
+
+`node tools/e2e/my-deposits-toolbar-smoke.cjs` usa una lista sintética para
+comprobar amplitud del buscador, cuenta singular/filtrada, es/en, 320 px y axe.
+No modifica datos; `E2E_SCREENSHOT_PATH` guarda captura de la barra.

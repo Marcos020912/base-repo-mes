@@ -295,3 +295,18 @@ input[type="checkbox"],input[type="radio"] { width:20px; height:20px; padding:0;
 .account-modal .modal-body { min-height:0; overflow-y:auto; }
 .account-modal .modal-body>p { margin:0; color:var(--muted); line-height:1.5; }
 .account-modal footer { flex-wrap:wrap; }
+
+/* Personal deposits need a flexible search column, not catalogue select widths. */
+.my-deposits-toolbar { grid-template-columns:minmax(0,1fr) auto auto; align-items:end; gap:20px; padding:20px 24px; }
+.my-deposits-search { min-width:0; gap:8px; }
+.my-deposits-search>span:first-child { font-size:13px; color:var(--muted); }
+.my-deposits-search-control { position:relative; display:block; min-width:0; }
+.my-deposits-search-control svg { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
+.my-deposits-search-control input { min-height:48px; padding-left:44px; }
+.my-deposits-toolbar #refresh-list { min-height:48px; }
+.my-deposits-toolbar .status { align-self:end; min-height:48px; display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:9px; background:var(--soft); font-size:13px; white-space:normal; overflow-wrap:anywhere; }
+@media(max-width:650px) {
+ .my-deposits-toolbar { grid-template-columns:minmax(0,1fr) auto; gap:12px; padding:16px; }
+ .my-deposits-search { grid-column:1/-1; }
+ .my-deposits-toolbar .status { justify-self:stretch; }
+}

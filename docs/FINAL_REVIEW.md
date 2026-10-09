@@ -173,3 +173,11 @@ Nombres largos e instituciones no desbordan. Fixture con diez instituciones,
 - En Chrome real admin ahora muestra «Sin tareas de depósito»; modal verificado
   en admin localhost y usuario127.0.0.1 sin enviar formularios. Fixture de menú
   de36casos ampliado con apertura/cierre/borrado/visibilidad y axe del modal.
+
+### Barra de búsqueda de Mis depósitos
+
+Buscador flexible con etiqueta e icono, botón alineado y contador en insignia;
+reglas locales evitan heredar columna de170px del catálogo. Móvil distribuye
+búsqueda en primera fila. Cuenta singular/plural y resultados filtrados es/en.
+Fixture específico aprobado: campo amplio, filtrado, idioma,320px y axe0,
+sin escrituras;9tests i18n y menú compartido aprobados.

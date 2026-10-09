@@ -210,7 +210,7 @@
   "deposit.previous": "Anterior",
   "deposit.next": "Siguiente",
   "deposit.allMine": "Todos mis depósitos",
-  "deposit.searchMine": "Buscar en mis datasets",
+  "deposit.searchMine": "Buscar por título o identificador",
   "deposit.empty": "Aún no has creado datasets.",
   "deposit.noPublisher": "Sin editorial",
   "deposit.tasksLoading": "Consultando tareas…",
@@ -1395,5 +1395,9 @@
   "readiness.formats.AUDIOVISUAL": "MP4, WEBM o MOV",
   "readiness.formats.OTHER": "archivos en el formato que necesites",
   "account.open": "Abrir mi cuenta",
-  "account.close": "Cerrar mi cuenta"
+  "account.close": "Cerrar mi cuenta",
+  "deposit.searchLabel": "Buscar en mis depósitos",
+  "deposit.resultOne": "1 depósito",
+  "deposit.resultMany": "{total} depósitos",
+  "deposit.filteredTotal": "{shown} de {total} depósitos"
 }
