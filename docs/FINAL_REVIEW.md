@@ -129,3 +129,26 @@ interrumpida, recuperación, versiones, permisos, curación y vocabularios.
 La compilación y el reinicio local conservan los datos del usuario; no se
 publican recursos ni se fusionan ramas. Comprobado modal real de pendientes en
 la sesión del usuario sin modificar el dataset.
+
+### Preparación del depósito guiada
+
+- Implementado el diseño aprobado: progreso, número de requisitos pendientes,
+  tarjetas con «Cómo resolverlo» y botones hacia descripción, archivos,
+  metadatos o autores. El destino recibe foco y resaltado temporal; navegar no
+  abre formularios ni realiza escrituras.
+- Recomendaciones separadas de requisitos, ayuda desplegable y comprobaciones
+  completadas plegadas. DOI/ORCID/ROR no se presentan como obligatorios.
+- «Volver a comprobar» consulta el informe del servidor; cambiar idioma vuelve
+  a dibujar el informe en caché sin consultas adicionales. Fallos del informe
+  no producen una falsa confirmación de completitud.
+- Acciones solo para el autor de un borrador. Completar esta comprobación no
+  equivale a aprobar privacidad ni a publicar el depósito.
+- Descripción y archivos tienen encabezados explícitos y «Subir descripción».
+
+Validado: fixture guiado con navegación/foco/permisos/es-en/320 px y axe;
+regresiones estáticas/dinámicas de ficha y 36 casos de barra lateral; auditoría
+base 69 estados sin infracciones y 9 pruebas i18n; flujo integral con PostgreSQL,
+SMTP y JAR aislados aprobado. JAR compilado y aplicación local reiniciada UP.
+En Chrome real: depósito del usuario al 76 %, cero requisitos base pendientes,
+recomendaciones separadas; «Ir a autores» enfoca Editar identidades sin abrir
+modal, sin desbordamiento horizontal. Datos y archivos del usuario preservados.

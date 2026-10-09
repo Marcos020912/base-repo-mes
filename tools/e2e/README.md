@@ -240,3 +240,12 @@ pendientes con cierre y enlace para completar. Comprueba axe con sugerencias
 abiertas y con modal abierto, y que no existan escrituras HTTP. Los avisos
 permanecen visibles también sobre diálogos nativos abiertos.
 `E2E_SCREENSHOT_PATH` guarda una captura sintética del modal.
+
+### Preparación guiada del depósito
+
+`node tools/e2e/readiness-smoke.cjs` comprueba tarjetas de requisitos y
+recomendaciones, instrucciones, navegación con foco y resaltado sin abrir
+modal ni mutar datos, permisos de autor, es/en sin consultas adicionales,
+actualización del informe y accesibilidad/ausencia de desbordamiento a 320 px.
+Usa informes sintéticos y no modifica depósitos reales.
+`E2E_SCREENSHOT_PATH` guarda una captura de prueba de esta sección.

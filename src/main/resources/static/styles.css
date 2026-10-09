@@ -233,3 +233,36 @@ input[type="checkbox"],input[type="radio"] { width:20px; height:20px; padding:0;
 .task-details-link { display:inline-block; white-space:nowrap; font-weight:700; color:#003a78; }
 .task-details-modal .modal-body { max-height:max(120px,calc(100dvh - 200px)); overflow-y:auto; }
 .task-details-modal .modal-body > h3,.task-details-modal .modal-body > p,.task-details-modal .modal-body > ul { margin:0; }
+/* Guided deposit preparation: requirements, solutions and section navigation. */
+.readiness-header { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:24px; }
+.readiness-header h2 { margin:0 0 8px; }
+.readiness-header > button { flex:none; }
+.readiness-progress { display:flex; align-items:center; gap:24px; padding:20px; background:#eaf3ff; border-radius:10px; margin-bottom:24px; color:#003a78; font-weight:700; }
+.readiness-progress > div { flex:1; min-width:0; }
+.readiness-progress p { margin:0 0 10px; }
+.readiness-progress > p { margin:0; padding-left:24px; border-left:1px solid #cbdcf0; }
+.quality-panel .readiness-progress progress { max-width:none; width:100%; }
+.readiness-group { display:grid; gap:12px; margin:24px 0; }
+.readiness-group-heading,.readiness-card-heading { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.readiness-group-heading h3,.readiness-card h4 { margin:0; }
+.readiness-badge { display:inline-block; padding:4px 10px; border-radius:20px; font-size:12px; line-height:1.4; background:#ffe2e5; color:#9b202a; font-weight:700; }
+.readiness-card { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; padding:18px; border:1px solid #d5e2ef; border-left:4px solid #c93844; border-radius:10px; background:#fff; }
+.readiness-card-body { min-width:0; }
+.readiness-card p { margin:8px 0; line-height:1.5; overflow-wrap:anywhere; }
+.readiness-card > button { align-self:start; white-space:normal; max-width:190px; }
+.readiness-help { padding:12px 14px; border-radius:8px; background:#eef5ff; margin-top:12px; color:#274969; font-size:14px; }
+.readiness-help strong { color:#004a98; }
+.readiness-help p { margin:5px 0 0; }
+.readiness-recommendation { border-left-color:#9fb7cf; }
+.readiness-recommendation .readiness-badge,.readiness-group-heading:has(+ .readiness-recommendation) .readiness-badge { background:#eef2f7; color:#445b70; }
+.readiness-ready { background:#e8f7ed; color:#176534; border-radius:8px; padding:16px; }
+.readiness-complete { margin:20px 0; padding:14px; border:1px solid var(--line); border-radius:8px; }
+.readiness-complete summary { cursor:pointer; font-weight:700; color:#176534; }
+.quality-panel .readiness-complete ul { display:block; padding-left:20px; }
+.readiness-complete li { margin:10px 0; }
+.readiness-complete li p { color:var(--muted); margin:4px 0; }
+#description-section,#files-section,#science-section,#authors-section,#resource-title { scroll-margin-top:24px; }
+.readiness-highlight { outline:3px solid #004a98; outline-offset:5px; box-shadow:0 0 0 9px #dcecff; }
+@media(max-width:650px) { .readiness-header,.readiness-progress { flex-direction:column; align-items:stretch; }.readiness-progress > p { border-left:0; padding-left:0; }.readiness-card { grid-template-columns:minmax(0,1fr); }.readiness-card > button { max-width:none; width:100%; } }
+.readiness-icon { font-size:28px; color:#c93844; line-height:1; }
+.readiness-help summary { cursor:pointer; color:#004a98; font-weight:700; }

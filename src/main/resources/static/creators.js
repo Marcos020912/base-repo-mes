@@ -7,7 +7,7 @@
     else toast.errorKey('creators.authFailure');
     const url = new URL(location.href); url.searchParams.delete('orcid'); history.replaceState(null, '', url);
   }
-  const panel = document.createElement('section'); panel.className = 'panel';
+  const panel = document.createElement('section'); panel.className = 'panel'; panel.id='authors-section';
   const heading = document.createElement('div'); heading.className = 'section-heading';
   const title = document.createElement('h2'); uiI18n.set(title, 'creators.heading');
   const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'secondary';

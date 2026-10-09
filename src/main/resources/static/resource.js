@@ -86,15 +86,55 @@ async function loadHistory(){
 const resourceQualityCodes=new Set(['title','authors','version','license','institution','methodology','description','files','doi','orcid','ror','summary','coverage']);
 const resourceProfileFields=new Set(['summary','language','discipline','keywords','productionDescription','processingDescription','processingTools','temporalStart','temporalEnd','geographicCoverage','translations']);
 function resourceCheckLabel(check){if(resourceQualityCodes.has(check.code))return resourceLabel('span',`quality.${check.code}`);const field=check.code?.startsWith('profile:')?check.code.slice(8):null;return resourceProfileFields.has(field)?resourceLabel('span',`quality.profile.${field}`):resourceNode('span',check.label);}
-async function loadQuality(){
- try{
-  const report=await api(`/api/v1/scientific/${encodeURIComponent(resourceId)}/quality`),blockers=report.blockers||[];$('#quality-progress').value=report.completionPercent;
-  uiI18n.plain($('#quality-summary'),'');$('#quality-summary').append(resourceLabel('span','resourceDynamic.quality',{percent:report.completionPercent}),resourceNode('span',' '),blockers.length?resourceLabel('span','resourceDynamic.blockers',{blockers:blockers.join(', ')}):resourceLabel('span','resourceDynamic.ready'));
-  const list=$('#quality-checks');list.replaceChildren();
-  for(const check of report.checks){const item=resourceNode('li');item.append(resourceNode('span',check.complete?'✓ ':'✗ '),resourceCheckLabel(check),resourceLabel('span',check.required?'resourceDynamic.required':'resourceDynamic.recommended'));item.className=check.complete?'quality-ok':'quality-missing';
-   if(check.explanation)item.append(resourceQualityCodes.has(check.code)?resourceLabel('p',`quality.${check.code}.explanation`):check.code?.startsWith('profile:')?resourceLabel('p','quality.profileExplanation'):resourceNode('p',check.explanation));list.append(item);}
- }catch(error){$('#quality-checks').replaceChildren();$('#quality-progress').value=0;uiI18n.plain($('#quality-summary'),'');uiI18n.set($('#quality-summary'),'resourceDynamic.qualityFailure');}
+let lastQualityReport=null;
+function readinessTarget(code){
+ if(code==='description')return ['description-section','[data-open-modal="description-modal"]','readiness.goDescription'];
+ if(code==='files')return ['files-section','[data-open-modal="files-modal"]','readiness.goFiles'];
+ if(['authors','orcid','ror'].includes(code))return ['authors-section','button','readiness.goAuthors'];
+ if(code==='title')return ['resource-title','[data-open-modal="edit-modal"]','readiness.goMetadata'];
+ return ['science-section','#edit-science','readiness.goMetadata'];
 }
+let readinessHighlightTimer;
+function goToReadinessTarget(code){
+ const [id,selector]=readinessTarget(code),target=document.getElementById(id)||$('#science-section');
+ document.querySelectorAll('.readiness-highlight').forEach(node=>node.classList.remove('readiness-highlight'));clearTimeout(readinessHighlightTimer);
+ target.classList.add('readiness-highlight');target.setAttribute('tabindex','-1');
+ target.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+ const control=code==='title'?document.querySelector(selector):target.querySelector(selector);
+ (control&&!control.hidden?control:target).focus({preventScroll:true});
+ readinessHighlightTimer=setTimeout(()=>target.classList.remove('readiness-highlight'),3000);
+}
+function renderQuality(report){
+ const checks=report.checks||[],required=checks.filter(check=>check.required&&!check.complete),recommended=checks.filter(check=>!check.required&&!check.complete),complete=checks.filter(check=>check.complete);
+ $('#quality-progress').value=report.completionPercent;uiI18n.plain($('#quality-summary'),'');$('#quality-summary').append(resourceLabel('span','resourceDynamic.quality',{percent:report.completionPercent}));uiI18n.set($('#quality-pending-count'),'readiness.pendingCount',{count:required.length});
+ const list=$('#quality-checks');list.replaceChildren();const editable=isOwner&&scientific?.status==='DRAFT';
+ function card(check){
+  const item=resourceNode('article','',check.required?'readiness-card':'readiness-card readiness-recommendation'),body=resourceNode('div','','readiness-card-body'),heading=resourceNode('div','','readiness-card-heading'),title=resourceNode('h4');
+  if(['description','files'].includes(check.code))uiI18n.set(title,'readiness.missing.'+check.code);else title.append(resourceCheckLabel(check));
+  if(['description','files'].includes(check.code)){const icon=resourceNode('span',check.code==='description'?'▤':'▦','readiness-icon');icon.setAttribute('aria-hidden','true');heading.append(icon);}heading.append(title,resourceLabel('span',check.required?'readiness.required':'readiness.optional',{},'readiness-badge'));body.append(heading);
+  if(check.explanation)body.append(resourceQualityCodes.has(check.code)?resourceLabel('p',`quality.${check.code}.explanation`):check.code?.startsWith('profile:')?resourceLabel('p','quality.profileExplanation'):resourceNode('p',check.explanation));
+  const help=resourceNode(check.required?'div':'details','','readiness-help');help.append(resourceLabel(check.required?'strong':'summary','readiness.how'));
+  const helpKey=['description','files','title','authors','orcid','ror','doi'].includes(check.code)?check.code:'metadata';
+  const formatKey=['DATASET','IMAGE','TEXT','AUDIOVISUAL'].includes(resource?.resourceType?.typeGeneral)?resource.resourceType.typeGeneral:'OTHER';
+  help.append(resourceLabel('p','readiness.help.'+helpKey,{formats:uiI18n.t('readiness.formats.'+formatKey)}));body.append(help);item.append(body);
+  if(editable){const action=resourceLabel('button',readinessTarget(check.code)[2]);action.type='button';action.className=check.required?'primary':'secondary';action.dataset.readinessCode=check.code;action.onclick=()=>goToReadinessTarget(check.code);item.append(action);}return item;
+ }
+ for(const [items,key]of [[required,'readiness.needed'],[recommended,'readiness.recommendations']]){
+  if(!items.length)continue;const section=resourceNode('section','','readiness-group'),heading=resourceNode('div','','readiness-group-heading');heading.append(resourceLabel('h3',key),resourceLabel('span',items===required?'readiness.requiredCount':'readiness.nonBlocking',{count:items.length},'readiness-badge'));section.append(heading);for(const check of items)section.append(card(check));list.append(section);
+ }
+ if(!required.length)list.prepend(resourceLabel('p','readiness.allRequiredComplete',{},'readiness-ready'));
+ if(!editable)list.append(resourceLabel('p','readiness.readOnly',{},'muted'));
+ if(complete.length){const details=resourceNode('details','','readiness-complete');details.append(resourceLabel('summary','readiness.completedCount',{count:complete.length}));const ul=resourceNode('ul');for(const check of complete){const item=resourceNode('li');item.append(resourceNode('span','✓ '),resourceCheckLabel(check));if(check.explanation)item.append(resourceQualityCodes.has(check.code)?resourceLabel('p',`quality.${check.code}.explanation`):resourceNode('p',check.explanation));ul.append(item);}details.append(ul);list.append(details);}
+}
+async function loadQuality(){
+ const refresh=$('#refresh-quality');refresh.disabled=true;
+ try{const report=await api(`/api/v1/scientific/${encodeURIComponent(resourceId)}/quality`);if(!Array.isArray(report.checks)||!Number.isFinite(report.completionPercent)||report.completionPercent<0||report.completionPercent>100)throw uiI18n.error('resourceDynamic.qualityFailure');lastQualityReport=report;renderQuality(report);}
+ catch(error){lastQualityReport=null;$('#quality-checks').replaceChildren();$('#quality-progress').value=0;uiI18n.plain($('#quality-pending-count'),'');uiI18n.plain($('#quality-summary'),'');uiI18n.set($('#quality-summary'),'resourceDynamic.qualityFailure');toast.errorObject(error);}
+ finally{refresh.disabled=false;}
+}
+$('#refresh-quality').addEventListener('click',()=>loadQuality());
+window.addEventListener('ui-locale-changed',()=>{if(lastQualityReport)renderQuality(lastQualityReport);});
+
 async function load(){$('#main-content').setAttribute('aria-busy','true');try{resource=await api(`/api/v1/dataresources/${encodeURIComponent(resourceId)}`);scientific=await api(`/api/v1/scientific/${encodeURIComponent(resourceId)}`);content=await api(`/api/v1/dataresources/${encodeURIComponent(resourceId)}/data/`,{headers:{Accept:'application/vnd.datamanager.content-information+json'}});if(resource.titles?.[0]?.value)uiI18n.plain($('#resource-title'),resource.titles[0].value);else uiI18n.set($('#resource-title'),'resourceDynamic.untitled');$('#resource-id').textContent=resource.id;applyFilePolicy();renderMetadata();renderFiles();renderScientificIdentity();document.dispatchEvent(new CustomEvent('scientific-record-loaded',{detail:{scientific,isOwner}}));await loadQuality();await loadHistory();const md=markdownItem();if(!md){$('#markdown-rendered').replaceChildren(resourceLabel('p','resourceDynamic.missingMarkdown',{},'empty'));return true}const r=await fetch(contentPath(md),{headers:auth.headers()});if(!r.ok)throw uiI18n.error('resourceDynamic.markdownFailure');$('#markdown-rendered').innerHTML=renderMarkdown(await r.text());await hydrateMarkdownImages();return true}catch(e){messageFailure(e);return false}finally{$('#main-content').setAttribute('aria-busy','false')}}
 $('#markdown-form').addEventListener('submit',async e=>{e.preventDefault();const file=new FormData(e.currentTarget).get('markdown');try{await transfers.upload(`/api/v1/dataresources/${encodeURIComponent(resourceId)}/description`,file,uiI18n.t('resourceDynamic.projectDescription'));$('#description-modal').close();messageKey('resourceDynamic.descriptionUpdated','success');load()}catch(err){messageFailure(err)}});
 $('#files-form').addEventListener('submit',async e=>{e.preventDefault();try{for(const file of new FormData(e.currentTarget).getAll('files')){if(!file.size)continue;await transfers.upload(`/api/v1/dataresources/${encodeURIComponent(resourceId)}/attachments?path=${encodeURIComponent(file.webkitRelativePath||file.name)}`,file)}$('#files-modal').close();messageKey('resourceDynamic.filesAdded','success');load()}catch(err){messageFailure(err)}});
