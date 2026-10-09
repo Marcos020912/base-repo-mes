@@ -105,3 +105,16 @@ candidato; reconstruir desde un commit nuevo después de la aprobación.
 
 El gate de `production_preflight.py --config ... --strict-schema` es de lectura;
 no imprime valores ni confirma servicios remotos. Ver `docs/PRODUCTION_RUNBOOK.md`.
+
+Las operaciones Git de `update.sh` se ejecutan como el usuario que llamó a sudo
+(`SUDO_USER`), no como root. La instalación mantiene privilegios para configuración
+y arranque. Si un despliegue antiguo dejó el índice de Git propiedad de root,
+corregir únicamente sus metadatos, desde la carpeta del proyecto:
+
+```bash
+sudo chown -R "$(id -u):$(id -g)" .git
+git pull --ff-only
+```
+
+No usar `chmod 777`, `sudo git pull` ni cambiar permisos de datos/configuración
+privada para resolverlo. Un fallo al leer el índice aborta antes de fetch/deploy.

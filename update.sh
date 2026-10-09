@@ -4,6 +4,18 @@ set -euo pipefail
 umask 077
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
+# Privileged deployment must not create root-owned Git metadata in a user clone.
+GIT_USER="${SUDO_USER:-}"
+if [[ $EUID -eq 0 && -z "$GIT_USER" ]]; then
+  GIT_USER="$(stat -c '%U' "$ROOT/.git")"
+fi
+git() {
+  if [[ $EUID -eq 0 && -n "$GIT_USER" && "$GIT_USER" != root ]]; then
+    runuser -u "$GIT_USER" -- git "$@"
+  else
+    command git "$@"
+  fi
+}
 # Sin argumentos: actualizar main y reconstruir mediante deploy.sh.
 # Un argumento: main o un tag estable aprobado. Tres: modo JAR precompilado.
 if [[ $# -le 1 ]]; then
@@ -14,7 +26,8 @@ if [[ $# -le 1 ]]; then
   command -v flock >/dev/null
   exec 9>"$ROOT/.update.lock"
   flock -n 9 || { echo "Ya hay un despliegue o actualización en curso" >&2; exit 1; }
-  [[ -z "$(git status --porcelain --untracked-files=no)" ]] || { echo "Hay cambios locales versionados; no se sobrescriben." >&2; exit 1; }
+  STATUS="$(git status --porcelain --untracked-files=no)"
+  [[ -z "$STATUS" ]] || { echo "Hay cambios locales versionados; no se sobrescriben." >&2; exit 1; }
   python3 "$ROOT/tools/releases/production_preflight.py" --config "$ROOT/config/application.properties" --strict-schema
   if [[ "$REF" == main ]]; then REMOTE_REF=refs/heads/main; else REMOTE_REF=refs/tags/$REF; fi
   git fetch https://github.com/Marcos020912/base-repo-mes.git "$REMOTE_REF"
@@ -65,7 +78,8 @@ PYPORT
 )"
 exec 9>"$ROOT/.update.lock"
 flock -n 9 || { echo "Ya hay una actualización en curso"; exit 1; }
-[[ -z "$(git status --porcelain --untracked-files=no)" ]] || { echo "Hay cambios locales versionados. Guárdelos antes."; exit 1; }
+STATUS="$(git status --porcelain --untracked-files=no)"
+[[ -z "$STATUS" ]] || { echo "Hay cambios locales versionados. Guárdelos antes."; exit 1; }
 # Solo descarga código; no ejecuta el despliegue ni compila en la VM.
 git fetch https://github.com/Marcos020912/base-repo-mes.git "refs/tags/$TAG"
 COMMIT="$(git rev-parse FETCH_HEAD)"

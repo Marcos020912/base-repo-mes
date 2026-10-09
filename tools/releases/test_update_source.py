@@ -37,7 +37,7 @@ exit "${DEPLOY_FAIL:-0}"
             git.write_text('''#!/bin/bash
 printf '%s\\n' "$*" >> "$TRACE"
 case "$1" in
- status) exit 0 ;;
+ status) exit "${STATUS_FAIL:-0}" ;;
  fetch) exit 0 ;;
  rev-parse) echo fixture-commit ;;
  merge-base) exit "${DIVERGENT:-0}" ;;
@@ -75,6 +75,12 @@ esac
         self.assertNotEqual(code, 0)
         self.assertNotIn('fetch ', log)
 
+    def test_unreadable_index_prevents_fetch(self):
+        code, log = self.run_fixture(STATUS_FAIL='1')
+        self.assertNotEqual(code, 0)
+        self.assertNotIn('fetch ', log)
+        self.assertNotIn('deploy-called', log)
+
     def test_deploy_failure_is_not_reported_as_success(self):
         code, log = self.run_fixture(DEPLOY_FAIL='1')
         self.assertNotEqual(code, 0)
@@ -84,6 +90,23 @@ esac
         for name in ('deploy.sh', 'update.sh'):
             line = next(line for line in (ROOT / name).read_text().splitlines() if line.startswith('nohup java'))
             self.assertIn('9>&- &', line)
+
+    def test_git_uses_original_user_under_sudo(self):
+        source = (ROOT / 'update.sh').read_text()
+        function = 'git() {' + source.split('git() {', 1)[1].split('# Sin argumentos:', 1)[0]
+        function = function.replace('[[ $EUID -eq 0 && -n "$GIT_USER" && "$GIT_USER" != root ]]', 'true')
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory)
+            (path/'runuser').write_text('#!/bin/bash\nprintf "%s\\n" "$*" >> "$TRACE"\nshift 3\nexec "$@"\n')
+            (path/'git').write_text('#!/bin/bash\nprintf "%s\\n" "$*" >> "$TRACE"\n')
+            (path/'runuser').chmod(0o755)
+            (path/'git').chmod(0o755)
+            trace = path/'trace'
+            subprocess.run(['bash','-c',function + '\ngit status --porcelain'], check=True,
+                           env={**os.environ, 'PATH':directory + ':' + os.environ['PATH'],
+                                'GIT_USER':'fixture-user', 'TRACE':str(trace)})
+            self.assertEqual(trace.read_text().splitlines(),
+                             ['-u fixture-user -- git status --porcelain', 'status --porcelain'])
 
     def test_shell_syntax(self):
         subprocess.run(['bash', '-n', str(ROOT / 'update.sh'), str(ROOT / 'deploy.sh')], check=True)
