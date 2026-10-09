@@ -272,3 +272,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Políticas de archivos, estados DOI/confirmación de reserva, historial editorial y checklist de calidad es/en; códigos DOI, actores y notas originales. Fallo de calidad limpia checks y porcentaje anterior.
 - [x] Fixture Chrome dinámica ampliada: estado DOI DRAFT sin presentar publicación, checklist conocido traducido/campo institucional desconocido original, historial con actor/nota intactos y cero consultas por idioma. Fixture UI con backend stubbed.
 - [ ] Vista previa de envío, mensajes/errores restantes y flujo completo real siguen pendientes; ficha privada todavía no finalizada.
+
+### Vista previa de envío y errores bilingües — avance A07 (2026-10-08)
+- [x] Vista previa privada es/en con contenido, lista de archivos, bloqueos y confirmación explícita; errores locales traducibles y detalles API originales. Se activa idioma global en ficha privada tras migración principal.
+- [x] Chrome fixture dinámica ampliada: preview conserva título/nombre archivo al idioma, cero consultas por cambio de idioma y ningún POST hasta confirmación; exactamente un envío confirmado. Backend stubbed: no sustituye revisión real de permisos/estado.
+- [ ] Regresión Java integral iniciada, resultado pendiente; JAR/E2E integrado y auditoría de requisitos globales restantes no cerrados.

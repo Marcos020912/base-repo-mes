@@ -1242,5 +1242,22 @@
   "resourceDynamic.policyText": "Solo textos y documentos: PDF, DOC, DOCX, ODT, RTF, TXT, MD o EPUB.",
   "resourceDynamic.policyVideo": "Solo video: MP4, WebM, MOV, AVI, MKV, MPEG o M4V.",
   "resourceDynamic.policyDataset": "Solo formatos tabulares: CSV, XLS, XLSX, TSV, ODS, Parquet, JSON o XML.",
-  "resourceDynamic.policyOther": "Este tipo permite cualquier archivo."
+  "resourceDynamic.policyOther": "Este tipo permite cualquier archivo.",
+  "resourceDynamic.previewLoading": "Preparando vista previa…",
+  "resourceDynamic.refreshFailure": "No se pudo actualizar la información del depósito.",
+  "resourceDynamic.noPublisher": "Sin editorial",
+  "resourceDynamic.noYear": "Sin año",
+  "resourceDynamic.previewIdentity": "Tipo: {type} · Versión: {version} · Licencia: {license}",
+  "resourceDynamic.previewAccess": "Institución: {institution} · Acceso: {access}",
+  "resourceDynamic.previewProduction": "Producción y origen: {value}",
+  "resourceDynamic.previewProcessing": "Procesamiento: {value}",
+  "resourceDynamic.previewTools": "Herramientas/versiones: {value}",
+  "resourceDynamic.previewMethods": "Metodología: {value}",
+  "resourceDynamic.projectDescription": "Descripción del proyecto",
+  "resourceDynamic.datasetFiles": "Archivos del dataset",
+  "resourceDynamic.emptyData": "No hay archivos de datos.",
+  "resourceDynamic.previewBlocked": "No se puede enviar todavía. Faltan: {blockers}.",
+  "resourceDynamic.previewReady": "Validación automática: {percent} %. Requisitos completos; el envío bloqueará la edición hasta que curación responda.",
+  "resourceDynamic.previewFailure": "No se pudo preparar la vista previa:",
+  "resourceDynamic.citationName": "Cita bibliográfica"
 }

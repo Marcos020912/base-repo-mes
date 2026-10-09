@@ -1242,5 +1242,22 @@
   "resourceDynamic.policyText": "Texts and documents only: PDF, DOC, DOCX, ODT, RTF, TXT, MD or EPUB.",
   "resourceDynamic.policyVideo": "Video only: MP4, WebM, MOV, AVI, MKV, MPEG or M4V.",
   "resourceDynamic.policyDataset": "Tabular formats only: CSV, XLS, XLSX, TSV, ODS, Parquet, JSON or XML.",
-  "resourceDynamic.policyOther": "This type allows any file."
+  "resourceDynamic.policyOther": "This type allows any file.",
+  "resourceDynamic.previewLoading": "Preparing preview…",
+  "resourceDynamic.refreshFailure": "Deposit information could not be refreshed.",
+  "resourceDynamic.noPublisher": "No publisher",
+  "resourceDynamic.noYear": "No year",
+  "resourceDynamic.previewIdentity": "Type: {type} · Version: {version} · License: {license}",
+  "resourceDynamic.previewAccess": "Institution: {institution} · Access: {access}",
+  "resourceDynamic.previewProduction": "Production and origin: {value}",
+  "resourceDynamic.previewProcessing": "Processing: {value}",
+  "resourceDynamic.previewTools": "Tools/versions: {value}",
+  "resourceDynamic.previewMethods": "Methodology: {value}",
+  "resourceDynamic.projectDescription": "Project description",
+  "resourceDynamic.datasetFiles": "Dataset files",
+  "resourceDynamic.emptyData": "No data files.",
+  "resourceDynamic.previewBlocked": "Cannot submit yet. Missing: {blockers}.",
+  "resourceDynamic.previewReady": "Automated validation: {percent}%. Requirements complete; submission will lock editing until curation responds.",
+  "resourceDynamic.previewFailure": "The preview could not be prepared:",
+  "resourceDynamic.citationName": "Bibliographic citation"
 }
