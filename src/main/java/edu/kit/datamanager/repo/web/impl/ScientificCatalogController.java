@@ -208,7 +208,7 @@ public class ScientificCatalogController {
     }
 
     public record CatalogItem(String id, String title, List<String> authors, String publisher, String year, String type, String identifier, String accessLevel) {}
-    public record CatalogPage(List<CatalogItem> items, long total, int page, int pages) {}
+    public record CatalogPage(@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS) List<CatalogItem> items, long total, int page, int pages) {}
 
     @GetMapping("/facets")
     @Transactional(readOnly = true)

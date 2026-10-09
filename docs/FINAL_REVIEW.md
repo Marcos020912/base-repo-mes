@@ -42,3 +42,22 @@ estadísticas externas reales. No se altera una base de datos desplegada.
 La revisión humana final corresponde al administrador, según decisión del
 usuario. La fusión y el despliegue requieren autorización explícita y respaldo.
 El PC de pruebas no demuestra el comportamiento del HAProxy productivo.
+
+## Comprobación durante el arranque local
+
+Al lanzar la aplicación real sobre una base nueva aparecieron dos problemas
+que no deben ocultarse con los resultados anteriores:
+
+- `ElasticWrapper` fijaba `baserepo` para escrituras aunque se configurase otro
+  índice. Ahora resuelve `repo.search.index`, conservando `baserepo` por defecto.
+  Dos pruebas de contexto comprueban ambas situaciones; el índice de demo
+  queda separado del anterior.
+- El JSON de catálogo vacío omitía `items` por la política global `NON_EMPTY`.
+  Ahora devuelve `items:[]`; una prueba específica verifica la serialización.
+
+Tras ambas correcciones: **72 suites / 1377 pruebas, cero fallos, errores u
+omisiones**, compilación JAR aprobada. La revisión final anterior de 1374 pruebas
+corresponde al código previo a estas tres pruebas adicionales. El arranque y
+las comprobaciones reales de navegador se realizan en el PC del usuario con
+PostgreSQL persistente local dedicado, Elasticsearch y SMTP capturado localmente.
+No se migran los datos H2 antiguos ni se envían mensajes/DOI/eventos externos.
