@@ -140,7 +140,7 @@ async function load() {
     const data = await response.json();
     if (response.status === 410) { if (data.title) uiI18n.plain(document.querySelector('#title'), data.title); else uiI18n.set(document.querySelector('#title'), 'publicRecord.withdrawnTitle'); uiI18n.set(status, data.reason ? 'publicRecord.withdrawn' : 'publicRecord.withdrawnNoReason', {reason: data.reason}); return; }
     if (!response.ok) throw uiI18n.error('publicRecord.unavailable');
-    detail = data; document.querySelector('#landing').hidden = false;
+    detail = data; window.dispatchEvent(new CustomEvent('reduniv-public-record-loaded',{detail:{id:data.id}})); document.querySelector('#landing').hidden = false;
     const archive = document.querySelector('#download-archive');
     archive.hidden = !canDownloadContent();
     archive.onclick = event => { event.preventDefault(); downloadPublic(archive.href, id + '.zip'); };
@@ -190,6 +190,8 @@ document.querySelector('#export').addEventListener('click', () => {
 async function downloadPublic(url, filename) {
   try {
     const result = await transfers.download(url, filename);
+    const path=new URL(url,location.origin).pathname;
+    if(detail&&['/api/v1/public/resources/'+encodeURIComponent(id)+'/file','/api/v1/public/resources/'+encodeURIComponent(id)+'/archive'].includes(path))window.dispatchEvent(new CustomEvent('reduniv-public-download',{detail:{resourceId:detail.id}}));
     uiI18n.set(status, result.savedToDisk ? 'publicRecord.saved' : 'publicRecord.prepared');
   }
   catch (error) { if(error.name === 'AbortError') uiI18n.set(status, 'publicRecord.cancelled'); else uiI18n.showError(status, error); }

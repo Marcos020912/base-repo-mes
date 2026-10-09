@@ -49,7 +49,7 @@ class CatalogueTest(unittest.TestCase):
 
     def test_scientific_ui_literal_keys_exist(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
-        domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users','versions','relations','funding','creators','reviewAccess','publicRecord','vocabulary','profilesAdmin','collections','reviews','resourceStatic','resourceDynamic','metadataHistory','usage','assessment'}
+        domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users','versions','relations','funding','creators','reviewAccess','publicRecord','vocabulary','profilesAdmin','collections','reviews','resourceStatic','resourceDynamic','metadataHistory','usage','assessment','dataciteUsage'}
         used=set()
         for script in STATIC.glob('*.js'):
             if script.name=='ui-locales.js':continue

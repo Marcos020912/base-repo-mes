@@ -50,7 +50,7 @@ boolean_value(){
 }
 remove_managed_properties(){
   local tmp keys
-  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,spring.mail.properties.mail.smtp.connectiontimeout,spring.mail.properties.mail.smtp.timeout,spring.mail.properties.mail.smtp.writetimeout,repo.mail.from,repo.fixity.enabled,repo.fixity.alert-to,repo.privacy.require-assessment,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url,repo.scientific.orcid.enabled,repo.scientific.orcid.environment,repo.scientific.orcid.client-id,repo.scientific.orcid.client-secret,repo.scientific.orcid.redirect-uri'
+  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,spring.mail.properties.mail.smtp.connectiontimeout,spring.mail.properties.mail.smtp.timeout,spring.mail.properties.mail.smtp.writetimeout,repo.mail.from,repo.fixity.enabled,repo.fixity.alert-to,repo.metrics.datacite.enabled,repo.metrics.datacite.repository-id,repo.privacy.require-assessment,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url,repo.scientific.orcid.enabled,repo.scientific.orcid.environment,repo.scientific.orcid.client-id,repo.scientific.orcid.client-secret,repo.scientific.orcid.redirect-uri'
   tmp="$(mktemp "$CONF.XXXXXX")"
   awk -v keys="$keys" '
     BEGIN { count=split(keys, items, ","); for (i=1; i<=count; i++) managed[items[i]]=1 }
@@ -179,6 +179,8 @@ REUSE_CONFIGURATION="N"
 if grep -qE '^# (BEGIN )?Managed by deploy.sh' "$CONF" 2>/dev/null; then
   ask REUSE_CONFIGURATION "Se detectó una configuración previa. ¿Reutilizarla sin volver a pedir datos? (S/n)" "S"
 fi
+DATACITE_USAGE_ENABLED="$(boolean_value "$(property_value 'repo.metrics.datacite.enabled')")"; DATACITE_USAGE_ENABLED=${DATACITE_USAGE_ENABLED:-false}
+DATACITE_USAGE_REPOSITORY_ID="$(property_value 'repo.metrics.datacite.repository-id')"
 if [[ "${REUSE_CONFIGURATION,,}" == "s" || "${REUSE_CONFIGURATION,,}" == "si" || "${REUSE_CONFIGURATION,,}" == "sí" ]]; then
   APP_PORT="$(property_value 'server.port')"; APP_DOMAIN="$(property_value 'repo.public-domain')"; APP_BIND="$(property_value 'server.address')"
   DB_NAME="$(property_value 'repo.deploy.db-name')"; DB_USER="$(property_value 'spring.datasource.username')"; DB_PASSWORD="$(property_value 'spring.datasource.password')"
@@ -271,6 +273,15 @@ else
     ask ORCID_REDIRECT_URI "URL de retorno ORCID registrada en ORCID" "${ORCID_REDIRECT_URI:-https://$APP_DOMAIN$( [[ "$HAPROXY_FRONTEND_PORT" == 443 ]] || printf ':%s' "$HAPROXY_FRONTEND_PORT" )/api/v1/scientific/orcid/callback}"
     [[ -n "$ORCID_CLIENT_ID" && -n "$ORCID_CLIENT_SECRET" && "$ORCID_REDIRECT_URI" == https://*/api/v1/scientific/orcid/callback ]] || { echo "Faltan datos válidos de ORCID; se requiere HTTPS público." >&2; exit 1; }
   fi
+  ask DATACITE_USAGE_ENABLED "¿Activar estadísticas externas DataCite (requiere aprobación institucional)? (s/N)" "$DATACITE_USAGE_ENABLED"
+  DATACITE_USAGE_ENABLED="$(boolean_value "${DATACITE_USAGE_ENABLED:-false}")"
+  [[ "$DATACITE_USAGE_ENABLED" == true || "$DATACITE_USAGE_ENABLED" == false ]] || { echo "Responda s o n para estadísticas DataCite." >&2; exit 1; }
+  if [[ "$DATACITE_USAGE_ENABLED" == true ]]; then
+    ask DATACITE_USAGE_REPOSITORY_ID "Identificador de estadísticas facilitado por DataCite (da-...)" "$DATACITE_USAGE_REPOSITORY_ID"
+    [[ "$DATACITE_USAGE_REPOSITORY_ID" =~ ^da-[A-Za-z0-9_-]{1,100}$ ]] || { echo "Identificador DataCite de estadísticas no válido; no es el usuario DOI." >&2; exit 1; }
+    [[ "${DATACITE_API_URL%/}" == https://api.datacite.org ]] || { echo "El tracker requiere DOI de producción. No active estadísticas en el entorno de pruebas." >&2; exit 1; }
+    echo "Cada visitante deberá aceptar el envío de eventos; DNT/GPC se respetan. No se configura certificación automática."
+  fi
   ask ES_URL "URL de Elasticsearch" "$(property_value 'repo.search.url')"; ES_URL=${ES_URL:-http://localhost:9200}
   ask CONFIGURE_FIREWALL "¿Configurar UFW para que solo HAProxy acceda al puerto de la app? (s/N)" "N"
   APP_JWT_SECRET="$(property_value 'repo.auth.jwtSecret')"
@@ -344,6 +355,8 @@ spring.mail.properties.mail.smtp.connectiontimeout: 10000
 spring.mail.properties.mail.smtp.timeout: 10000
 spring.mail.properties.mail.smtp.writetimeout: 10000
 repo.mail.from: $MAIL_USER
+repo.metrics.datacite.enabled: $DATACITE_USAGE_ENABLED
+repo.metrics.datacite.repository-id: $DATACITE_USAGE_REPOSITORY_ID
 repo.fixity.enabled: $FIXITY_ENABLED
 repo.fixity.alert-to: $FIXITY_ALERT_TO
 repo.privacy.require-assessment: $PRIVACY_REQUIRED

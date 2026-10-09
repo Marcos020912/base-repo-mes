@@ -408,6 +408,22 @@ Este avance no declara completadas las validaciones institucionales de la matriz
 - [x] 19 páginas/1322claveses/en;9tests de catálogos aprobados. Nueva prueba exige rutas absolutas de todos los scripts de ficha permanente.
 - [x] E2E final PG/SMTP/Chrome/2JVM/restauración terminal0: `/tmp/reduniv-features-final-e2e.log`. Métricas reales/deduplicación/exclusiones, permisos y guardado de expediente/modal/idioma aprobados; migración doble y todas las tablas restauradas idénticas, esquema validate y descarga. Ensayos previos detectaron NON_EMPTY (corregido con contrato Jackson) y expectativa incorrecta403anónimo (entrypoint existente401, corregido el harness). Sin errores JS.
 - [ ] A04: integración de login OIDC institucional, pendiente confirmar proveedor/issuer y registro de cliente. ORCID OAuth no es sustituto.
-- [ ] A11: conformidad COUNTER y envío de eventos DataCite, si se exige; las nuevas métricas locales no los implementan.
+- [ ] A11: certificación/conformidad institucional y evidencias de recepción mensual real. El envío opcional DataCite está implementado en el avance siguiente; los contadores locales siguen separados.
 - [ ] A08/A12 institucional: perfiles OAIS aprobados, evidencias/políticas completas y certificación externa. El expediente facilita el trabajo, no lo aprueba automáticamente.
 - [ ] Validaciones reales DOI/correo/HAProxy, revisión bibliotecaria, accesibilidad manual y evaluación/rotación de secretos históricos.
+
+
+## Estadísticas DataCite y validaciones externas — 2026-10-09
+
+- [x] Integración oficial DataCite Usage Tracker 0.0.5 fijada con SRI, desactivada por defecto. Solo DOI publicado de producción, confirmado findable y con landing propia; identificador institucional `da-...` separado de las credenciales DOI.
+- [x] Consentimiento explícito antes de contactar terceros; DNT/GPC, revocación y expiración respetados. URL canónica sin parámetros; eventos de descargas solo tras terminar el flujo de transferencia, no citas/metadata. No acredita recepción en disco.
+- [x] Estadísticas mensuales del proveedor, tabla accesible y exportación JSON separadas de métricas locales, siempre `certified:false`. Cambiar idioma no repite solicitudes.
+- [x] `deploy.sh` conserva configuración al reutilizarla, solicita activación institucional opcional y deduplica las dos propiedades; no cambia automáticamente a producción ni publica DOIs.
+- [x] Comprobador externo readonly HTTPS/login/preflight/DOI/Tracker/SMTP TLS: sin contraseñas, cuentas, eventos, publicación DOI ni envío de correo. Reportes privados 0600 sin sobrescribir; PASS/FAIL/INCONCLUSIVE por alcance, no certificación automática.
+- [x] Java: 69 suites, 1367 tests, cero fallos/errores/omitidos; `/tmp/reduniv-datacite-usage-java.log`, terminal0. JAR aprobado y 59 assets idénticos a fuentes.
+- [x] E2E real PostgreSQL/SMTP/Chrome/dos JVM/restauración: `/tmp/reduniv-datacite-usage-e2e.log`, terminal0. Contrato 27 rutas/167 referencias; configuración desactivada por defecto, migración doble, esquema validate y tablas restauradas idénticas, sin errores JS.
+- [x] Gates finales: 7 pruebas de validación externa, 9 de seguridad/despliegue y 9 de catálogos; bundle determinista y bash syntax aprobados. Auditoría heurística de secretos del árbol: cero hallazgos; no certifica el historial.
+- [x] 18 fixtures navegador terminal0 en `/tmp/reduniv-datacite-usage-all-ui.log`. Biblioteca oficial real con APIs interceptadas: seis escenarios terminal0, `/tmp/reduniv-datacite-official-library-final-ui.log`; incluye axe y ausencia de overflow a 320px. Ningún evento real emitido.
+- [x] Comprobación externa real limitada: login de `https://datos.reduniv.edu.cu` HTTP200 con certificado HTTPS verificado desde este entorno. Preflight HTTP200 sin CORS marcado INCONCLUSIVE (mismo origen no exige esas cabeceras). Reporte `/tmp/reduniv-external-readonly-2026-10-09-v2.json`, exit2, cero FAIL. No demuestra entrega SMTP ni validación DOI de producción.
+- [ ] Activación institucional: recibir ID DataCite, aprobar tratamiento de datos y configurar producción; comprobar recepción autorizada y reporte mensual posterior. No afirmar certificación COUNTER sin auditoría correspondiente.
+- [ ] Validaciones humanas/externas: entrega de correo real, HAProxy institucional, DOI autorizado, revisión bibliotecaria, accesibilidad manual y evaluación de políticas/certificación. Procedimiento: `DATACITE_USAGE_AND_EXTERNAL_VALIDATION.md`.

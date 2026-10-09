@@ -812,6 +812,7 @@ async function usageAndAssessment(page,base,resource){
   const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
   const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
   const usageUrl=base+'/api/v1/public/usage?resourceId='+resource.id;
+  const externalResponse=await fetch(base+'/api/v1/public/resources/'+resource.id+'/usage-configuration');assert(externalResponse.ok,'Public tracker configuration missing');const external=await externalResponse.json();assert(external.enabled===false&&external.consentRequired===true&&external.certified===false&&!external.repositoryId&&!external.doi,'External tracking enabled without production approval');
   const before=await (await fetch(usageUrl)).json();
   assert(before.schema==='reduniv.local-usage.v1'&&before.collectionEnabled&&!before.counterCertified,'Usage report must be enabled and uncertified');
   const agent={'User-Agent':'Mozilla/5.0 RedUniv Acceptance Human'};

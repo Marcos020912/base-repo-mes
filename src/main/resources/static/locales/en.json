@@ -1320,5 +1320,19 @@
   "assessment.R13": "R13 · Reuse",
   "assessment.R14": "R14 · Storage and integrity",
   "assessment.R15": "R15 · Technical infrastructure",
-  "assessment.R16": "R16 · Security"
+  "assessment.R16": "R16 · Security",
+  "dataciteUsage.heading": "DataCite usage statistics",
+  "dataciteUsage.notice": "Processed by DataCite using its research-data usage methodology. Cumulative totals, separate from local counters; not evidence of external certification.",
+  "dataciteUsage.accept": "Allow DataCite analytics",
+  "dataciteUsage.withdraw": "Withdraw permission",
+  "dataciteUsage.consent": "Only with your permission will DataCite be contacted. It receives the connection address and browser agent to process events. Accounts, files and URL parameters are not sent. Permission is remembered for 30 days.",
+  "dataciteUsage.loading": "Checking DOI and usage…",
+  "dataciteUsage.reported": "Totals published by DataCite; current-month events are processed later.",
+  "dataciteUsage.awaiting": "Integration active; monthly report not yet available.",
+  "dataciteUsage.failed": "Unable to verify the DOI or query DataCite. The record and downloads remain available.",
+  "dataciteUsage.disabled": "External analytics disabled or no production DOI available.",
+  "dataciteUsage.blocked": "DataCite will not be contacted: the browser requests no tracking.",
+  "dataciteUsage.export": "Export DataCite statistics",
+  "dataciteUsage.monthly": "Latest twelve months with data",
+  "dataciteUsage.month": "Month"
 }

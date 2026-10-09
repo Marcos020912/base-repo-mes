@@ -1320,5 +1320,19 @@
   "assessment.R13": "R13 · Reutilización",
   "assessment.R14": "R14 · Almacenamiento e integridad",
   "assessment.R15": "R15 · Infraestructura técnica",
-  "assessment.R16": "R16 · Seguridad"
+  "assessment.R16": "R16 · Seguridad",
+  "dataciteUsage.heading": "Estadísticas de DataCite",
+  "dataciteUsage.notice": "Procesadas por DataCite según su metodología de uso de datos. Totales acumulados, distintos de los contadores locales; no acreditan certificación externa.",
+  "dataciteUsage.accept": "Permitir estadísticas de DataCite",
+  "dataciteUsage.withdraw": "Retirar permiso",
+  "dataciteUsage.consent": "Solo con tu permiso se contacta a DataCite, que recibe la dirección de conexión y el agente del navegador para procesar eventos. No se envían cuentas, archivos ni parámetros de la URL. Permiso recordado por 30 días.",
+  "dataciteUsage.loading": "Comprobando DOI y estadísticas…",
+  "dataciteUsage.reported": "Totales publicados por DataCite; los eventos del mes actual se procesan posteriormente.",
+  "dataciteUsage.awaiting": "Integración activa; informe mensual aún no disponible.",
+  "dataciteUsage.failed": "No se pudo verificar el DOI o consultar DataCite. La ficha y las descargas siguen disponibles.",
+  "dataciteUsage.disabled": "Estadísticas externas desactivadas o DOI de producción no disponible.",
+  "dataciteUsage.blocked": "No se contactará a DataCite: el navegador solicita no ser rastreado.",
+  "dataciteUsage.export": "Exportar estadísticas de DataCite",
+  "dataciteUsage.monthly": "Últimos doce meses con datos",
+  "dataciteUsage.month": "Mes"
 }

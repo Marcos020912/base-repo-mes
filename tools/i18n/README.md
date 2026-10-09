@@ -23,13 +23,13 @@ Si localStorage está bloqueado, el selector sigue funcionando en memoria.
 ```sh
 python3 tools/i18n/build_catalogues.py --check
 python3 -m unittest discover -s tools/i18n -p 'test_*.py'
-for f in auth-pages-smoke catalog-history collections-i18n deposit-i18n help-i18n operations-i18n profiles-admin-i18n public-record-i18n record-editors-i18n resource-dynamic-i18n resource-static-i18n review-access-i18n reviews-i18n users-i18n vocabulary-i18n wizard-i18n usage-assessment-i18n; do
+for f in auth-pages-smoke catalog-history collections-i18n deposit-i18n help-i18n operations-i18n profiles-admin-i18n public-record-i18n record-editors-i18n resource-dynamic-i18n resource-static-i18n review-access-i18n reviews-i18n users-i18n vocabulary-i18n wizard-i18n usage-assessment-i18n datacite-usage-consent; do
   node "tools/e2e/$f.cjs" || exit 1
 done
 ```
 
 Nueve pruebas de coherencia verifican claves, parámetros, orden de assets, seguridad
-de bindings hoja y cobertura de las 19 páginas. Los 17 fixtures Chrome ejercitan
+de bindings hoja y cobertura de las 19 páginas. Los 18 fixtures Chrome ejercitan
 estados dinámicos, formularios preservados, cambios de idioma sin solicitudes,
 recarga de curación, Markdown/datos no traducidos, fallos y restauración.
 Los fixtures usan API simulada; la E2E integrada PostgreSQL/SMTP/JAR/restauración

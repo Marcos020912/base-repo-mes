@@ -17,7 +17,9 @@ No se almacenan IP, User-Agent, usuario ni ruta de archivo originales. La clave
 HMAC incluye día UTC, recurso, evento, enlace, dirección y agente. Se conserva un
 máximo de 90 días mediante purga diaria; el informe excluye días más antiguos incluso
 antes de la purga. No son totales históricos ni estadísticas certificadas COUNTER;
-no hay envío de eventos a DataCite.
+estos contadores locales no se envían a DataCite. La integración opcional y separada
+con su Usage Tracker, con consentimiento explícito, se documenta en
+[DATACITE_USAGE_AND_EXTERNAL_VALIDATION.md](DATACITE_USAGE_AND_EXTERNAL_VALIDATION.md).
 
 Configuración opcional:
 
