@@ -12,6 +12,7 @@ ARTIFACT="$(realpath "$2")"
 command -v curl >/dev/null
 command -v python3 >/dev/null
 command -v ss >/dev/null
+python3 "$ROOT/tools/releases/production_preflight.py" --config "$ROOT/config/application.properties" --strict-schema
 # Fail before network, checkout or process termination if artifact is not approved.
 python3 "$ROOT/tools/releases/verify_artifact.py" "$ARTIFACT" "$3"
 # URL configurable si el servidor no escucha en loopback o usa otro puerto.

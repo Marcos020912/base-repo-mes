@@ -167,7 +167,8 @@ const server = http.createServer((request,response) => {
       await page.type(`input[name=${name}]`,value);
     await page.select('[data-ui-locale]','en');
     assert.equal(await page.$eval('h1',node=>node.textContent),'My account');
-    assert.equal(await page.$eval('.sidebar a[href="account.html"]',node=>node.textContent),'◉ My account');
+    assert.equal(await page.$$('.sidebar a[href="account.html"]').then(nodes=>nodes.length),0);
+    assert.match(await page.$eval('#current-user',node=>node.getAttribute('aria-label')),/^Open my account: /);
     assert.equal(await page.$eval('input[name=currentPassword]',node=>node.value),password);
     await page.setViewport({width:320,height:700});await page.evaluate(axe.source);
     const accountAccessibility=await page.evaluate(async()=>axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}));

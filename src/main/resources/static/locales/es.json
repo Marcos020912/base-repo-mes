@@ -1394,7 +1394,7 @@
   "readiness.formats.TEXT": "PDF, DOCX o TXT",
   "readiness.formats.AUDIOVISUAL": "MP4, WEBM o MOV",
   "readiness.formats.OTHER": "archivos en el formato que necesites",
-  "account.open": "Abrir mi cuenta",
+  "account.open": "Abrir mi cuenta: {username}",
   "account.close": "Cerrar mi cuenta",
   "deposit.searchLabel": "Buscar en mis depósitos",
   "deposit.resultOne": "1 depósito",

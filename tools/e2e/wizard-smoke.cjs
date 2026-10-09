@@ -12,7 +12,7 @@ const {validate:validateOpenApi}=require('../contract/openapi-check.cjs');
 const contractCompatibility=require('../contract/compatibility-check.cjs');
 
 const root = path.resolve(__dirname, '../..');
-const jar = path.join(root, 'build/libs/base-repo.jar');
+const jar = process.env.E2E_JAR ? path.resolve(process.env.E2E_JAR) : path.join(root, 'build/libs/base-repo.jar');
 const chrome = process.env.CHROME_BIN || '/usr/bin/google-chrome';
 const java = process.env.JAVA_BIN || '/usr/lib/jvm/java-21-openjdk-amd64/bin/java';
 const password = crypto.randomBytes(24).toString('hex');

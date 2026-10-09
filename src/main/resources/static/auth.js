@@ -84,7 +84,7 @@ document.querySelectorAll('.sidebar').forEach(sidebar => {
 });
 document.querySelectorAll('#current-user').forEach(node=>{
   const button=document.createElement('button');button.id='current-user';button.type='button';button.className='link-button account-trigger';button.textContent=signedInUser?.username||'';
-  button.setAttribute('aria-haspopup','dialog');uiI18n.attribute(button,'aria-label','account.open');node.replaceWith(button);
+  button.setAttribute('aria-haspopup','dialog');uiI18n.attribute(button,'aria-label','account.open',{username:signedInUser?.username||''});node.replaceWith(button);
 });
 document.querySelectorAll('[data-logout]').forEach(button=>{uiI18n.set(button,'nav.logout');button.addEventListener('click',auth.logout);});
 

@@ -67,3 +67,21 @@ Así una página de otro proceso no basta. `APP_CHECK_URL` se valida antes de pa
 servicios: HTTP interno, sin credenciales/query/fragmento. El operador debe indicar
 la dirección de esta instalación, no el HAProxy remoto. Sigue sin sustituir las
 pruebas funcionales de DB/SMTP/ES ni demostrar actualización sin interrupción.
+
+## Candidato de producción
+
+Con JDK21 y árbol Git limpio/revisado:
+
+```bash
+./tools/releases/build_candidate.sh
+```
+
+Construye en staging, sin sobrescribir el JAR de una demo activa. Salida privada
+ignorada en `build/releases/COMMIT/`: JAR, SHA256SUMS, manifiesto del commit,
+auditoría del artefacto y runbook. No crea tags/releases ni sube nada. La suma
+local detecta corrupción, no certifica procedencia por sí sola. Un candidato con
+versión SNAPSHOT no sustituye el tag estable aprobado. Rechaza sobrescribir un
+candidato; reconstruir desde un commit nuevo después de la aprobación.
+
+El gate de `production_preflight.py --config ... --strict-schema` es de lectura;
+no imprime valores ni confirma servicios remotos. Ver `docs/PRODUCTION_RUNBOOK.md`.

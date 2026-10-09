@@ -181,3 +181,23 @@ reglas locales evitan heredar columna de170px del catálogo. Móvil distribuye
 búsqueda en primera fila. Cuenta singular/plural y resultados filtrados es/en.
 Fixture específico aprobado: campo amplio, filtrado, idioma,320px y axe0,
 sin escrituras;9tests i18n y menú compartido aprobados.
+
+### Preparación de producción (candidato, sin despliegue remoto)
+
+- Gate de configuración de lectura y sin valores de secretos: duplicados,
+  autenticación/JWT, PostgreSQL/esquema no destructivo, persistencia, CORS HTTPS,
+  HAProxy, SMTP cifrado/identidad/captura, privacidad y Actuator mínimo. Update
+  exige además ddl-auto=validate, tras migraciones y respaldo aprobado.
+- Deploy compila en staging, audita estructura del JAR antes de parar Java,
+  bloqueo compartido con update, parada solo de esta instalación y confirmación
+  HTTP perteneciente al PID candidato. No se recrean bases ni se toca la VM.
+- Nueva configuración usa CORS real de seguridad y SMTP limitado al host con
+  identidad; configuraciones existentes inseguras requieren corrección explícita.
+- Empaquetado candidato con commit/SHA256/auditoría/runbook sin reemplazar JAR
+  activo, ni secretos/configuración local, sin crear tag ni subir Release.
+- Regresión completa:73suitesJava/1381tests,0fallos;13tests releases,9security,
+  catálogos/migraciones/validación/contrato Python y fixtures de UI aprobados.
+  Corregida accesibilidad del botón de nombre: aria-label incluye nombre visible.
+- Validación final VM/HAProxy/SMTP/DOI, restore real, revisión CVE/carga y
+  supervisor no-root siguen siendo aceptación operativa, no garantizada por
+  pruebas locales. Procedimiento en PRODUCTION_RUNBOOK.md.

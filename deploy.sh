@@ -4,6 +4,9 @@ set -euo pipefail
 # Interactive deployment for Debian/Ubuntu. Run from the project directory.
 if [[ $EUID -ne 0 ]]; then echo "Ejecute con sudo: sudo ./deploy.sh"; exit 1; fi
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
+command -v flock >/dev/null || { echo "Se requiere flock (util-linux)."; exit 1; }
+exec 9>"$APP_DIR/.update.lock"
+flock -n 9 || { echo "Ya hay un despliegue o actualización en curso."; exit 1; }
 CONF="$APP_DIR/config/application.properties"
 REPO_DATA_DIR="/var/lib/base-repo/data"
 # application.properties contiene secretos de cada instalación y no se publica
@@ -50,7 +53,7 @@ boolean_value(){
 }
 remove_managed_properties(){
   local tmp keys
-  keys='server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,spring.mail.properties.mail.smtp.connectiontimeout,spring.mail.properties.mail.smtp.timeout,spring.mail.properties.mail.smtp.writetimeout,repo.mail.from,repo.fixity.enabled,repo.fixity.alert-to,repo.metrics.datacite.enabled,repo.metrics.datacite.repository-id,repo.privacy.require-assessment,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url,repo.scientific.orcid.enabled,repo.scientific.orcid.environment,repo.scientific.orcid.client-id,repo.scientific.orcid.client-secret,repo.scientific.orcid.redirect-uri'
+  keys='management.endpoints.web.exposure.include,repo.security.allowedOriginPattern,server.port,server.address,server.forward-headers-strategy,server.tomcat.remoteip.remote-ip-header,server.tomcat.remoteip.protocol-header,spring.datasource.driver-class-name,spring.datasource.url,spring.datasource.username,spring.datasource.password,spring.jpa.database,spring.jpa.database-platform,repo.basepath,repo.search.url,repo.search.enabled,repo.mail.description,spring.mail.host,spring.mail.port,spring.mail.username,spring.mail.password,spring.mail.properties.mail.smtp.auth,spring.mail.properties.mail.smtp.starttls.enable,spring.mail.properties.mail.smtp.starttls.required,spring.mail.properties.mail.smtp.ssl.trust,spring.mail.properties.mail.smtp.ssl.checkserveridentity,spring.mail.properties.mail.smtp.connectiontimeout,spring.mail.properties.mail.smtp.timeout,spring.mail.properties.mail.smtp.writetimeout,repo.mail.from,repo.fixity.enabled,repo.fixity.alert-to,repo.metrics.datacite.enabled,repo.metrics.datacite.repository-id,repo.privacy.require-assessment,repo.allowed-origin-pattern,repo.public-domain,repo.deploy.db-name,repo.deploy.haproxy-network,repo.deploy.private-host,repo.deploy.haproxy-port,repo.auth.enabled,repo.auth.jwtSecret,repo.auth.bootstrap-admin-password,repo.datacite.enabled,repo.datacite.api-url,repo.datacite.repository-id,repo.datacite.password,repo.datacite.prefix,repo.datacite.public-base-url,repo.scientific.orcid.enabled,repo.scientific.orcid.environment,repo.scientific.orcid.client-id,repo.scientific.orcid.client-secret,repo.scientific.orcid.redirect-uri'
   tmp="$(mktemp "$CONF.XXXXXX")"
   awk -v keys="$keys" '
     BEGIN { count=split(keys, items, ","); for (i=1; i<=count; i++) managed[items[i]]=1 }
@@ -311,6 +314,7 @@ cat >> "$CONF" <<EOF
 
 # BEGIN Managed by deploy.sh
 server.port: $APP_PORT
+management.endpoints.web.exposure.include: health
 server.address: $APP_BIND
 # HAProxy termina TLS y comunica el esquema/host original con X-Forwarded-*.
 server.forward-headers-strategy: framework
@@ -348,9 +352,9 @@ spring.mail.password: $MAIL_PASSWORD
 spring.mail.properties.mail.smtp.auth: true
 spring.mail.properties.mail.smtp.starttls.enable: $MAIL_STARTTLS
 spring.mail.properties.mail.smtp.starttls.required: $MAIL_STARTTLS
-# El proveedor indicó aceptar certificados del servidor SMTP.
-spring.mail.properties.mail.smtp.ssl.trust: *
-spring.mail.properties.mail.smtp.ssl.checkserveridentity: false
+# Confianza limitada al SMTP configurado; su nombre debe coincidir con el certificado.
+spring.mail.properties.mail.smtp.ssl.trust: $MAIL_HOST
+spring.mail.properties.mail.smtp.ssl.checkserveridentity: true
 spring.mail.properties.mail.smtp.connectiontimeout: 10000
 spring.mail.properties.mail.smtp.timeout: 10000
 spring.mail.properties.mail.smtp.writetimeout: 10000
@@ -360,6 +364,7 @@ repo.metrics.datacite.repository-id: $DATACITE_USAGE_REPOSITORY_ID
 repo.fixity.enabled: $FIXITY_ENABLED
 repo.fixity.alert-to: $FIXITY_ALERT_TO
 repo.privacy.require-assessment: $PRIVACY_REQUIRED
+repo.security.allowedOriginPattern: https://$APP_DOMAIN$( [[ "$HAPROXY_FRONTEND_PORT" == 443 ]] || printf ':%s' "$HAPROXY_FRONTEND_PORT" )
 repo.allowed-origin-pattern: https://$APP_DOMAIN
 repo.public-domain: $APP_DOMAIN
 repo.deploy.db-name: $DB_NAME
@@ -399,6 +404,7 @@ fi
 fi # Conservar configuración y firewall intactos al reutilizar.
 
 cd "$APP_DIR"
+python3 tools/releases/production_preflight.py --config "$CONF"
 REBUILD_APPLICATION="S"
 APP_JAR="$(find_application_jar)"
 if [[ -n "$APP_JAR" ]]; then
@@ -406,13 +412,37 @@ if [[ -n "$APP_JAR" ]]; then
 fi
 if [[ "${REBUILD_APPLICATION,,}" == "s" || "${REBUILD_APPLICATION,,}" == "si" || "${REBUILD_APPLICATION,,}" == "sí" ]]; then
   configure_gradle_proxy
-  ./gradlew --no-daemon -Dprofile=minimal bootJar
-  APP_JAR="$(find_application_jar)"
+  mkdir -p "$APP_DIR/build"
+  STAGING="$(mktemp -d "$APP_DIR/build/release-stage.XXXXXX")"
+  trap 'rm -rf "$STAGING"' EXIT
+  cat > "$STAGING/stage.gradle" <<'GRADLE'
+allprojects { afterEvaluate { tasks.matching { it.name == 'bootJar' }.configureEach { destinationDirectory = file(System.getProperty('baseRepo.stage')) } } }
+GRADLE
+  ./gradlew --no-daemon -Dprofile=minimal -I "$STAGING/stage.gradle" -DbaseRepo.stage="$STAGING" bootJar
+  [[ -s "$STAGING/base-repo.jar" ]] || { echo "No se generó el candidato"; exit 1; }
+  APP_JAR="$STAGING/base-repo.jar"
 else
   echo "Usando el JAR existente; se omite la descarga y compilación con Gradle."
 fi
 [[ -n "$APP_JAR" ]] || { echo "No se encontró el JAR de Base Repo en build/libs." >&2; exit 1; }
-pkill -f 'base[-_]repo\.jar' || true
+python3 "$APP_DIR/tools/releases/verify_artifact.py" "$APP_JAR" "$(sha256sum "$APP_JAR" | cut -d' ' -f1)"
+python3 "$APP_DIR/tools/releases/stop_application.py" --root "$APP_DIR"
+if [[ -n "${STAGING:-}" ]]; then
+  mkdir -p "$APP_DIR/build/libs"
+  cp "$APP_JAR" "$APP_DIR/build/libs/base-repo.jar.new"
+  mv "$APP_DIR/build/libs/base-repo.jar.new" "$APP_DIR/build/libs/base-repo.jar"
+  APP_JAR="$APP_DIR/build/libs/base-repo.jar"
+fi
 nohup java -jar "$APP_JAR" --spring.config.location="file:$CONF" --spring.profiles.active=production > "$APP_DIR/base-repo.log" 2>&1 &
-echo "Base Repo iniciado. Log: $APP_DIR/base-repo.log"
+APP_PID=$!
+echo "$APP_PID" > "$APP_DIR/base-repo.pid"
+CHECK_HOST="$APP_BIND"; [[ "$CHECK_HOST" == 0.0.0.0 || "$CHECK_HOST" == :: ]] && CHECK_HOST=127.0.0.1
+READY=false
+for _ in $(seq 1 90); do
+  kill -0 "$APP_PID" 2>/dev/null || break
+  if ss -ltnp "sport = :$APP_PORT" 2>/dev/null | grep -Eq "pid=${APP_PID}(,|\))" && [[ "$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 3 "http://$CHECK_HOST:$APP_PORT/login.html" || true)" == 200 ]]; then READY=true; break; fi
+  sleep 2
+done
+[[ "$READY" == true ]] || { echo "No se confirmó el arranque. Revise $APP_DIR/base-repo.log" >&2; exit 1; }
+echo "Base Repo responde en HTTP interno. Log: $APP_DIR/base-repo.log"
 echo "Entregue $APP_DIR/haproxy-base-repo.cfg al administrador del HAProxy remoto."
