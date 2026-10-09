@@ -49,7 +49,7 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 | F10 | Procedencia: producción y procesamiento de datos | Implementado local: producción/origen, procesamiento y herramientas/versiones por versión, creación/edición/preview/ficha pública y exportación DataCite/RO-Crate/PROV; pruebas/JPA/E2E aprobadas. Es declaración del autor, no ejecución verificada. |
 | F11 | Artículos, software, proyectos, financiación y datasets relacionados | Base local: relaciones tipadas y funding; comprobar visibilidad y representación máquina de todas las categorías. |
 | F12 | Última verificación y política de preservación aplicable | Parcial: fixity existe; política institucional y su presentación aprobada pendientes. |
-| F13 | Historial de cambios de metadatos y versiones publicadas | Parcial: historial editorial existe; comprobar presentación pública según política. |
+| F13 | Historial de cambios de metadatos y versiones publicadas | Comparación pública implementada con proyección permitida y rechazo de versiones retiradas; fixture es/en aprobada. Validación integrada en curso; política institucional pendiente. |
 | F14 | Compartir y exportar metadatos como acciones científicas | Implementado local: copia de landing permanente y exportación JSON versionada de ficha pública (sin archivos privados), además de citas. E2E Chrome/PostgreSQL aprobado. |
 | F15 | Publicado inmutable; cambios crean nueva versión | Base local: workflow/versiones y E2E sintético; probar todos los endpoints de escritura. |
 | F16 | Retirada controlada sustituye borrado publicado; tombstone | Base local: estado WITHDRAWN/HTTP410; auditoría de autorización y permanencia pendientes. |

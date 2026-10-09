@@ -1260,5 +1260,15 @@
   "resourceDynamic.previewReady": "Validación automática: {percent} %. Requisitos completos; el envío bloqueará la edición hasta que curación responda.",
   "resourceDynamic.previewFailure": "No se pudo preparar la vista previa:",
   "resourceDynamic.citationName": "Cita bibliográfica",
-  "resourceDynamic.completenessLabel": "Completitud del depósito"
+  "resourceDynamic.completenessLabel": "Completitud del depósito",
+  "metadataHistory.heading": "Cambios de metadatos entre versiones",
+  "metadataHistory.scope": "Comparación de fichas públicas publicadas, no de ediciones privadas ni del contenido de los archivos. Las notas de curación y las cuentas no se muestran.",
+  "metadataHistory.compare": "Comparar metadatos con esta ficha",
+  "metadataHistory.loading": "Comparando metadatos públicos…",
+  "metadataHistory.unavailable": "No se pueden comparar estas fichas: alguna no está publicada, fue retirada o no está disponible.",
+  "metadataHistory.compared": "Versiones comparadas:",
+  "metadataHistory.other": "Versión seleccionada del historial",
+  "metadataHistory.current": "Esta ficha",
+  "metadataHistory.total": "{count} campos públicos diferentes.",
+  "metadataHistory.identical": "No hay diferencias en los campos públicos comparados."
 }

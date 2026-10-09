@@ -1260,5 +1260,15 @@
   "resourceDynamic.previewReady": "Automated validation: {percent}%. Requirements complete; submission will lock editing until curation responds.",
   "resourceDynamic.previewFailure": "The preview could not be prepared:",
   "resourceDynamic.citationName": "Bibliographic citation",
-  "resourceDynamic.completenessLabel": "Deposit completeness"
+  "resourceDynamic.completenessLabel": "Deposit completeness",
+  "metadataHistory.heading": "Metadata changes between versions",
+  "metadataHistory.scope": "Comparison of published public records, not private edits or file contents. Curatorial notes and accounts are not shown.",
+  "metadataHistory.compare": "Compare metadata with this record",
+  "metadataHistory.loading": "Comparing public metadata…",
+  "metadataHistory.unavailable": "These records cannot be compared: one is unpublished, withdrawn or unavailable.",
+  "metadataHistory.compared": "Compared versions:",
+  "metadataHistory.other": "Selected history version",
+  "metadataHistory.current": "This record",
+  "metadataHistory.total": "{count} different public fields.",
+  "metadataHistory.identical": "There are no differences in the compared public fields."
 }

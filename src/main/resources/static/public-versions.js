@@ -9,6 +9,7 @@
   function raw(tag, value = '') { const node = document.createElement(tag); node.textContent = value; return node; }
   function label(tag, key, params = {}) { const node = raw(tag); uiI18n.set(node, key, params); return node; }
   function render(body) {
+    window.publicMetadataHistory?.registerVersions(body.items);
     list.replaceChildren(); pagination.replaceChildren();
     if (body.newerPublicationAvailable && body.latestPublishedId) {
       const links = document.querySelector('#version-links');
@@ -28,7 +29,9 @@
       metadata.append(label('span', version.status === 'WITHDRAWN' ? 'versions.withdrawn' : 'versions.published'), raw('span', ' · '),
         version.publishedAt ? raw('span', version.publishedAt) : label('span', 'versions.noDate'), raw('span', ' · DOI: '),
         version.doi ? raw('span', version.doi) : label('span', 'versions.noDoi'));
-      item.append(link, metadata); list.append(item);
+      item.append(link, metadata);
+      if (!version.current && version.status === 'PUBLISHED' && window.publicMetadataHistory) { const compare = label('button','metadataHistory.compare'); compare.type='button'; compare.className='secondary'; compare.onclick=()=>publicMetadataHistory.compare(version.id); item.append(compare); }
+      list.append(item);
     }
     uiI18n.set(status, body.total ? 'versions.total' : 'versions.empty', { total: body.total, page: body.page + 1, pages: body.pages });
     if (body.pages > 1) {

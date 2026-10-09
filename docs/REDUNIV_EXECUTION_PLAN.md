@@ -307,3 +307,13 @@ Actualizado 2026-10-08 tras tercera corrida integrada; las listas anteriores reg
 - [ ] F13: comparación pública de cambios de metadatos entre versiones publicadas, separada del historial editorial privado; retirada/borradores/notas y cuentas no deben filtrarse.
 - [ ] Auditorías de seguridad/estados y demás requisitos no cerrados de la matriz de fuentes; integraciones institucionales y pruebas externas requieren evidencia propia.
 El objetivo global no se da por terminado con esta regresión.
+
+### Comparación pública de metadatos — F13 (2026-10-08)
+- [x] Botón de comparación solo para otras versiones publicadas de la familia explícita; utiliza API pública existente, sin exponer historial editorial ni cuentas/notas.
+- [x] Campos permitidos y valores originales como texto; IDs internos de relaciones/financiación no generan cambios espurios. Idioma cambia etiquetas sin consultar ni traducir datos.
+- [x] Fixture Chrome: exactamente un campo cambiado, contenido HTML tratado como texto, notas/actores excluidos y versión retirada después de listado público rechazada por HTTP 410, limpiando comparación anterior. Siete tests de catálogos aprobados.
+- [x] JAR reconstruido con módulo nuevo; /tmp/reduniv-f13-jar.log.
+- [ ] Integración PostgreSQL/SMTP/restauración iniciada con comparación en navegador real; /tmp/reduniv-f13-e2e.log. No equivale a aprobación hasta terminar.
+- [ ] Política institucional de visibilidad y revisión manual siguen pendientes; comparación no representa auditoría de cada edición privada ni diferencias de contenido binario.
+
+- Diagnóstico F13: primera integración falló porque el módulo nuevo no estaba en allowlist de assets anónimos de Spring Security. Corregido; JAR y E2E repetidos, resultado aún pendiente. /tmp/reduniv-f13-retry-e2e.log.
