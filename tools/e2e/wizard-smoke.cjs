@@ -514,6 +514,84 @@ async function deriveNewVersion(page, base, files, previous) {
     'La nueva versión no conservó el DOI conceptual del conjunto.');
   return id;
 }
+async function verifyMutationCoordination(page,base,dataset,other) {
+  if(!postgres)return;
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  const key=crypto.createHash('sha256').update('reduniv:resource-mutation:'+dataset.id).digest().readBigInt64BE(0).toString();
+  const args=['-X','-At','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-p',String(postgres.port),'-U','e2e_admin','-d',postgres.database];
+  const env={...process.env,PGPASSWORD:postgres.secret};
+  const before=await (await fetch(base+'/api/v1/scientific/'+dataset.id,{headers})).json();
+  const holder=spawn(path.join(postgres.bin,'psql'),args,{env,stdio:['pipe','pipe','pipe']});
+  try {
+    await new Promise((resolve,reject)=>{
+      let output='';const timer=setTimeout(()=>reject(new Error('No se adquirió lease PostgreSQL externo.')),10000);
+      holder.stdout.on('data',chunk=>{output+=chunk;if(output.includes('MUTATION_LOCK_HELD')){clearTimeout(timer);resolve();}});
+      holder.once('error',error=>{clearTimeout(timer);reject(error);});
+      holder.once('exit',code=>{if(!output.includes('MUTATION_LOCK_HELD')){clearTimeout(timer);reject(new Error('psql externo terminó antes del lease: '+code));}});
+      holder.stdin.write(`SELECT pg_advisory_lock(${key});
+SELECT 'MUTATION_LOCK_HELD';
+`);
+    });
+    const encoded='%'+dataset.id.charCodeAt(0).toString(16)+dataset.id.slice(1);
+    const attempts=[
+      ['PUT','/api/v1/scientific/'+dataset.id,{}],
+      ['PUT','/api/v1/scientific/'+dataset.id+'/funding',[]],
+      ['PUT','/api/v1/scientific/'+dataset.id+'/creators',[]],
+      ['PUT','/api/v1/scientific/'+dataset.id+'/privacy',{}],
+      ['POST','/api/v1/scientific/'+dataset.id+'/submit',{}],
+      ['POST','/api/v1/scientific/'+dataset.id+'/publish',{doiRegisteredExternally:true}],
+      ['POST','/api/v1/dataresources/'+dataset.id+'/attachments?path=blocked.csv',{}],
+      ['DELETE','/api/v1/dataresources/'+encoded,{}],
+      ['POST','/%61pi/v1/scientific/'+dataset.id+'/submit',{}]
+    ];
+    for(const [method,url,body]of attempts) {
+      const response=await fetch(base+url,{method,headers,body:JSON.stringify(body)});
+      assert(response.status===409,'Escritura no coordinada: '+method+' '+url+' -> '+response.status);
+      const text=await response.text();assert(text.includes('operación en curso'),'Conflicto no provino del coordinador: '+text);
+      assert(response.headers.get('retry-after')==='1','Falta instrucción de reintento.');
+    }
+    const after=await (await fetch(base+'/api/v1/scientific/'+dataset.id,{headers})).json();
+    assert(JSON.stringify(after)===JSON.stringify(before),'Intentos bloqueados modificaron ficha.');
+    assert((await fetch(base+'/api/v1/scientific/'+other.id+'/funding',{method:'PUT',headers,body:'[]'})).ok,'Lease de un dataset bloquea otro dataset.');
+  } finally {
+    holder.stdin.end(`SELECT pg_advisory_unlock(${key});
+\\q
+`);
+    await new Promise(resolve=>{if(holder.exitCode!==null)return resolve();holder.once('exit',resolve);setTimeout(()=>{holder.kill('SIGTERM');resolve();},5000).unref();});
+  }
+  assert((await fetch(base+'/api/v1/scientific/'+dataset.id+'/funding',{method:'PUT',headers,body:'[]'})).ok,'No se recuperó escritura tras liberar lease externo.');
+
+  // Hold a real multipart request open after headers/body prefix. DispatcherServlet
+  // waits for the remaining file while the mutation gate holds the resource lease.
+  const http=require('node:http'),boundary='reduniv-mutation-'+Date.now();
+  const prefix=Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="mutation-race.csv"\r\nContent-Type: text/csv\r\n\r\na,b\n`);
+  const tail=Buffer.from(`1,2\n\r\n--${boundary}--\r\n`);
+  let request;
+  const uploaded=new Promise((resolve,reject)=>{
+    request=http.request(base+'/api/v1/dataresources/'+dataset.id+'/attachments?path=mutation-race.csv',{
+      method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'multipart/form-data; boundary='+boundary,'Content-Length':prefix.length+tail.length}
+    },response=>{const chunks=[];response.on('data',part=>chunks.push(part));response.on('end',()=>resolve({status:response.statusCode,body:Buffer.concat(chunks).toString()}));});
+    request.on('error',reject);request.write(prefix);
+  });
+  try {
+    let held=false;
+    for(let i=0;i<40;i++) {
+      await new Promise(resolve=>setTimeout(resolve,100));
+      const probe=spawnSync(path.join(postgres.bin,'psql'),[...args,'-c',`SELECT pg_try_advisory_lock(${key})`],{env,encoding:'utf8'});
+      assert(probe.status===0,'No se pudo comprobar mutex durante subida.');
+      if(probe.stdout.trim()==='f'){held=true;break;}
+    }
+    assert(held,'La subida real no tomó lease antes de consumir el multipart.');
+    const submitted=await fetch(base+'/api/v1/scientific/'+dataset.id+'/submit',{method:'POST',headers,body:'{}'});
+    assert(submitted.status===409 && (await submitted.text()).includes('operación en curso'),'El envío compitió con la subida pendiente.');
+    request.end(tail);const result=await uploaded;assert(result.status===204,'Subida coordinada falló: '+result.status+' '+result.body);
+    assert((await (await fetch(base+'/api/v1/scientific/'+dataset.id,{headers})).json()).status==='DRAFT','Subida concurrente alteró estado editorial.');
+    assert((await fetch(base+'/api/v1/scientific/'+dataset.id+'/funding',{method:'PUT',headers,body:'[]'})).ok,'Lease quedó retenido tras completar subida.');
+  } finally {request.destroy();await uploaded.catch(()=>{});}
+  process.stdout.write('Coordinación OK: sesión PostgreSQL independiente, nueve mutaciones bloqueadas, rutas codificadas, datasets independientes y subida real excluye envío.\n');
+}
+
 async function publicVersionHistory(base,published,nextId,token) {
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
   assert((await fetch(base+'/api/v1/public/resources/'+nextId+'/versions')).status===404,'Historial expone borrador.');
@@ -534,6 +612,11 @@ async function publicVersionHistory(base,published,nextId,token) {
   assert((await fetch(base+'/api/v1/scientific/'+nextId,{method:'PUT',headers,body:JSON.stringify({...next,versionDoi:`10.99999/version-history-${Date.now()}`})})).ok,'No se pudo preparar sucesora sintética.');
   assert((await fetch(base+'/api/v1/scientific/'+nextId+'/submit',{method:'POST',headers})).ok,'No se pudo enviar sucesora sintética.');
   assert((await fetch(base+'/api/v1/scientific/'+nextId+'/publish',{method:'POST',headers,body:'{"doiRegisteredExternally":true}'})).ok,'No se pudo publicar sucesora sintética.');
+  const encodedId='%'+nextId.charCodeAt(0).toString(16)+nextId.slice(1);
+  for(const url of ['/api/v1/dataresources/'+encodedId,'/%61pi/v1/dataresources/'+nextId]) {
+    const denied=await fetch(base+url,{method:'DELETE',headers});
+    assert(denied.status===409 && (await denied.text()).includes('no es un borrador editable'),'URL codificada permitió eliminar publicación o no aplicó guard de estado.');
+  }
   let history=await (await fetch(base+'/api/v1/public/resources/'+published.id+'/versions?size=1')).json();assert(history.latestPublishedId===nextId&&history.newerPublicationAvailable,'No informa publicación más reciente en la familia.');assert(history.total===2&&history.pages===2&&history.items.length===1&&history.items[0].id===nextId,'Historial paginado no incluye nueva versión.');
   const beforeWithdrawalContext=await browser.createBrowserContext();try{const visitor=await beforeWithdrawalContext.newPage();await visitor.goto(base+'/datasets/'+published.id,{waitUntil:'load'});await visitor.waitForSelector('#family-version-warning a');assert(await visitor.$eval('#family-version-warning a',n=>n.href).then(href=>href.endsWith('/datasets/'+nextId)),'Aviso no apunta a última publicación de familia.');await visitor.waitForSelector('#versions-list button');await visitor.click('#versions-list button');await visitor.waitForSelector('.metadata-difference');assert(await visitor.$eval('.metadata-differences',n=>n.textContent.includes('2.0')),'Comparación pública no muestra cambio de versión.');assert(!await visitor.$eval('.metadata-differences',n=>n.textContent.includes('reviewNote')),'Comparación expone auditoría privada.');}finally{await beforeWithdrawalContext.close();}
   assert((await fetch(base+'/api/v1/scientific/'+nextId+'/withdraw',{method:'POST',headers,body:JSON.stringify({reason:'Retirada sintética para prueba de historial'})})).ok,'No se pudo retirar sucesora sintética.');
@@ -947,6 +1030,7 @@ async function main() {
     const markdown = await deposit(page, base, files, 'md');
     const zipped = await deposit(page, base, files, 'zip');
     const packaged = await deposit(page, base, files, 'package');
+    await verifyMutationCoordination(page,base,markdown,zipped);
     const before = await page.$eval('#download-list', element => element.textContent);
     await rejectPackage(page, base, packaged.id, files.missingDescriptionZip, 'description/description.md');
     await rejectPackage(page, base, packaged.id, files.invalidTypeZip, 'no admite archivos .exe');

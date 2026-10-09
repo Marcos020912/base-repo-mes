@@ -20,6 +20,7 @@ import edu.kit.datamanager.security.filter.NoAuthenticationFilter;
 import edu.kit.datamanager.security.filter.PublicAuthenticationFilter;
 import edu.kit.datamanager.repo.security.LocalJwtAuthenticationFilter;
 import edu.kit.datamanager.repo.security.ResourceOwnershipAuthorizationFilter;
+import edu.kit.datamanager.repo.security.ResourceMutationGateFilter;
 import java.util.Arrays;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -84,6 +85,7 @@ public class WebSecurityConfig {
     private LocalJwtAuthenticationFilter localJwtAuthenticationFilter;
     @Autowired
     private ResourceOwnershipAuthorizationFilter resourceOwnershipAuthorizationFilter;
+    @Autowired private ResourceMutationGateFilter resourceMutationGateFilter;
 
     public WebSecurityConfig() {
     }
@@ -99,6 +101,13 @@ public class WebSecurityConfig {
     @Bean
     public org.springframework.boot.web.servlet.FilterRegistrationBean<ResourceOwnershipAuthorizationFilter> ownershipServletRegistration() {
         var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(resourceOwnershipAuthorizationFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<ResourceMutationGateFilter> mutationGateServletRegistration() {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(resourceMutationGateFilter);
         registration.setEnabled(false);
         return registration;
     }
@@ -147,7 +156,8 @@ public class WebSecurityConfig {
         httpSecurity = httpSecurity.csrf(csrf -> csrf.disable());
        
         httpSecurity.addFilterAfter(localJwtAuthenticationFilter, BasicAuthenticationFilter.class);
-        httpSecurity.addFilterAfter(resourceOwnershipAuthorizationFilter, LocalJwtAuthenticationFilter.class);
+        httpSecurity.addFilterAfter(resourceMutationGateFilter, LocalJwtAuthenticationFilter.class);
+        httpSecurity.addFilterAfter(resourceOwnershipAuthorizationFilter, ResourceMutationGateFilter.class);
         logger.info("Adding authentication filters to security chain.");
         if (keycloaktokenFilterBean.isPresent()) {
             logger.info("Add keycloak filter!");

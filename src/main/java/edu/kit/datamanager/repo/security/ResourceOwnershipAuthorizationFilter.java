@@ -27,14 +27,14 @@ public class ResourceOwnershipAuthorizationFilter extends OncePerRequestFilter {
         this.scientificRecords = scientificRecords;
     }
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI(); String method = request.getMethod();
+        String path = ResourceRequestPath.path(request); String method = request.getMethod();
         if (!path.startsWith("/api/v1/dataresources/")) return true;
         boolean read = HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method);
         return !(read || HttpMethod.PUT.matches(method) || HttpMethod.PATCH.matches(method) || HttpMethod.DELETE.matches(method)
                 || (HttpMethod.POST.matches(method) && (path.contains("/data/") || path.endsWith("/description") || path.endsWith("/attachments"))));
     }
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
-        String remainder = request.getRequestURI().substring("/api/v1/dataresources/".length());
+        String remainder = ResourceRequestPath.path(request).substring("/api/v1/dataresources/".length());
         String resourceId = remainder.split("/", 2)[0];
         boolean contentRead = (HttpMethod.GET.matches(request.getMethod()) || HttpMethod.HEAD.matches(request.getMethod()))
                 && (remainder.contains("/data/") || remainder.endsWith("/archive"));

@@ -340,3 +340,10 @@ El objetivo global no se da por terminado con esta regresión.
 - [ ] E2E ampliado con rechazo HTTP de metadatos no publicados y ZIP editorial consumido/validado por Python zipfile (description.md y datos-dos.csv): /tmp/reduniv-rootguard-e2e.log, en ejecución.
 - [ ] Descubierto riesgo concurrente F15: escritura de tablas separadas no incrementa/bloquea ScientificRecord; comprobar y corregir serialización frente a envío/publicación y escrituras legacy. No cerrar F15 por matriz secuencial.
 - [x] E2E raíz/ZIP terminal0: metadatos de borrador/retirado no accesibles por usuario ajeno, archivo editorial consumido y validado con Python zipfile (CRC, description.md y CSV), autor conserva acceso tras retirada, todos los flujos y restauración completos. /tmp/reduniv-rootguard-e2e.log. No errores JS finales.
+
+### Coordinación de mutaciones por recurso — avance F15 (2026-10-08)
+- [x] Gate de escritura científica y legacy, ID canónico, tras JWT/antes ownership; pool PostgreSQL separado y mutex H2 embebido; no convertir transacciones DOI en una transacción de petición. Usuario ajeno no toma lease ni ve estado busy privado.
+- [x] Pruebas de hilos/mutex, liberación tras fallo, SQL unlock/eviction, URI codificada y guard; primera suite completa falló por selección de constructor Spring y expectativa Mockito; corregidas y repetición terminal0.
+- [x] Java final:59suites1331tests0fallos/errores/omitidos,1m9s; /tmp/reduniv-mutation-final-full-java.log.
+- [x] E2E final PostgreSQL/SMTP/restauración terminal0: sesión independiente bloquea nueve mutaciones, otro dataset editable, multipart real bloquea envío, liberar permite continuar; DELETE codificado no elimina publicado incluso admin. /tmp/reduniv-mutation-final-e2e.log. Sin errores JS.
+- [ ] F15 no cerrado: falta fencing/guarda transaccional ante pérdida de la sesión dedicada durante escritura, pruebas dos JVM y auditoría completa de escritores. Documentado SCIENTIFIC_MUTATION_COORDINATION.md.
