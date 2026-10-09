@@ -152,3 +152,10 @@ SMTP y JAR aislados aprobado. JAR compilado y aplicación local reiniciada UP.
 En Chrome real: depósito del usuario al 76 %, cero requisitos base pendientes,
 recomendaciones separadas; «Ir a autores» enfoca Editar identidades sin abrir
 modal, sin desbordamiento horizontal. Datos y archivos del usuario preservados.
+
+### Modal de autores corregido
+
+Estructura header/modal-body/footer conforme al modal compartido; márgenes
+internos, altura limitada al viewport, cuerpo con scroll y acciones persistentes.
+Nombres largos e instituciones no desbordan. Fixture con diez instituciones,
+320 px y axe aprobado, sin escrituras a cuentas o depósitos reales.

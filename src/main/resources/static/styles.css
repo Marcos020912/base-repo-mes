@@ -266,3 +266,23 @@ input[type="checkbox"],input[type="radio"] { width:20px; height:20px; padding:0;
 @media(max-width:650px) { .readiness-header,.readiness-progress { flex-direction:column; align-items:stretch; }.readiness-progress > p { border-left:0; padding-left:0; }.readiness-card { grid-template-columns:minmax(0,1fr); }.readiness-card > button { max-width:none; width:100%; } }
 .readiness-icon { font-size:28px; color:#c93844; line-height:1; }
 .readiness-help summary { cursor:pointer; color:#004a98; font-weight:700; }
+
+/* Author identity editor: fixed shell, scrollable fields, persistent actions. */
+.creator-identity-modal { width:min(760px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:hidden; }
+.creator-identity-modal form { display:flex; flex-direction:column; max-height:calc(100dvh - 32px); min-height:0; }
+.creator-identity-modal header,.creator-identity-modal footer { flex-shrink:0; }
+.creator-identity-modal .modal-body { min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+.creator-identity-modal .modal-body>p { margin:0; line-height:1.5; color:var(--muted); }
+.creator-identity-editor { min-width:0; display:grid; gap:18px; }
+.creator-identity-modal .creator-identity-row { margin:0; padding:18px; display:grid; gap:12px; }
+.creator-identity-modal legend { max-width:100%; overflow-wrap:anywhere; }
+.creator-identity-modal label { margin:0; display:grid; gap:6px; min-width:0; }
+.creator-identity-modal input { width:100%; min-width:0; }
+.creator-identity-modal .creator-affiliations:empty { display:none; }
+.creator-identity-modal .creator-identity-row>button { justify-self:start; }
+.creator-identity-modal footer { flex-wrap:wrap; }
+@media(max-width:480px) {
+ .creator-identity-modal header,.creator-identity-modal footer,.creator-identity-modal .modal-body { padding:16px; }
+ .creator-identity-modal .creator-identity-row { padding:12px; }
+ .creator-identity-modal footer button { flex:1 1 auto; }
+}

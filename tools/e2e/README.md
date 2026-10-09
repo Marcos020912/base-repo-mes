@@ -249,3 +249,9 @@ modal ni mutar datos, permisos de autor, es/en sin consultas adicionales,
 actualización del informe y accesibilidad/ausencia de desbordamiento a 320 px.
 Usa informes sintéticos y no modifica depósitos reales.
 `E2E_SCREENSHOT_PATH` guarda una captura de prueba de esta sección.
+
+### Modal de identidad de autores
+
+`node tools/e2e/creator-modal-smoke.cjs` prueba encabezado/cuerpo/pie con
+márgenes, nombres largos, diez instituciones, cuerpo desplazable a 320 px,
+axe y ausencia de escrituras; datos sintéticos. `E2E_SCREENSHOT_PATH` opcional.

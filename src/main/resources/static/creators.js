@@ -16,17 +16,20 @@
   listing.setAttribute('aria-live', 'polite'); panel.append(heading, listing);
   document.querySelector('#history-panel').before(panel);
 
-  const dialog = document.createElement('dialog'); dialog.className = 'modal';
+  const dialog = document.createElement('dialog'); dialog.className = 'modal creator-identity-modal';
+  dialog.setAttribute('aria-labelledby', 'creator-modal-title');
   const form = document.createElement('form');
-  const dialogTitle = document.createElement('h2'); uiI18n.set(dialogTitle, 'creators.modal');
+  const dialogTitle = document.createElement('h2'); dialogTitle.id = 'creator-modal-title'; uiI18n.set(dialogTitle, 'creators.modal');
   const hint = document.createElement('p'); uiI18n.set(hint, 'creators.hint');
   const rows = document.createElement('div'); rows.className = 'creator-identity-editor';
-  const actions = document.createElement('div'); actions.className = 'button-row';
+  const actions = document.createElement('footer'); actions.className = 'button-row';
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'secondary';
   uiI18n.set(cancel, 'creators.cancel'); cancel.onclick = () => dialog.close();
   const save = document.createElement('button'); save.type = 'submit'; save.className = 'primary';
   uiI18n.set(save, 'creators.save'); actions.append(cancel, save);
-  form.append(dialogTitle, hint, rows, actions); dialog.append(form); document.body.append(dialog);
+  const header = document.createElement('header'); header.append(dialogTitle);
+  const body = document.createElement('div'); body.className = 'modal-body'; body.append(hint, rows);
+  form.append(header, body, actions); dialog.append(form); document.body.append(dialog);
   let current = [];
 
   function labelled(key, value, placeholder, name) {
