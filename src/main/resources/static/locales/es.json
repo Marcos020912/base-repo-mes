@@ -1259,5 +1259,6 @@
   "resourceDynamic.previewBlocked": "No se puede enviar todavía. Faltan: {blockers}.",
   "resourceDynamic.previewReady": "Validación automática: {percent} %. Requisitos completos; el envío bloqueará la edición hasta que curación responda.",
   "resourceDynamic.previewFailure": "No se pudo preparar la vista previa:",
-  "resourceDynamic.citationName": "Cita bibliográfica"
+  "resourceDynamic.citationName": "Cita bibliográfica",
+  "resourceDynamic.completenessLabel": "Completitud del depósito"
 }

@@ -1259,5 +1259,6 @@
   "resourceDynamic.previewBlocked": "Cannot submit yet. Missing: {blockers}.",
   "resourceDynamic.previewReady": "Automated validation: {percent}%. Requirements complete; submission will lock editing until curation responds.",
   "resourceDynamic.previewFailure": "The preview could not be prepared:",
-  "resourceDynamic.citationName": "Bibliographic citation"
+  "resourceDynamic.citationName": "Bibliographic citation",
+  "resourceDynamic.completenessLabel": "Deposit completeness"
 }

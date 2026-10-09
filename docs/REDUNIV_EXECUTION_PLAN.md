@@ -283,3 +283,10 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Dieciséis fixtures Chrome secuenciales aprobados, acceso/catálogo/depósito/operaciones/fichas/administración/ayuda; log /tmp/reduniv-i18n-all-fixtures.log. No equivalen a permisos reales de servidor.
 - [x] JAR minimal Java21 construido correctamente (12s); log /tmp/reduniv-i18n-full-jar.log.
 - [ ] E2E aislado PostgreSQL/SMTP/restore en ejecución; resultado pendiente. A07 requiere además auditoría textual/estados y revisión institucional, sin cerrar objetivo global.
+
+### Corrección detectada en integración — 2026-10-08
+- [x] Primera ejecución integrada completó flujos funcionales, inventario/restauración, pero falló guard final por error JS `UI text bindings require a leaf node`; NO se considera aprobada. Log /tmp/reduniv-i18n-full-e2e.log.
+- [x] Corrección de fallos tras estados compuestos: quality/history y métricas de preservación limpian datos previos antes de registrar texto; guard conserva restricción y diagnóstico agrega tag/id/key. E2E captura stack para localizar cualquier fallo restante.
+- [x] Fixture privada reproduce fallo quality posterior al éxito: limpia checks/progress, mensaje es/en y cero errores JS. Loading inicial y aria progreso también traducidos.
+- [x] JAR reconstruido después de estas correcciones, 9s; log /tmp/reduniv-i18n-retry-jar.log.
+- [ ] Repetición integrada PostgreSQL/SMTP/restore en ejecución; aún no hay aprobación final ni cierre global.

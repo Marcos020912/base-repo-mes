@@ -147,7 +147,7 @@ async function loadPreservation() {
     const metrics = await request('/api/v1/scientific/preservation/metrics');
     const latest = metrics.latestAudit?.id?uiNode('span','reviews.latestAudit',{...metrics.latestAudit,message:metrics.latestAudit.message||''}):uiNode('span','reviews.noAudits');
     uiI18n.plain(preservation,'');preservation.append(uiNode('span','reviews.metrics',{published:metrics.published,review:metrics.inReview,files:metrics.files,checked:metrics.filesChecked,mismatched:metrics.mismatched,missing:metrics.missing}),document.createTextNode(' '),latest);
-  } catch (error) { uiI18n.set(preservation,'reviews.metricsFailure'); }
+  } catch (error) { uiI18n.plain(preservation,'');uiI18n.set(preservation,'reviews.metricsFailure'); }
 }
 document.querySelector('#start-audit').addEventListener('click', async () => {
   if (!confirm(uiI18n.t('reviews.auditConfirm'))) return;

@@ -922,7 +922,7 @@ async function main() {
       args:['--no-sandbox', '--disable-dev-shm-usage']});
     const page = await browser.newPage();
     const pageErrors = [];
-    page.on('pageerror', error => pageErrors.push(error.message));
+    page.on('pageerror', error => pageErrors.push(error.stack || error.message));
     const base = `http://127.0.0.1:${port}`;
     const apiDocs=await fetch(base+'/v3/api-docs');assert(apiDocs.ok,'No se pudo generar OpenAPI local.');
     const contract=validateOpenApi(await apiDocs.json());process.stdout.write(`Contrato OpenAPI OK: ${contract.paths} rutas científicas y ${contract.localReferences} referencias locales.\n`);
