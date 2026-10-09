@@ -51,3 +51,5 @@ Perfiles administrativos: `node tools/e2e/profiles-admin-i18n.cjs` comprueba eti
 Colecciones: `node tools/e2e/collections-i18n.cjs` prueba modos público/gestión, datos originales y formularios conservados, revisión en PUT y eliminación explícita de pertenencia. Cambiar idioma no consulta API ni cambia URL/filtros. No prueba permisos reales de servidor ni que un borrador se oculte correctamente en publicación.
 
 Guía de ayuda: `node tools/e2e/help-i18n.cjs` comprueba español/inglés, enlaces y comandos intactos, avisos de política pendiente y limitaciones de descarga/certificación, sin API, axe automático y overflow a 320px. Los párrafos con links/code usan spans hoja, nunca bindings del contenedor. La suite de catálogos cuenta ahora con siete pruebas.
+
+Curación: `node tools/e2e/reviews-i18n.cjs` valida vista previa es/en, metadatos y nota privada intactos, enlace temporal conservado en su control y cero solicitudes por cambio de idioma. Las notas/códigos del servidor no se traducen automáticamente. No prueba publicación real DataCite ni autorización curatorial.

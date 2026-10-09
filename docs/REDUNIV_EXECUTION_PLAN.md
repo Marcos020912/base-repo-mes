@@ -252,3 +252,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Chrome `node tools/e2e/help-i18n.cjs`: textos/caveats, links/code conservados, sin API, inglés a 320px sin overflow ni violaciones axe automáticas WCAG2/2.1/2.2. No sustituye revisión manual ni certifica cumplimiento WCAG.
 - [x] Siete pruebas de catálogos aprobadas incluyendo bindings hoja de ayuda.
 - [ ] Ficha privada y revisiones pendientes, así como comprobación integrada y requisitos globales.
+
+### Curación bilingüe — avance A07 (2026-10-08)
+- [x] Revisión curatorial es/en: controles/confirmaciones, vista previa, mensajes de privacidad, enlaces temporales y resumen de preservación. Metadatos, notas privadas y códigos científicos originales permanecen intactos.
+- [x] Chrome `node tools/e2e/reviews-i18n.cjs`: vista previa y notas originales, cambio es/en sin consultas, campo de enlace secreto conservado, creación explícita, ninguna publicación DOI por idioma. Fixture UI, no prueba autorización ni integración DataCite real.
+- [ ] Ficha privada y revisión integrada global pendientes; auditorías y evidencias institucionales no cerradas por esta prueba.
