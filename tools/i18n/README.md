@@ -53,3 +53,5 @@ Colecciones: `node tools/e2e/collections-i18n.cjs` prueba modos público/gestió
 Guía de ayuda: `node tools/e2e/help-i18n.cjs` comprueba español/inglés, enlaces y comandos intactos, avisos de política pendiente y limitaciones de descarga/certificación, sin API, axe automático y overflow a 320px. Los párrafos con links/code usan spans hoja, nunca bindings del contenedor. La suite de catálogos cuenta ahora con siete pruebas.
 
 Curación: `node tools/e2e/reviews-i18n.cjs` valida vista previa es/en, metadatos y nota privada intactos, enlace temporal conservado en su control y cero solicitudes por cambio de idioma. Las notas/códigos del servidor no se traducen automáticamente. No prueba publicación real DataCite ni autorización curatorial.
+
+Ficha privada, avance estático: `node tools/e2e/resource-static-i18n.cjs` comprueba modales y valores de formulario conservados. Excluye scripts de negocio; `resource.js` sigue pendiente y la página no declara todavía idioma global inglés. No confundir esta prueba con flujo de edición/DOI/subida completo.

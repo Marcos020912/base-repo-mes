@@ -257,3 +257,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Revisión curatorial es/en: controles/confirmaciones, vista previa, mensajes de privacidad, enlaces temporales y resumen de preservación. Metadatos, notas privadas y códigos científicos originales permanecen intactos.
 - [x] Chrome `node tools/e2e/reviews-i18n.cjs`: vista previa y notas originales, cambio es/en sin consultas, campo de enlace secreto conservado, creación explícita, ninguna publicación DOI por idioma. Fixture UI, no prueba autorización ni integración DataCite real.
 - [ ] Ficha privada y revisión integrada global pendientes; auditorías y evidencias institucionales no cerradas por esta prueba.
+
+### Formularios estáticos de ficha privada — avance parcial A07 (2026-10-08)
+- [x] Etiquetas estáticas, formularios y modales de resource.html en es/en; controles, códigos de acceso/tipo y rutas/nombre description.md intactos.
+- [x] Chrome `node tools/e2e/resource-static-i18n.cjs`: controles originales y valores preservados al cambiar idioma. Excluye scripts de negocio deliberadamente; no demuestra el flujo de ficha ni backend.
+- [ ] Contenido dinámico de resource.js y verificación integrada pendientes. No se activa lang global inglés mientras la ficha dinámica siga sin migrar.
