@@ -18,7 +18,7 @@ function action(label, className, handler) {
 }
 function uiNode(tag,key,params={}){const n=document.createElement(tag);uiI18n.set(n,key,params);return n;}
 async function preview(id, container, page = 0) {
-  uiI18n.set(container,'reviews.previewLoading');
+  uiI18n.plain(container,'');uiI18n.set(container,'reviews.previewLoading');
   try {
     const [metadata, listing, quality] = await Promise.all([
       request(`/api/v1/scientific/review/${encodeURIComponent(id)}`),
@@ -113,7 +113,7 @@ async function preview(id, container, page = 0) {
   } catch (error) { uiI18n.plain(container,''); toast.errorObject(error); }
 }
 async function load() {
-  uiI18n.set(list,'reviews.loading');
+  uiI18n.plain(list,'');uiI18n.set(list,'reviews.loading');
   try {
     const doiEnabled = (await request('/api/v1/scientific/doi/config')).enabled;
     const records = await request('/api/v1/scientific/reviews');

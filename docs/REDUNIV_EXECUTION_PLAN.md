@@ -290,3 +290,9 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Fixture privada reproduce fallo quality posterior al éxito: limpia checks/progress, mensaje es/en y cero errores JS. Loading inicial y aria progreso también traducidos.
 - [x] JAR reconstruido después de estas correcciones, 9s; log /tmp/reduniv-i18n-retry-jar.log.
 - [ ] Repetición integrada PostgreSQL/SMTP/restore en ejecución; aún no hay aprobación final ni cierre global.
+
+### Diagnóstico exacto de recarga curatorial — 2026-10-08
+- [x] Segunda integración completó flujos/restauración pero siguió fallando el guard JS. Stack identificó `DIV#reviews-list`, clave `reviews.loading`, al recargar tras guardar revisión de privacidad. No está aprobada; log /tmp/reduniv-i18n-retry-e2e.log.
+- [x] reviews.load/preview ahora desregistran y limpian contenido antes del mensaje loading; fixture reproduce recarga y preview repetido sin errores.
+- [x] JAR reconstruido después del fix, 10s; /tmp/reduniv-i18n-final-jar.log. Axe baseline: 66 estados y cero infracciones automáticas; no certifica WCAG.
+- [ ] Tercera integración aislada PostgreSQL/SMTP/restauración iniciada; resultado pendiente, fuentes congeladas.
