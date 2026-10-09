@@ -61,3 +61,30 @@ corresponde al código previo a estas tres pruebas adicionales. El arranque y
 las comprobaciones reales de navegador se realizan en el PC del usuario con
 PostgreSQL persistente local dedicado, Elasticsearch y SMTP capturado localmente.
 No se migran los datos H2 antiguos ni se envían mensajes/DOI/eventos externos.
+
+## Revisión de navegación y verificación local (9 octubre 2026)
+
+- Menú compartido por rol: mismas entradas y orden entre secciones. Colecciones
+  y autoevaluación mantienen su vista pública anónima y usan la barra lateral
+  cuando hay sesión. Selector de idioma entre logo y primer enlace.
+- Mostrar/ocultar contraseña en cada campo, sin alterar su valor ni enviar el
+  formulario. Login y registro seleccionan explícitamente el botón de envío.
+- Comprobación en el Chrome ya abierto del usuario: catálogo, usuarios,
+  colecciones, operaciones y cuenta; idioma persistente y controles correctos.
+- Java: **73 suites / 1380 pruebas**, sin fallos. **19 fixtures de navegador**,
+  **69 estados axe sin infracciones**; ensayo PostgreSQL/SMTP/dos JVM y
+  restauración aprobado. Fixture compartido: 36 combinaciones rol/sección.
+- El correo de esta demo se captura en el visor local `http://localhost:8025/`;
+  no llega a un buzón externo. La cuenta creada permanece sin verificar hasta
+  introducir el código. Reenviar cuando expire, sin borrar ni recrear la cuenta.
+
+`GET /api/v1/public/mail-delivery` devuelve únicamente el modo de entrega y,
+si está habilitado explícitamente, un enlace HTTP de visor loopback validado.
+No publica credenciales, usuarios ni códigos. Por defecto
+`repo.mail.delivery-mode=SMTP` y `repo.mail.preview-url` está vacío.
+Para demo local se configura `LOCAL_CAPTURE` y el visor; esto solo muestra
+instrucciones y **no cambia el transporte SMTP**. En producción conservar
+SMTP y configurar el servidor real mediante `spring.mail.*`.
+
+Cambios solo en `develop-reduniv`, sin fusión ni publicación. La aplicación
+local se recompiló y reinició conservando PostgreSQL y el índice de demo.

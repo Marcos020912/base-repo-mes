@@ -23,48 +23,86 @@ const toast = {
   errorObject: error=>error.i18nKey?toast.errorKey(error.i18nKey,error.i18nParams):toast.error(error.message)
 };
 
-document.querySelectorAll('.brand').forEach((brand) => {
-  const logo = document.createElement('img');
-  logo.src = 'logo%20mes.png';
-  uiI18n.attribute(logo,'alt','brand.alt');
-  const name = document.createElement('span');
-  name.textContent = 'Datos RedUniv';
-  brand.replaceChildren(logo, name);
-});
+// One shared shell and navigation registry for every authenticated section.
 const signedInUser = auth.user();
-document.querySelectorAll('.sidebar nav').forEach((nav) => {
-  if (!nav.querySelector('a[href="account.html"]')) {
-    const link = document.createElement('a');
-    link.href = 'account.html'; uiI18n.set(link,'nav.account');
-    nav.insertBefore(link, nav.querySelector('#users-nav'));
+const currentSection = location.pathname.split('/').pop() || 'index.html';
+if (signedInUser && auth.token() && ['collections.html','self-assessment.html'].includes(currentSection) && !document.querySelector('.sidebar')) {
+  const main = document.querySelector('main');
+  const shell = document.createElement('div'); shell.className = 'app-shell';
+  const sidebar = document.createElement('aside'); sidebar.className = 'sidebar';
+  const brand = document.createElement('a'); brand.className = 'brand'; brand.href = 'index.html';
+  const nav = document.createElement('nav');
+  const bottom = document.createElement('div'); bottom.className = 'sidebar-bottom';
+  const identity = document.createElement('span'); identity.id = 'current-user';
+  const logout = document.createElement('button'); logout.type = 'button'; logout.className = 'link-button'; logout.dataset.logout = '';
+  bottom.append(identity,logout); sidebar.append(brand,nav,bottom);
+  // Preserve the existing selector (and its locale event listener) before removing the public nav.
+  const picker = document.querySelector('[data-ui-locale]');
+  if (picker) sidebar.insertBefore(picker,nav);
+  main.before(shell); main.classList.remove('public-main'); main.classList.add('app-main');
+  shell.append(sidebar,main);
+  document.querySelector('.public-nav')?.remove();
+}
+document.querySelectorAll('.brand').forEach(brand => {
+  const logo = document.createElement('img'); logo.src = 'logo%20mes.png'; uiI18n.attribute(logo,'alt','brand.alt');
+  const name = document.createElement('span'); name.textContent = 'Datos RedUniv'; brand.replaceChildren(logo,name);
+});
+const editorial = ['CURATOR','ADMINISTRATOR'].includes(signedInUser?.role);
+const administrator = signedInUser?.role === 'ADMINISTRATOR';
+const navigation = [
+  ['index.html','nav.catalog',true], ['my-datasets.html','nav.mine',true], ['account.html','nav.account',true],
+  ['reviews.html','nav.reviews',editorial], ['users.html','nav.users',administrator],
+  [editorial?'collections.html?manage=true':'collections.html','nav.collections',true],
+  ['operations.html','nav.operations',editorial], ['self-assessment.html','nav.assessment',editorial],
+  ['vocabulary-admin.html','nav.vocabularies',administrator], ['metadata-profiles-admin.html','nav.profiles',administrator]
+];
+const activeSection = ['resource.html','create.html'].includes(currentSection) ? 'my-datasets.html' : currentSection;
+document.querySelectorAll('.sidebar').forEach(sidebar => {
+  const nav = sidebar.querySelector('nav'); nav.replaceChildren(); uiI18n.attribute(nav,'aria-label','nav.main');
+  for (const [href,key,visible] of navigation) {
+    // Keep this hidden anchor for older page scripts; authorization remains server-side.
+    if (!visible && href !== 'users.html') continue;
+    const link = document.createElement('a'); link.href = href; link.hidden = !visible;
+    if (href === 'users.html') link.id = 'users-nav';
+    if (href.split('?')[0] === activeSection) {link.className = 'active'; link.setAttribute('aria-current','page');}
+    uiI18n.set(link,key); nav.append(link);
+  }
+  const select = document.querySelector('[data-ui-locale]');
+  if (select) {
+    let label = select.closest('label.locale-picker');
+    if (!label) {label = document.createElement('label'); const caption = document.createElement('span'); uiI18n.set(caption,'language'); label.append(caption,select);}
+    label.classList.add('locale-picker','sidebar-locale'); uiI18n.attribute(select,'aria-label','language');
+    sidebar.insertBefore(label,nav);
   }
 });
-if (['CURATOR', 'ADMINISTRATOR'].includes(signedInUser?.role)) {
-  document.querySelectorAll('.sidebar nav').forEach((nav) => {
-    if (!nav.querySelector('a[href="reviews.html"]')) {
-      const link = document.createElement('a');
-      link.href = 'reviews.html';
-      uiI18n.set(link,'nav.reviews');
-      nav.insertBefore(link, nav.querySelector('#users-nav'));
+document.querySelectorAll('#current-user').forEach(node=>node.textContent=signedInUser?.username || '');
+document.querySelectorAll('[data-logout]').forEach(button=>{uiI18n.set(button,'nav.logout');button.addEventListener('click',auth.logout);});
+
+// Password visibility is per field, never changes its value or submits the form.
+let passwordFieldSequence = 0;
+document.querySelectorAll('input[type="password"]').forEach(input => {
+  if (!input.id) input.id = `password-field-${++passwordFieldSequence}`;
+  const wrapper = document.createElement('span'); wrapper.className = 'password-control';
+  input.before(wrapper); wrapper.append(input);
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'password-toggle';
+  button.setAttribute('aria-controls',input.id); button.setAttribute('aria-pressed','false'); uiI18n.set(button,'password.show');
+  const hide = () => {input.type='password';button.setAttribute('aria-pressed','false');uiI18n.set(button,'password.show');};
+  button.addEventListener('click',()=>{const visible=input.type==='password';input.type=visible?'text':'password';button.setAttribute('aria-pressed',String(visible));uiI18n.set(button,visible?'password.hide':'password.show');});
+  input.form?.addEventListener('reset',hide); wrapper.append(button);
+});
+
+// Demo delivery must never pretend that a captured message reached the user's inbox.
+if (document.querySelector('#register-form, #verify-form')) {
+  fetch('/api/v1/public/mail-delivery',{cache:'no-store'}).then(response=>response.ok?response.json():null).then(config=>{
+    if (config?.mode !== 'LOCAL_CAPTURE') return;
+    const notice = document.createElement('aside'); notice.className = 'mail-delivery-notice'; notice.setAttribute('role','note');
+    const text = document.createElement('p'); uiI18n.set(text,'mail.localNotice'); notice.append(text);
+    if (config.previewUrl) {
+      const url = new URL(config.previewUrl);
+      if (url.protocol==='http:' && ['localhost','127.0.0.1','[::1]'].includes(url.hostname) && !url.username && !url.password) {
+        const link = document.createElement('a'); link.href=url.href; link.target='_blank';link.rel='noopener noreferrer';uiI18n.set(link,'mail.localLink');notice.append(link);
+      }
     }
-  });
+    document.querySelector('#register-form, #verify-form').before(notice);
+  }).catch(()=>{/* Standard SMTP mode remains usable if delivery metadata is unavailable. */});
 }
-
-if (['CURATOR','ADMINISTRATOR'].includes(signedInUser?.role)) {
-  document.querySelectorAll('.sidebar nav').forEach(nav=>{
-    const link=document.createElement('a');link.href='collections.html?manage=true';uiI18n.set(link,'nav.collections');nav.append(link);
-  });
-}
-
-if (['CURATOR','ADMINISTRATOR'].includes(signedInUser?.role)) {
-  document.querySelectorAll('.sidebar nav').forEach(nav=>{if(!nav.querySelector('a[href="operations.html"]')){const link=document.createElement('a');link.href='operations.html';uiI18n.set(link,'nav.operations');nav.append(link);}});
-}
-
-if(auth.user()?.role==='ADMINISTRATOR')document.querySelectorAll('.sidebar nav').forEach(nav=>{if(!nav.querySelector('a[href="vocabulary-admin.html"]')){const link=document.createElement('a');link.href='vocabulary-admin.html';uiI18n.set(link,'nav.vocabularies');nav.append(link);}});
-
-if(auth.user()?.role==='ADMINISTRATOR')document.querySelectorAll('.sidebar nav').forEach(nav=>{if(!nav.querySelector('a[href="metadata-profiles-admin.html"]')){const link=document.createElement('a');link.href='metadata-profiles-admin.html';uiI18n.set(link,'nav.profiles');nav.append(link);}});
-
-// Keys are selected by stable navigation routes, never by visible text or user data.
-const sharedNavKeys={'index.html':'nav.catalog','my-datasets.html':'nav.mine','account.html':'nav.account','users.html':'nav.users','reviews.html':'nav.reviews','collections.html?manage=true':'nav.collections','operations.html':'nav.operations','vocabulary-admin.html':'nav.vocabularies','metadata-profiles-admin.html':'nav.profiles'};
-document.querySelectorAll('.sidebar nav').forEach(nav=>{uiI18n.attribute(nav,'aria-label','nav.main');nav.querySelectorAll('a').forEach(link=>{const key=sharedNavKeys[link.getAttribute('href')];if(key)uiI18n.set(link,key);});});
-document.querySelectorAll('[data-logout]').forEach(button=>uiI18n.set(button,'nav.logout'));

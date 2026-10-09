@@ -1,7 +1,7 @@
 // Keep registration reachable even when a stored session is stale.
 const registrationForm = document.querySelector('#register-form');
 const registrationMessage = document.querySelector('#register-message');
-const registrationSubmit = registrationForm.querySelector('button');
+const registrationSubmit = registrationForm.querySelector('button[type=submit]');
 registrationForm.addEventListener('submit', async event => {
   event.preventDefault();
   if (registrationSubmit.disabled) return;

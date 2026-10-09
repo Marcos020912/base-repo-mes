@@ -183,3 +183,18 @@ main:focus { outline:none; }
 #deposit-tasks nav { display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem; }
 
 .assessment-list{display:grid;gap:16px}.assessment-list .panel{min-width:0;overflow-wrap:anywhere}.assessment-list .panel p{white-space:pre-wrap}
+
+/* Shared sidebar language control and password visibility. */
+.sidebar { gap:22px; }
+.sidebar-locale { display:grid; gap:7px; margin:0; color:#e9f2ff; font-size:13px; }
+.sidebar-locale select { width:100%; min-width:0; color:var(--ink); background:#fff; }
+.password-control { display:flex; align-items:stretch; gap:8px; width:100%; min-width:0; }
+.password-control input { min-width:0; flex:1; width:0; }
+.password-toggle { flex:none; padding:10px; font-size:12px; background:#e7f0ff; color:#003a78; border:1px solid #b9d2ef; border-radius:8px; cursor:pointer; }
+.mail-delivery-notice { padding:14px; border:1px solid #b9d2ef; border-radius:10px; background:#edf4ff; margin:16px 0; }
+.mail-delivery-notice p { margin:0 0 8px; }
+@media(max-width:800px) {
+  .sidebar { flex-wrap:wrap; gap:15px; }
+  .sidebar-locale { max-width:190px; flex:1; }
+  .sidebar nav { order:3; flex-basis:100%; flex-wrap:wrap; }
+}

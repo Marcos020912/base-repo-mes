@@ -1341,5 +1341,10 @@
   "doiEvidence.attempt": "Último intento de sincronización",
   "doiEvidence.landing": "Última URL enviada y aceptada",
   "doiEvidence.revision": "Revisión local de envíos de metadatos confirmados",
-  "doiEvidence.unknown": "Sin evidencia local"
+  "doiEvidence.unknown": "Sin evidencia local",
+  "nav.assessment": "Autoevaluación",
+  "password.show": "Mostrar contraseña",
+  "password.hide": "Ocultar contraseña",
+  "mail.localNotice": "Correo de prueba: los mensajes se guardan en el visor local y no se envían a tu bandeja de entrada. Abre el visor para consultar tu código de verificación.",
+  "mail.localLink": "Abrir correo de pruebas"
 }

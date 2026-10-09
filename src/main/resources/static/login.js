@@ -1,6 +1,6 @@
 // A stored token may be invalid after deployment; keep login reachable.
 const loginForm = document.querySelector('#login-form');
-const loginSubmit = loginForm.querySelector('button');
+const loginSubmit = loginForm.querySelector('button[type=submit]');
 const loginMessage = document.querySelector('#login-message');
 loginForm.addEventListener('submit', async event => {
   event.preventDefault();

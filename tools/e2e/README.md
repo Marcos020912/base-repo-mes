@@ -216,3 +216,13 @@ aviso y redirige a verificación con correo y mailPending.
 ### Guardado directo a disco
 
 El monitor ofrece una opción manual cuando `showSaveFilePicker` está disponible en contexto seguro. No se activa automáticamente. La prueba `transfer-smoke.cjs` sustituye solo el selector y utiliza un handle OPFS real del navegador para comprobar write/close/abort; no prueba el diálogo del sistema ni permisos del disco del usuario. En otros navegadores continúa la descarga mediante Blob en memoria. Validar archivos grandes y selección nativa en staging antes de declarar soporte masivo.
+
+### Navegación compartida y contraseñas
+
+`node tools/e2e/shared-shell-smoke.cjs` recorre 36 combinaciones de rol/sección
+con HTML, estilos y scripts compartidos reales. Comprueba orden y permisos del
+menú, idioma entre logo y navegación, persistencia de idioma, página activa,
+contraseñas visibles/ocultas sin perder el valor ni enviar el formulario,
+instrucciones del correo capturado y ausencia de desbordamiento a 320 px.
+No usa cuentas reales ni envía mensajes. `E2E_SCREENSHOT_PATH` permite guardar
+una captura de la barra lateral del fixture.

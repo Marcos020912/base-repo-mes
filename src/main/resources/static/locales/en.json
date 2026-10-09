@@ -1341,5 +1341,10 @@
   "doiEvidence.attempt": "Last synchronization attempt",
   "doiEvidence.landing": "Last submitted and acknowledged URL",
   "doiEvidence.revision": "Local revision of acknowledged metadata submissions",
-  "doiEvidence.unknown": "No local evidence"
+  "doiEvidence.unknown": "No local evidence",
+  "nav.assessment": "Self-assessment",
+  "password.show": "Show password",
+  "password.hide": "Hide password",
+  "mail.localNotice": "Test email: messages are stored in the local viewer and are not sent to your inbox. Open the viewer to find your verification code.",
+  "mail.localLink": "Open test email"
 }
