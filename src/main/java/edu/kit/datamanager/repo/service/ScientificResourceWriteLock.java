@@ -18,11 +18,12 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class ScientificResourceWriteLock {
     private final EntityManager entities;
+    private final SearchIndexOutbox outbox;
     private final boolean postgres;
     private final edu.kit.datamanager.repo.repository.ScientificRecordRepository records;
     public ScientificResourceWriteLock(EntityManager entities, DataSourceProperties database,
-            edu.kit.datamanager.repo.repository.ScientificRecordRepository records) {
-        this.entities = entities; this.records = records;
+            edu.kit.datamanager.repo.repository.ScientificRecordRepository records, SearchIndexOutbox outbox) {
+        this.entities = entities; this.records = records; this.outbox = outbox;
         this.postgres = database.determineUrl().startsWith("jdbc:postgresql:");
     }
 
@@ -40,6 +41,10 @@ public class ScientificResourceWriteLock {
                     Map.of("jakarta.persistence.lock.timeout", 2000));
             if (locked == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Recurso no encontrado.");
+            records.findById(id).ifPresent(record -> {
+                if (entities.contains(record)) entities.refresh(record);
+            });
+            outbox.enqueue(id);
             return locked;
         } catch (LockTimeoutException | PessimisticLockException busy) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

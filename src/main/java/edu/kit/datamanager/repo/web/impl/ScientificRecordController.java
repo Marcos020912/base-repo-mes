@@ -229,6 +229,7 @@ public class ScientificRecordController {
         writeLock.acquire(id);
         ScientificRecord record = current(id);
         if (record.getStatus() != PublicationStatus.IN_REVIEW) throw new ResponseStatusException(HttpStatus.CONFLICT, "El recurso no está en revisión.");
+        if (record.isDoiPublicationPending()) throw new ResponseStatusException(HttpStatus.CONFLICT, "Hay una publicación DOI pendiente. Reintente la publicación para conciliarla antes de devolver el depósito.");
         if(privacy!=null)privacy.clearReview(id);
         record.setStatus(PublicationStatus.DRAFT);
         ScientificRecord saved = records.save(record);

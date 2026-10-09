@@ -15,6 +15,14 @@ class Bindings(HTMLParser):
         for index in range(len(self.stack)-1,-1,-1):
             if self.stack[index][0]==tag:self.stack=self.stack[:index];break
 class CatalogueTest(unittest.TestCase):
+    def test_all_platform_pages_enable_document_language_and_localized_title(self):
+        pages=('login','register','verify','account','users','index','public','my-datasets','operations','create','review-access','public-resource','vocabulary-admin','metadata-profiles-admin','collections','reviews','resource','help')
+        for name in pages:
+            html=(STATIC/f'{name}.html').read_text()
+            self.assertRegex(html,r'<html[^>]*data-ui-page-localized(?:="[^"]*")?',name)
+            self.assertRegex(html,r'<title[^>]*data-i18n=',name)
+            self.assertIn('data-ui-locale',html,name)
+
     def test_bindings_cannot_replace_form_controls(self):
         with self.assertRaises(ValueError):Bindings().feed('<label data-i18n="username">Name<input name="username"></label>')
     def test_generated_bundle_is_current_and_language_key_sets_match(self):

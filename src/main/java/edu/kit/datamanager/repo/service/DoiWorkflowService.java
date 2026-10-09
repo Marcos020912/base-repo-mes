@@ -45,6 +45,7 @@ public class DoiWorkflowService {
     private final ScientificFundingRepository funding;
     private final ScientificAffiliationRepository affiliations;
     private final TransactionTemplate transactions;
+    private final ScientificResourceWriteLock writeLock;
     private final String publicBaseUrl;
     @org.springframework.beans.factory.annotation.Autowired(required=false) private ScientificPrivacyService privacy;
 
@@ -55,6 +56,7 @@ public class DoiWorkflowService {
             ScientificCreatorRepository creators, ScientificFundingRepository funding,
             ScientificAffiliationRepository affiliations,
             org.springframework.transaction.PlatformTransactionManager manager,
+            ScientificResourceWriteLock writeLock,
             @Value("${repo.datacite.public-base-url:}") String publicBaseUrl) {
         this.datacite = datacite;
         this.mapper = mapper;
@@ -69,6 +71,7 @@ public class DoiWorkflowService {
         this.funding = funding;
         this.affiliations = affiliations;
         this.transactions = new TransactionTemplate(manager);
+        this.writeLock = writeLock;
         this.publicBaseUrl = publicBaseUrl;
     }
 
@@ -91,12 +94,18 @@ public class DoiWorkflowService {
         if (science.getConceptualDoi() != null && !science.getConceptualDoi().equalsIgnoreCase(conceptDoi))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El DOI conceptual existente necesita conciliación.");
         transactions.executeWithoutResult(status -> {
+            lockFamily(rootId, resourceId);
+            ScientificRecord current = science(resourceId);
+            if (current.getStatus() != PublicationStatus.DRAFT && current.getStatus() != PublicationStatus.IN_REVIEW)
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El depósito cambió de estado durante la reserva.");
+            if (!rootId.equals(root(resourceId))) throw new ResponseStatusException(HttpStatus.CONFLICT, "La familia de versiones cambió; reintente la reserva.");
             ensureRegistration("c:" + rootId, rootId, "CONCEPT", conceptDoi);
             ensureRegistration("v:" + resourceId, resourceId, "VERSION", versionDoi);
         });
         reconcileDraft("c:" + rootId, conceptDoi);
         reconcileDraft("v:" + resourceId, versionDoi);
         transactions.executeWithoutResult(status -> {
+            writeLock.acquire(resourceId);
             ScientificRecord current = science(resourceId);
             if (current.getStatus() != PublicationStatus.DRAFT && current.getStatus() != PublicationStatus.IN_REVIEW)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "El depósito cambió de estado durante la reserva.");
@@ -119,6 +128,27 @@ public class DoiWorkflowService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Faltan datos para publicar: " + String.join(", ", report.blockers()));
         DoiStatus ids = reserve(resourceId);
         String rootId = ids.rootResourceId();
+        // Durable claim, committed before remote I/O. A failed response is retried, never unfrozen blindly.
+        transactions.executeWithoutResult(status -> {
+            lockFamily(rootId, resourceId);
+            ScientificRecord current = science(resourceId);
+            ScientificRecord family = science(rootId);
+            if (current.getStatus() != PublicationStatus.IN_REVIEW)
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El depósito cambió de estado antes de publicar.");
+            if (family.isDoiPublicationRunning())
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "La publicación DOI de esta familia sigue ejecutándose. Espere antes de reintentar.");
+            if (family.getDoiPublicationOwner() != null && !resourceId.equals(family.getDoiPublicationOwner()))
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Otra versión de esta familia tiene una publicación DOI pendiente; concíliela primero.");
+            var checked = quality.inspect(current);
+            if (!checked.blockers().isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Complete los datos requeridos antes de publicar.");
+            if (privacy != null) privacy.requirePublicationAllowed(resourceId, current.getAccessLevel());
+            current.setDoiPublicationPending(true);
+            family.setDoiPublicationOwner(resourceId);
+            family.setDoiPublicationRunning(true);
+            records.save(current);
+            if (!rootId.equals(resourceId)) records.save(family);
+        });
+        try {
         URI versionLanding = landing(resourceId);
         Map<String, Object> version = new LinkedHashMap<>(transactions.execute(status -> {
             var resource = resources.findById(resourceId)
@@ -163,16 +193,31 @@ public class DoiWorkflowService {
         publishRemote("v:" + resourceId, ids.versionDoi(), version);
         if(science.getPreviousResourceId()!=null) synchronizePrevious(science.getPreviousResourceId(),ids.versionDoi());
         return transactions.execute(status -> {
+            lockFamily(rootId, resourceId);
             ScientificRecord current = science(resourceId);
             if (current.getStatus() == PublicationStatus.PUBLISHED) return current;
             if (current.getStatus() != PublicationStatus.IN_REVIEW)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "El depósito cambió de estado durante la publicación.");
+            current.setDoiPublicationPending(false);
+            ScientificRecord family = science(rootId);
+            family.setDoiPublicationOwner(null);
+            if (!rootId.equals(resourceId)) records.save(family);
             current.setStatus(PublicationStatus.PUBLISHED);
             current.setPublishedAt(Instant.now());
             ScientificRecord saved = records.save(current);
             editorialEvents.save(new ScientificRecordEvent(resourceId, actor, "PUBLISHED", ids.versionDoi()));
             return saved;
         });
+        } finally {
+            // Only a completed handler releases execution, even when remote I/O failed.
+            // A hard process crash remains fail-closed until an operator confirms all old runners stopped.
+            transactions.executeWithoutResult(status -> {
+                lockFamily(rootId, resourceId);
+                ScientificRecord family = science(rootId);
+                family.setDoiPublicationRunning(false);
+                records.save(family);
+            });
+        }
     }
 
     /** Update only relations: published files and all other remote metadata remain untouched. */
@@ -327,6 +372,10 @@ public class DoiWorkflowService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "La reserva DOI pertenece a otro prefijo o entorno DataCite; no se puede cambiar automáticamente.");
         }
+    }
+
+    private void lockFamily(String rootId, String resourceId) {
+        java.util.stream.Stream.of(rootId, resourceId).distinct().sorted().forEach(writeLock::acquire);
     }
 
     private String root(String resourceId) {

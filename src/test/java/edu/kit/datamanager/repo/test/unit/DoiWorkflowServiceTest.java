@@ -91,7 +91,39 @@ public class DoiWorkflowServiceTest {
         when(funding.findByResourceIdOrderByIdAsc(anyString())).thenReturn(java.util.List.of());
         when(affiliations.findByResourceIdOrderByCreatorIdAscSortOrderAsc(anyString())).thenReturn(java.util.List.of());
         workflow = new DoiWorkflowService(datacite, mapper, registrations, syncEvents, records, editorial,
-                resources, quality, relations, creators, funding, affiliations, manager, "https://datos.reduniv.edu.cu");
+                resources, quality, relations, creators, funding, affiliations, manager, mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class), "https://datos.reduniv.edu.cu");
+    }
+
+
+    @Test public void duplicateRunnerCannotPublishEvenAfterRequestLeaseLoss() {
+        science.setStatus(PublicationStatus.IN_REVIEW);
+        var attempted=new java.util.concurrent.atomic.AtomicBoolean();
+        doAnswer(call -> {
+            if(attempted.compareAndSet(false,true)) {
+                assertTrue(science.isDoiPublicationRunning());
+                assertEquals(409,assertThrows(ResponseStatusException.class,()->workflow.publish("r1","second-jvm")).getStatusCode().value());
+            }
+            String doi=call.getArgument(0);remote.put(doi,"findable");return new DataCiteService.DoiResponse(doi,"findable");
+        }).when(datacite).publish(anyString(),anyMap());
+        workflow.publish("r1","curator");
+        verify(datacite,times(2)).publish(anyString(),anyMap());
+        assertFalse(science.isDoiPublicationRunning());
+    }
+
+    @Test public void competingFamilyPublicationCannotPerformRemotePublish() {
+        science.setStatus(PublicationStatus.IN_REVIEW);
+        science.setDoiPublicationOwner("other-version");
+        var conflict=assertThrows(ResponseStatusException.class,()->workflow.publish("r1","curator"));
+        assertEquals(409,conflict.getStatusCode().value());
+        verify(datacite,never()).publish(anyString(),anyMap());
+        assertFalse(science.isDoiPublicationPending());
+    }
+    @Test public void stateChangedDuringReservationCannotBecomeFindable() {
+        science.setStatus(PublicationStatus.IN_REVIEW);
+        doAnswer(call -> {science.setStatus(PublicationStatus.DRAFT);return new DataCiteService.DoiResponse(call.getArgument(0),"draft");})
+            .when(datacite).reserveDraft(anyString());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->workflow.publish("r1","curator")).getStatusCode().value());
+        verify(datacite,never()).publish(anyString(),anyMap());
     }
 
     @Test
@@ -168,10 +200,15 @@ public class DoiWorkflowServiceTest {
         }).when(datacite).publish(anyString(), anyMap());
         assertThrows(IllegalStateException.class, () -> workflow.publish("r1", "curator"));
         assertEquals(PublicationStatus.IN_REVIEW, science.getStatus());
+        assertTrue(science.isDoiPublicationPending());
+        assertFalse(science.isDoiPublicationRunning());
+        assertEquals("r1",science.getDoiPublicationOwner());
         String versionDoi = local.get("v:r1").getDoi();
         ScientificRecord retried = workflow.publish("r1", "curator");
         assertEquals(PublicationStatus.PUBLISHED, retried.getStatus());
         assertEquals(versionDoi, retried.getVersionDoi());
+        assertFalse(retried.isDoiPublicationPending());
+        assertNull(retried.getDoiPublicationOwner());
         assertEquals(2, local.size());
     }
 
@@ -186,7 +223,7 @@ public class DoiWorkflowServiceTest {
     @Test
     public void invalidPublicUrlFailsBeforeCreatingAnyDoi() {
         var invalid = new DoiWorkflowService(datacite, mapper, registrations, syncEvents, records, editorial,
-                resources, quality, relations, creators, funding, affiliations, manager, "http://localhost:8090");
+                resources, quality, relations, creators, funding, affiliations, manager, mock(edu.kit.datamanager.repo.service.ScientificResourceWriteLock.class), "http://localhost:8090");
         assertThrows(ResponseStatusException.class, () -> invalid.reserve("r1"));
         verify(datacite, never()).reserveDraft(anyString());
         assertTrue(local.isEmpty());

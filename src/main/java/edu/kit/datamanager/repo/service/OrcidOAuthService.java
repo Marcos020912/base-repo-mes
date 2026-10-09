@@ -40,6 +40,8 @@ public class OrcidOAuthService {
     private final ScientificRecordEventRepository events;
     private final ObjectMapper json;
     private final HttpClient http;
+    private final ScientificResourceWriteLock writeLock;
+    private final org.springframework.transaction.support.TransactionTemplate transactions;
     private final boolean enabled;
     private final String clientId;
     private final String clientSecret;
@@ -54,11 +56,12 @@ public class OrcidOAuthService {
             @Value("${repo.scientific.orcid.environment:sandbox}") String environment,
             @Value("${repo.scientific.orcid.client-id:}") String clientId,
             @Value("${repo.scientific.orcid.client-secret:}") String clientSecret,
-            @Value("${repo.scientific.orcid.redirect-uri:}") String redirectUri) {
+            @Value("${repo.scientific.orcid.redirect-uri:}") String redirectUri,
+            ScientificResourceWriteLock writeLock, org.springframework.transaction.PlatformTransactionManager manager) {
         this(states, records, ownership, users, resources, creators, events, json,
                 HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build(), enabled,
                 clientId, clientSecret, redirectUri,
-                "production".equals(environment) ? URI.create("https://orcid.org") : URI.create("https://sandbox.orcid.org"));
+                "production".equals(environment) ? URI.create("https://orcid.org") : URI.create("https://sandbox.orcid.org"), writeLock, manager);
         if (!"production".equals(environment) && !"sandbox".equals(environment))
             throw new IllegalArgumentException("Entorno ORCID no válido.");
     }
@@ -66,12 +69,14 @@ public class OrcidOAuthService {
     OrcidOAuthService(OrcidOAuthStateService states, ScientificRecordRepository records,
             ResourceOwnershipRepository ownership, LocalUserRepository users, IDataResourceDao resources,
             ScientificCreatorRepository creators, ScientificRecordEventRepository events, ObjectMapper json,
-            HttpClient http, boolean enabled, String clientId, String clientSecret, String redirectUri, URI orcidBase) {
+            HttpClient http, boolean enabled, String clientId, String clientSecret, String redirectUri, URI orcidBase,
+            ScientificResourceWriteLock writeLock, org.springframework.transaction.PlatformTransactionManager manager) {
         this.states = states; this.records = records; this.ownership = ownership; this.users = users;
         this.resources = resources; this.creators = creators; this.events = events; this.json = json;
         this.http = http; this.enabled = enabled; this.clientId = clientId; this.clientSecret = clientSecret;
         this.redirectUri = redirectUri == null || redirectUri.isBlank() ? null : URI.create(redirectUri);
         this.orcidBase = orcidBase;
+        this.writeLock=writeLock; this.transactions=new org.springframework.transaction.support.TransactionTemplate(manager);
     }
 
     public boolean isEnabled() { return configured(); }
@@ -83,7 +88,6 @@ public class OrcidOAuthService {
                 + enc("/authenticate") + "&redirect_uri=" + enc(redirectUri.toString()) + "&state=" + state;
     }
 
-    @Transactional
     public Result finish(String state, String code, String error) {
         requireConfigured();
         OrcidOAuthState pending = states.consume(state);
@@ -150,6 +154,8 @@ public class OrcidOAuthService {
     }
 
     public void attach(OrcidOAuthState pending, String orcid) {
+        transactions.executeWithoutResult(status -> {
+        writeLock.acquireEditable(pending.getResourceId());
         requireEditable(pending.getResourceId(), pending.getCreatorId(), pending.getUsername());
         ScientificCreator creator = creators.findByResourceIdAndCreatorId(pending.getResourceId(), pending.getCreatorId())
                 .orElseGet(() -> new ScientificCreator(pending.getResourceId(), pending.getCreatorId(), null, null, null));
@@ -157,6 +163,7 @@ public class OrcidOAuthService {
         creators.save(creator);
         events.save(new ScientificRecordEvent(pending.getResourceId(), pending.getUsername(),
                 "ORCID_AUTHENTICATED", "creatorId=" + pending.getCreatorId()));
+        });
     }
 
     private static String enc(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }

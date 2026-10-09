@@ -45,6 +45,10 @@ public class OrcidOAuthServiceTest {
     private OrcidOAuthService service;
     private AtomicReference<String> requestBody;
 
+    private org.springframework.transaction.PlatformTransactionManager transactionManager() {
+        var manager=mock(org.springframework.transaction.PlatformTransactionManager.class);
+        when(manager.getTransaction(any())).thenReturn(mock(org.springframework.transaction.TransactionStatus.class));return manager;
+    }
     @Before public void setup() throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         requestBody = new AtomicReference<>();
@@ -59,7 +63,8 @@ public class OrcidOAuthServiceTest {
         service = new OrcidOAuthService(states, records, ownership, users, resources, creators, events,
                 new ObjectMapper(), HttpClient.newHttpClient(), true, "APP-TEST", "secret", 
                 "https://datos.example/api/v1/scientific/orcid/callback",
-                URI.create("http://127.0.0.1:" + server.getAddress().getPort()));
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort()),
+                mock(ScientificResourceWriteLock.class), transactionManager());
         LocalUser ana = new LocalUser("ana", "hash", LocalRole.USER); ana.setVerified(true);
         when(users.findByUsernameIgnoreCase("ana")).thenReturn(Optional.of(ana));
         ResourceOwnership owner = mock(ResourceOwnership.class); when(owner.getUsername()).thenReturn("ana");

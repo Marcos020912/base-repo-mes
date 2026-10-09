@@ -110,6 +110,10 @@ public class DataResourceController implements IDataResourceController {
     @Autowired
     private Optional<DataResourceRepository> dataResourceRepository;
     @Autowired
+    private edu.kit.datamanager.repo.service.SearchIndexOutbox searchOutbox;
+    @Autowired
+    private edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock;
+    @Autowired
     private ResourceOwnershipRepository ownershipRepository;
     @Autowired
     private ScientificRecordRepository scientificRecords;
@@ -136,6 +140,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<DataResource> create(@RequestBody final DataResource resource,
             final WebRequest request,
             final HttpServletResponse response) {
@@ -251,6 +256,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity patch(@PathVariable("id") final String identifier,
             @RequestBody final JsonPatch patch,
             final WebRequest request,
@@ -265,6 +271,7 @@ public class DataResourceController implements IDataResourceController {
         ControllerUtils.checkAnonymousAccess();
         DataResource existing = DataResourceUtils.getResourceByIdentifierOrRedirect(repositoryProperties, identifier, null, patchDataResource);
         DataResourceUtils.performPermissionCheck(existing, PERMISSION.WRITE);
+        existing = writeLock.acquireEditable(existing.getId());
         ControllerUtils.checkEtag(eTag, existing);
         edu.kit.datamanager.repo.service.ResourceTypeTransitionPolicy.validatePatch(existing, patch);
         DataResourceUtils.patchResource(repositoryProperties, identifier, patch, eTag, patchDataResource);
@@ -281,6 +288,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity patchPid(@PathVariable("prefix") final String prefix,
             @PathVariable("suffix") final String suffix,
             @RequestBody final JsonPatch patch,
@@ -290,12 +298,14 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity put(@PathVariable("id") final String identifier,
             @RequestBody final DataResource newResource,
             final WebRequest request,
             final HttpServletResponse response) {
         LOGGER.trace("Update resource with id '{}': new resource: '{}'", identifier, newResource);
         DataResource existing = dataResourceDao.findById(identifier).orElse(null);
+        if (existing != null) existing = writeLock.acquireEditable(existing.getId());
         if (existing != null) edu.kit.datamanager.repo.service.ResourceTypeTransitionPolicy.validate(
                 existing.getResourceType(), newResource.getResourceType());
         Function<String, String> putWithId;
@@ -319,6 +329,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity putPid(@PathVariable("prefix") final String prefix,
             @PathVariable("suffix") final String suffix,
             @RequestBody final DataResource newResource,
@@ -328,6 +339,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity delete(@PathVariable("id") final String identifier,
             final WebRequest request,
             final HttpServletResponse response) {
@@ -335,6 +347,10 @@ public class DataResourceController implements IDataResourceController {
         Function<String, String> getById = (t) -> {
             return WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).getById(t, 1l, request, response)).toString();
         };
+        ControllerUtils.getEtagFromHeader(request);
+        if (repositoryProperties.isReadOnly()) throw new edu.kit.datamanager.exceptions.ServiceUnavailableException("Repository is in read-only mode.");
+        DataResource deleting = dataResourceDao.findById(identifier).orElse(null);
+        if (deleting != null) writeLock.acquireEditable(deleting.getId());
         DataResourceUtils.deleteResource(repositoryProperties, identifier, request, getById);
         scientificRecords.findById(identifier).ifPresent(scientificRecords::delete);
         ownershipRepository.findById(identifier).ifPresent(ownershipRepository::delete);
@@ -345,6 +361,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity deletePid(@PathVariable("prefix") final String prefix,
             @PathVariable("suffix") final String suffix,
             final WebRequest request,
@@ -353,6 +370,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity createContent(@PathVariable(value = "id") final String identifier,
             @RequestPart(name = "file", required = false) MultipartFile file,
             @RequestPart(name = "metadata", required = false) final MultipartFile contentInformation,
@@ -365,6 +383,7 @@ public class DataResourceController implements IDataResourceController {
             return WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).createContent(t, file, contentInformation, force, request, response, uriBuilder)).toString();
         };
         DataResource resource = DataResourceUtils.getResourceByIdentifierOrRedirect(repositoryProperties, identifier, null, createContent);
+        resource = writeLock.acquireEditable(resource.getId());
         String path = decodeContentPath(request);
 
         ContentInformation info = null;
@@ -405,6 +424,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity createContentPid(@PathVariable(value = "prefix") final String prefix,
             @PathVariable(value = "suffix") final String suffix,
             @RequestPart(name = "file", required = false) MultipartFile file,
@@ -480,6 +500,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity patchContentMetadata(@PathVariable(value = "id") final String identifier,
             final @RequestBody JsonPatch patch,
             final WebRequest request,
@@ -489,6 +510,9 @@ public class DataResourceController implements IDataResourceController {
         };
         String path = decodeContentPath(request);
         String eTag = ControllerUtils.getEtagFromHeader(request);
+        if (repositoryProperties.isReadOnly()) throw new edu.kit.datamanager.exceptions.ServiceUnavailableException("Repository is in read-only mode.");
+        DataResource editing = DataResourceUtils.getResourceByIdentifierOrRedirect(repositoryProperties, identifier, null, patchContentMetadata);
+        writeLock.acquireEditable(editing.getId());
         ContentInformation toUpdate = ContentDataUtils.patchContentInformation(repositoryProperties, identifier, path, patch, eTag, patchContentMetadata);
 
         indexResource(identifier, true);
@@ -502,6 +526,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity patchContentMetadataPid(@PathVariable(value = "prefix") final String prefix,
             @PathVariable(value = "suffix") final String suffix,
             final @RequestBody JsonPatch patch,
@@ -539,6 +564,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity deleteContent(@PathVariable(value = "id")
             final String identifier,
             final WebRequest request,
@@ -558,6 +584,9 @@ public class DataResourceController implements IDataResourceController {
         Function<String, String> deleteContent = (t) -> {
             return WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).deleteContent(t, request, response)).toString();
         };
+        if (repositoryProperties.isReadOnly()) throw new edu.kit.datamanager.exceptions.ServiceUnavailableException("Repository is in read-only mode.");
+        DataResource deleting = DataResourceUtils.getResourceByIdentifierOrRedirect(repositoryProperties, identifier, null, deleteContent);
+        writeLock.acquireEditable(deleting.getId());
         ContentDataUtils.deleteFile(repositoryProperties, identifier, path, eTag, deleteContent);
 
         if (prior != null && fileProvenance != null) {
@@ -574,6 +603,7 @@ public class DataResourceController implements IDataResourceController {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity deleteContentPid(@PathVariable(value = "prefix") final String prefix,
             @PathVariable(value = "suffix") final String suffix,
             final WebRequest request,
@@ -615,41 +645,11 @@ public class DataResourceController implements IDataResourceController {
         return resources;
     }
 
-    private void indexResource(
-            String identifier,
-            boolean includeContent) {
-        if (dataResourceRepository.isPresent()) {
-            LOGGER.trace("Indexing data resource {} {} content information.", identifier, (includeContent ? "with" : "without"));
-            Optional<DataResource> resource = dataResourceDao.findById(identifier);
-            ElasticWrapper wrapper;
-
-            if (includeContent) {
-                LOGGER.trace("Reading content information for resource {}.", identifier);
-                Page<ContentInformation> page = contentInformationDao.findByParentResource(resource.get(), PageRequest.of(0, Integer.MAX_VALUE));
-                List<ContentInformation> infoList = page.toList();
-                LOGGER.trace("Obtained {} content information element(s). Shortening resource to reference.", infoList.size());
-                infoList.forEach(info -> {
-                    DataResource res = DataResource.factoryNewDataResource(info.getParentResource().getId());
-                    info.setParentResource(res);
-                });
-                LOGGER.trace("Creating Elastic wrapper with data resource and content information.");
-                wrapper = new ElasticWrapper(resource.get(), infoList);
-
-            } else {
-                LOGGER.trace("Creating Elastic wrapper with data resource.");
-                wrapper = new ElasticWrapper(resource.get());
-            }
-            LOGGER.trace("Indexing Elastic wrapper.");
-            dataResourceRepository.get().save(wrapper);
-        } else {
-            LOGGER.trace("No Elastic repository found. Skipping indexing of resource.");
-        }
+    private void indexResource(String identifier, boolean includeContent) {
+        if (dataResourceRepository.isPresent()) searchOutbox.enqueue(identifier);
     }
 
-    private void unindexResource(
-            String id) {
-        if (dataResourceRepository.isPresent()) {
-            dataResourceRepository.get().deleteById(id);
-        }
+    private void unindexResource(String id) {
+        if (dataResourceRepository.isPresent()) searchOutbox.enqueue(id);
     }
 }

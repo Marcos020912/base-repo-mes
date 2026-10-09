@@ -601,6 +601,59 @@ async function verifyUploadLeaseLoss(page,base,dataset) {
   process.stdout.write('Upload session-loss fence OK: onRead/CRLF 100-continue proves parsing after initial guard; terminated lease cannot append CSV or replace Markdown after state transition; recovery succeeds.\n');
 }
 
+async function verifyTwoJvmFence(page,base,dataset,other) {
+  if(!postgres)return;
+  const port=await freePort();const secondBase=`http://127.0.0.1:${port}`;
+  const output=fs.openSync(path.join(temp,'second-jvm.log'),'w',0o600);
+  const second=spawn(java,['-Xms64m','-Xmx384m','-jar',jar,
+    `--spring.config.location=file:${path.join(root,'config/application-default.properties')},file:${path.join(temp,'application.properties')}`,
+    '--spring.profiles.active=default',`--server.port=${port}`,'--spring.jpa.hibernate.ddl-auto=validate'],
+    {cwd:root,stdio:['ignore',output,output]});fs.closeSync(output);
+  let holder;
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  const args=['-X','-At','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-p',String(postgres.port),'-U','e2e_admin','-d',postgres.database];
+  const env={...process.env,PGPASSWORD:postgres.secret};
+  try {
+    let ready=false;
+    for(let attempt=0;attempt<90;attempt++) {
+      assert(second.exitCode===null,'Second JVM exited before healthcheck.');
+      try {const response=await fetch(secondBase+'/actuator/health',{signal:AbortSignal.timeout(1500)});if(response.ok){ready=true;break;}}catch{}
+      await sleep(1000);
+    }
+    assert(ready,'Second JVM never became healthy.');
+    const rootResponse=await fetch(base+'/api/v1/dataresources/'+dataset.id,{headers});
+    const resource=await rootResponse.json();const etag=rootResponse.headers.get('etag');
+    holder=spawn(path.join(postgres.bin,'psql'),args,{env,stdio:['pipe','pipe','pipe']});
+    await new Promise((resolve,reject)=>{
+      let output='';const timer=setTimeout(()=>reject(new Error('Two-JVM SQL holder timeout.')),10000);
+      holder.stdout.on('data',chunk=>{output+=chunk;if(output.includes('TWO_JVM_HELD')){clearTimeout(timer);resolve();}});
+      holder.once('error',reject);
+      holder.stdin.write(`BEGIN;\nSELECT id FROM data_resource WHERE id='${dataset.id}' FOR UPDATE;\nSELECT 'TWO_JVM_HELD';\n`);
+    });
+    const first=fetch(base+'/api/v1/dataresources/'+dataset.id,{method:'PUT',headers:{...headers,'If-Match':etag},body:JSON.stringify(resource)});
+    const key=crypto.createHash('sha256').update('reduniv:resource-mutation:'+dataset.id).digest().readBigInt64BE(0);
+    const unsigned=BigInt.asUintN(64,key);const classid=(unsigned>>32n).toString();const objid=(unsigned&0xffffffffn).toString();
+    let active=false;
+    for(let attempt=0;attempt<20;attempt++){
+      const query=spawnSync(path.join(postgres.bin,'psql'),[...args,'-c',`SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND classid=${classid} AND objid=${objid} AND granted`],{env,encoding:'utf8'});
+      if(query.stdout.trim()==='1'){active=true;break;}await sleep(30);
+    }
+    assert(active,'First JVM did not hold a real request lease.');
+    const blocked=await fetch(secondBase+'/api/v1/scientific/'+dataset.id+'/funding',{method:'PUT',headers,body:'[]'});
+    assert(blocked.status===409&&blocked.headers.get('retry-after')==='1','Second JVM bypassed the first JVM request lease.');
+    assert((await fetch(secondBase+'/api/v1/scientific/'+other.id+'/funding',{method:'PUT',headers,body:'[]'})).ok,'Second JVM blocked unrelated dataset.');
+    assert((await first).status===409,'First JVM bypassed the primary SQL lock.');
+    holder.stdin.end('ROLLBACK;\n\\q\n');await new Promise(resolve=>holder.once('exit',resolve));holder=null;
+    const retry=await fetch(secondBase+'/api/v1/dataresources/'+dataset.id,{method:'PATCH',headers:{...headers,'Content-Type':'application/json-patch+json','If-Match':etag},body:JSON.stringify([{op:'replace',path:'/publisher',value:resource.publisher}])});
+    assert(retry.status===204,'Second JVM did not recover after lease/row release: '+retry.status+' '+await retry.text());
+    process.stdout.write('Two JVMs OK: shared PostgreSQL lease, primary legacy PUT fence, unrelated writer and PATCH recovery.\n');
+  } finally {
+    if(holder){holder.stdin.end('ROLLBACK;\n\\q\n');holder.kill('SIGTERM');}
+    second.kill('SIGTERM');await new Promise(resolve=>{if(second.exitCode!==null)return resolve();second.once('exit',resolve);setTimeout(()=>{second.kill('SIGKILL');resolve();},10000).unref();});
+  }
+}
+
 async function verifyPrimaryRowFence(page,base,dataset,other) {
   if(!postgres)return;
   assert(/^[a-zA-Z0-9-]+$/.test(dataset.id),'Synthetic resource ID must be SQL-safe.');
@@ -1161,6 +1214,7 @@ async function main() {
     await verifyMutationCoordination(page,base,markdown,zipped);
     await verifyPrimaryRowFence(page,base,markdown,zipped);
     await verifyUploadLeaseLoss(page,base,markdown);
+    await verifyTwoJvmFence(page,base,markdown,zipped);
     const before = await page.$eval('#download-list', element => element.textContent);
     await rejectPackage(page, base, packaged.id, files.missingDescriptionZip, 'description/description.md');
     await rejectPackage(page, base, packaged.id, files.invalidTypeZip, 'no admite archivos .exe');

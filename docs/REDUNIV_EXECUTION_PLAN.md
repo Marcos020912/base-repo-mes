@@ -373,3 +373,22 @@ El objetivo global no se da por terminado con esta regresión.
 - [x] Java62suites1339tests0fallos/errores/omitidos y JAR11s terminal0: /tmp/reduniv-typepolicy-full-java.log y /tmp/reduniv-typepolicy-jar.log.
 - [x] HTTP real PostgreSQL y restauración final terminal0: /tmp/reduniv-typepolicy-e2e.log. PATCH IMAGE→TEXT rechazado con ficha/ETag intactos; IMAGE→OTHER aceptado; OTHER→IMAGE rechazado por PATCH y PUT con ficha/ETag intactos; recurso sintético eliminado. Todos los flujos y guard JS aprobados.
 - [ ] Sigue pendiente fencing primario rootlegacy/DOI y coordinación SQL/Elasticsearch beforecommit; esta política no serializa por sí sola todas las mutaciones ni cierra F15.
+
+## Cierre de los cuatro bloques técnicos solicitados — 2026-10-08
+Este estado prevalece sobre pendientes históricos duplicados de las secciones anteriores.
+- [x] Legacy CRUD/PID/raw content/content metadata: transacciones primarias y recheck DRAFT; If-Match428/readonly503 y DELETE inexistente204 conservados. Refresco de ficha gestionada evita estado OSIV obsoleto.
+- [x] Indexación SQL/Elasticsearch: outbox persistente en el commit SQL; snapshots copiados y lectura paginada101 comprobada; fallo conserva intención para retry, rollback no la publica, borrado reconstruido desde SQL.
+- [x] DOI: claim durable de familia y runner único también para reintento mismoID; transacciones cortas, revalidación de estado/calidad/privacidad y bloqueo de retorno a borrador. Timeout/error concilia sin nuevo DOI; caída abrupta failclosed con procedimiento operador documentado, sin TTL inseguro.
+- [x] Audit de escritores: ficha/estado/relaciones/funding/creators/affiliations/perfil/privacidad, legacy y callback ORCID. Este último hace HTTP fuera de tx y revalida bajo fence antes de attach.
+- [x] Dos JVM reales sobre mismo PostgreSQL: legacyPUT se bloquea por rowlock, mantiene lease que otro JVM respeta con409/Retry-After; otra ficha sigue editable; PATCH desde segundo JVM funciona después de liberar.
+- [x] i18n:18 páginas/1272 claves,8 tests catálogos,16 fixtures Chrome terminal0 (proceso28119). Conservación de formularios/Markdown/identidades y ningún refetch por idioma; documentación antigua actualizada.
+- [x] Java final:64 suites,1349 tests,0 fallos/errores/omitidos; `/tmp/reduniv-blocks-final-java.log`, terminal0,1m34s.
+- [x] JAR final:11s, terminal0; `/tmp/reduniv-blocks-final-jar.log`.55assets idénticos byte a byte a fuentes.
+- [x] E2E final PostgreSQL/SMTP/Chrome/restauración con migración doble y validate: `/tmp/reduniv-blocks-final-e2e.log`, terminal0; dos JVM y todos los flujos previos aprobados, guard JS sin errores.
+- [x] Gate de secretos árbol actual:0 hallazgos; no equivale a revisión/rotación del historial.
+
+Resumen: `docs/TECHNICAL_CLOSEOUT.md`. Operación: `docs/SEARCH_INDEX_RECOVERY.md` y
+`docs/DOI_CONCURRENCY_RECOVERY.md`. Migración idempotente añade tabla/columnas sin
+recrear datos. Validaciones DataCite institucional, HAProxy real, políticas, revisión
+bibliotecaria y accesibilidad manual siguen separadas de estos cuatro bloques.
+Este cierre no certifica automáticamente todos los otros requisitos de la matriz.

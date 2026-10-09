@@ -274,3 +274,14 @@ ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS metadata_profile_revisio
 CREATE TABLE IF NOT EXISTS scientific_record_profile_fields (
  resource_id varchar(255) NOT NULL REFERENCES scientific_records(resource_id), field_name varchar(80) NOT NULL, PRIMARY KEY(resource_id,field_name)
 );
+
+-- Durable search indexing: safe to rerun, no deletion of existing data.
+CREATE TABLE IF NOT EXISTS search_index_tasks (
+    id varchar(36) PRIMARY KEY,
+    resource_id varchar(255) NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL
+);
+CREATE INDEX IF NOT EXISTS search_index_tasks_created_idx ON search_index_tasks(created_at);
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS doi_publication_pending boolean NOT NULL DEFAULT false;
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS doi_publication_owner varchar(255);
+ALTER TABLE scientific_records ADD COLUMN IF NOT EXISTS doi_publication_running boolean NOT NULL DEFAULT false;

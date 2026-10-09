@@ -24,6 +24,12 @@ public class ScientificRecord {
     private String resourceId;
     @Version
     private long revision;
+    @Column(nullable = false)
+    private boolean doiPublicationPending;
+    @Column(nullable = false)
+    private boolean doiPublicationRunning;
+    @Column(length = 255)
+    private String doiPublicationOwner;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PublicationStatus status = PublicationStatus.DRAFT;

@@ -152,15 +152,25 @@ La suite Java final: 61 suites, 1337 tests sin fallos/errores/omitidos,
 `/tmp/reduniv-uploadfence-final-java.log`. Incluye contrato editable/refresco/estados y
 configuración real de Connector, además de matrices y regresiones previas.
 
-### Todavía pendiente en F15
+### Cierre de las rutas técnicas (8 octubre 2026)
 
-- Rutas legacy generales de DataResourceController (CRUD, raw data y content metadata).
-- Flujo DOI automatizado dentro de sus transacciones cortas y snapshots de publicación.
-- Prueba de dos JVM y auditoría de filesystem/rollback/versionado/escritores no coordinados.
+- CRUD, aliases PID, contenido raw y metadatos de contenido legacy abren transacción
+  primaria y revalidan DRAFT bajo rowlock antes de escribir. DELETE inexistente
+  conserva su semántica y la prioridad de If-Match/readonly no cambia.
+- El fence refresca la ficha científica ya gestionada: bloquear una fila no hace
+  que un objeto cacheado por OSIV se actualice por sí solo.
+- ORCID callback realiza intercambio HTTP fuera de la transacción; attach abre una
+  transacción corta y vuelve a comprobar estado y autoría bajo lock.
+- La indexación inmediata fue sustituida por intenciones SQL durables y snapshots
+  separados. Véase SEARCH_INDEX_RECOVERY.md. No hay commit distribuido SQL/ES.
+- DOI usa transacciones cortas, claim durable familiar y exclusión de runners
+  duplicados; se reintenta tras fallo sin devolver el depósito a borrador.
+  Véase DOI_CONCURRENCY_RECOVERY.md para caída abrupta de JVM.
+- E2E real con dos JVM sobre el mismo PostgreSQL: un PUT legacy bloqueado por
+  rowlock conserva la lease HTTP; otro JVM recibe409 con Retry-After, otra ficha
+  sigue editable y PATCH desde el segundo JVM se recupera al liberar ambos locks.
 
-Antes de envolver los controladores legacy en transacciones, corregir su indexación:
-`indexResource` hoy guarda en Elasticsearch inmediatamente y modifica parentResource
-sobre objetos de contenido. Una transacción exterior podría indexar antes del commit
-y ensuciar entidades gestionadas. Hace falta coordinación after-commit/reintentos y
-snapshots sin modificar entidades persistentes. No declarar esta segunda barrera
-aplicada a esas rutas porque solo se probó el gate de petición.
+Los locks protegen el estado editorial, no convierten filesystem/SQL/DataCite/ES
+en una sola transacción. Conservar backups y el procedimiento de restauración.
+El HAProxy remoto y la validación DataCite institucional requieren sus propias
+pruebas de despliegue. Los logs finales se registran en REDUNIV_EXECUTION_PLAN.md.

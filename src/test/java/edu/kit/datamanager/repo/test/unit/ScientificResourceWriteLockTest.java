@@ -16,7 +16,7 @@ public class ScientificResourceWriteLockTest {
     private final EntityManager entities = mock(EntityManager.class);
     private ScientificResourceWriteLock service(String url) {
         var database = new DataSourceProperties(); database.setUrl(url);
-        return new ScientificResourceWriteLock(entities, database, mock(edu.kit.datamanager.repo.repository.ScientificRecordRepository.class));
+        return new ScientificResourceWriteLock(entities, database, mock(edu.kit.datamanager.repo.repository.ScientificRecordRepository.class),mock(edu.kit.datamanager.repo.service.SearchIndexOutbox.class));
     }
     @After public void cleanup() { TransactionSynchronizationManager.clear(); }
     @Test public void rejectsMissingOrReadOnlyTransactionWithoutTouchingDatabase() {
@@ -67,7 +67,7 @@ public class ScientificResourceWriteLockTest {
         when(entities.find(eq(DataResource.class),eq("r1"),eq(LockModeType.PESSIMISTIC_WRITE),anyMap())).thenReturn(row);
         var science=new edu.kit.datamanager.repo.domain.ScientificRecord("r1");
         when(records.findById("r1")).thenReturn(java.util.Optional.of(science));
-        var locks=new ScientificResourceWriteLock(entities,database,records);
+        var locks=new ScientificResourceWriteLock(entities,database,records,mock(edu.kit.datamanager.repo.service.SearchIndexOutbox.class));
         assertSame(row,locks.acquireEditable("r1"));
         var order=inOrder(entities,records);
         order.verify(entities).find(eq(DataResource.class),eq("r1"),eq(LockModeType.PESSIMISTIC_WRITE),anyMap());
