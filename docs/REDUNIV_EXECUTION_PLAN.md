@@ -317,3 +317,5 @@ El objetivo global no se da por terminado con esta regresión.
 - [ ] Política institucional de visibilidad y revisión manual siguen pendientes; comparación no representa auditoría de cada edición privada ni diferencias de contenido binario.
 
 - Diagnóstico F13: primera integración falló porque el módulo nuevo no estaba en allowlist de assets anónimos de Spring Security. Corregido; JAR y E2E repetidos, resultado aún pendiente. /tmp/reduniv-f13-retry-e2e.log.
+
+- [x] Repetición F13 terminal 0: comparación pública real, todos los flujos existentes y restauración PostgreSQL completos; guard final sin errores JS. /tmp/reduniv-f13-retry-e2e.log. JAR reconstruido tras allowlist, 11s.
