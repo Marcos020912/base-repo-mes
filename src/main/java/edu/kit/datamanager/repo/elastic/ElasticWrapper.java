@@ -37,7 +37,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
  *
  * @author jejkal
  */
-@Document(indexName = "baserepo")
+@Document(indexName = "#{@environment.getProperty('repo.search.index', 'baserepo')}")
 public class ElasticWrapper {
 
     @Id
