@@ -255,3 +255,7 @@ Usa informes sintéticos y no modifica depósitos reales.
 `node tools/e2e/creator-modal-smoke.cjs` prueba encabezado/cuerpo/pie con
 márgenes, nombres largos, diez instituciones, cuerpo desplazable a 320 px,
 axe y ausencia de escrituras; datos sintéticos. `E2E_SCREENSHOT_PATH` opcional.
+
+El fixture compartido también comprueba que «Mi cuenta» no aparezca en el menú
+para ningún rol; el nombre abre un modal, los campos se vacían y ocultan al
+cerrarlo y el modal pasa axe. No envía cambios de contraseña.

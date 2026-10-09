@@ -57,7 +57,7 @@ document.querySelectorAll('.brand').forEach(brand => {
 const editorial = ['CURATOR','ADMINISTRATOR'].includes(signedInUser?.role);
 const administrator = signedInUser?.role === 'ADMINISTRATOR';
 const navigation = [
-  ['index.html','nav.catalog',true], ['my-datasets.html','nav.mine',true], ['account.html','nav.account',true],
+  ['index.html','nav.catalog',true], ['my-datasets.html','nav.mine',true],
   ['reviews.html','nav.reviews',editorial], ['users.html','nav.users',administrator],
   [editorial?'collections.html?manage=true':'collections.html','nav.collections',true],
   ['operations.html','nav.operations',editorial], ['self-assessment.html','nav.assessment',editorial],
@@ -82,8 +82,55 @@ document.querySelectorAll('.sidebar').forEach(sidebar => {
     sidebar.insertBefore(label,nav);
   }
 });
-document.querySelectorAll('#current-user').forEach(node=>node.textContent=signedInUser?.username || '');
+document.querySelectorAll('#current-user').forEach(node=>{
+  const button=document.createElement('button');button.id='current-user';button.type='button';button.className='link-button account-trigger';button.textContent=signedInUser?.username||'';
+  button.setAttribute('aria-haspopup','dialog');uiI18n.attribute(button,'aria-label','account.open');node.replaceWith(button);
+});
 document.querySelectorAll('[data-logout]').forEach(button=>{uiI18n.set(button,'nav.logout');button.addEventListener('click',auth.logout);});
+
+// Account dialog shared by all authenticated pages; credentials are never prefilled.
+if(signedInUser && auth.token() && document.querySelector('.sidebar')) {
+  const modal=document.createElement('dialog');modal.className='modal account-modal';modal.id='account-modal';modal.setAttribute('aria-labelledby','account-modal-heading');
+  modal.innerHTML='<form id="account-modal-form"><header><h2 id="account-modal-heading" data-i18n="account.heading"></h2><button type="button" class="icon-button" data-account-close data-i18n-aria-label="account.close">×</button></header><div class="modal-body"><p data-i18n="account.lead"></p><label><span data-i18n="account.current"></span><input name="currentPassword" type="password" autocomplete="current-password" required></label><label><span data-i18n="account.new"></span><small data-i18n="account.minimum"></small><input name="newPassword" type="password" autocomplete="new-password" minlength="12" required></label><label><span data-i18n="account.confirm"></span><input name="confirmation" type="password" autocomplete="new-password" minlength="12" required></label></div><footer><button type="button" class="secondary" data-account-close data-i18n="creators.cancel"></button><button class="primary" type="submit" data-i18n="account.submit"></button></footer></form>';
+  document.body.append(modal);
+  modal.querySelectorAll('[data-i18n]').forEach(n=>uiI18n.set(n,n.dataset.i18n));uiI18n.attribute(modal.querySelector('.icon-button'),'aria-label','account.close');
+  modal.querySelectorAll('[data-account-close]').forEach(b=>b.onclick=()=>modal.close());
+  modal.addEventListener('close',()=>modal.querySelector('form').reset());
+  document.querySelectorAll('.account-trigger').forEach(button=>button.onclick=()=>modal.showModal());
+}
+function bindAccountPasswordForm(passwordForm) {
+const passwordSubmit = passwordForm.querySelector('button[type=submit]');
+passwordForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (passwordSubmit.disabled) return;
+  const form = new FormData(passwordForm);
+  if (form.get('newPassword') !== form.get('confirmation')) { toast.errorKey('account.mismatch'); return; }
+  let completed = false;
+  passwordSubmit.disabled = true;
+  passwordForm.setAttribute('aria-busy', 'true');
+  uiI18n.set(passwordSubmit,'account.busy');
+  try {
+    const response = await fetch('/api/v1/auth/change-password', {
+      method: 'POST', headers: auth.headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ currentPassword: form.get('currentPassword'), newPassword: form.get('newPassword') })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw body.message?new Error(body.message):uiI18n.error('account.failed');
+    completed = true;
+    toast.successKey('account.success');
+    setTimeout(auth.logout, 1200);
+  } catch (error) { toast.errorObject(error); }
+  finally {
+    if (!completed) {
+      passwordSubmit.disabled = false;
+      passwordForm.setAttribute('aria-busy', 'false');
+      uiI18n.set(passwordSubmit,'account.submit');
+    }
+  }
+});
+
+}
+document.querySelectorAll('#password-form,#account-modal-form').forEach(bindAccountPasswordForm);
 
 // Password visibility is per field, never changes its value or submits the form.
 let passwordFieldSequence = 0;

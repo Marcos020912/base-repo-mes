@@ -27,6 +27,17 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.$$eval('.sidebar nav a[aria-current=page]:not([hidden])',xs=>xs.length),baseline.some(href=>href.split('?')[0]===active)?1:0,role+' active '+section);
    await page.select('[data-ui-locale]','en');assert.equal(await page.$eval('.sidebar nav a',x=>x.textContent),'▦ Catalogue');
   }
+  assert.equal(baseline.includes('account.html'),false);
+  await page.click('#current-user');await page.waitForSelector('#account-modal[open]');
+  await page.addScriptTag({content:require('../a11y/node_modules/axe-core').source});assert.deepEqual((await page.evaluate(()=>axe.run(document.querySelector('#account-modal')))).violations.map(v=>v.id),[]);
+  assert.equal(await page.$eval('#account-modal [name=currentPassword]',n=>n.value),'');
+  if(process.env.E2E_SCREENSHOT_PATH)await (await page.$('#account-modal')).screenshot({path:process.env.E2E_SCREENSHOT_PATH});
+  await page.setViewport({width:320,height:800});assert(await page.$eval('#account-modal',n=>n.scrollWidth<=n.clientWidth));await page.setViewport({width:800,height:600});
+  await page.type('#account-modal [name=currentPassword]','synthetic-no-submit');
+  await page.click('#account-modal .password-toggle');assert.equal(await page.$eval('#account-modal [name=currentPassword]',n=>n.type),'text');
+  await page.click('#account-modal [data-account-close]');
+  await page.click('#current-user');assert.equal(await page.$eval('#account-modal [name=currentPassword]',n=>n.value),'');assert.equal(await page.$eval('#account-modal [name=currentPassword]',n=>n.type),'password');
+  await page.click('#account-modal [data-account-close]');
   assert.equal(baseline.includes('users.html'),role==='ADMINISTRATOR');assert.equal(baseline.includes('operations.html'),role!=='USER');
  }
  await page.goto(base+'/register.html');await page.waitForSelector('.mail-delivery-notice a');assert.equal(await page.$eval('.mail-delivery-notice a',x=>x.href),'http://localhost:8025/');

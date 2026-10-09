@@ -1393,5 +1393,7 @@
   "readiness.formats.IMAGE": "JPG, PNG or TIFF",
   "readiness.formats.TEXT": "PDF, DOCX or TXT",
   "readiness.formats.AUDIOVISUAL": "MP4, WEBM or MOV",
-  "readiness.formats.OTHER": "files in the format you need"
+  "readiness.formats.OTHER": "files in the format you need",
+  "account.open": "Open my account",
+  "account.close": "Close my account"
 }

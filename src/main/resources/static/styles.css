@@ -286,3 +286,12 @@ input[type="checkbox"],input[type="radio"] { width:20px; height:20px; padding:0;
  .creator-identity-modal .creator-identity-row { padding:12px; }
  .creator-identity-modal footer button { flex:1 1 auto; }
 }
+
+.account-trigger { text-align:left; overflow-wrap:anywhere; cursor:pointer; }
+.account-trigger:hover { text-decoration:underline; }
+.account-modal { max-height:calc(100dvh - 32px); overflow:hidden; }
+.account-modal form { display:flex; flex-direction:column; max-height:calc(100dvh - 32px); }
+.account-modal header,.account-modal footer { flex-shrink:0; }
+.account-modal .modal-body { min-height:0; overflow-y:auto; }
+.account-modal .modal-body>p { margin:0; color:var(--muted); line-height:1.5; }
+.account-modal footer { flex-wrap:wrap; }

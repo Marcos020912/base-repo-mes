@@ -23,4 +23,9 @@ public class DepositTaskServiceTest {
     }
     @Test public void authenticationAndBounds(){SecurityContextHolder.clearContext();assertEquals(401,Assert.assertThrows(ResponseStatusException.class,()->service.mine(0,10)).getStatusCode().value());assertEquals(400,Assert.assertThrows(ResponseStatusException.class,()->service.mine(-1,10)).getStatusCode().value());assertEquals(400,Assert.assertThrows(ResponseStatusException.class,()->service.mine(0,51)).getStatusCode().value());}
     @Test public void emptyQueueHasNoInspections(){when(ownership.findByUsernameIgnoreCaseOrderByCreatedAtDesc("author")).thenReturn(List.of());when(records.findAllById(any())).thenReturn(List.of());when(resources.findAllById(any())).thenReturn(List.of());var result=service.mine(0,10);assertEquals(0,result.total());assertTrue(result.items().isEmpty());verifyNoInteractions(quality);}
+    @Test public void emptyQueueSerializesItemsDespiteGlobalNonEmpty() throws Exception {
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().setSerializationInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY);
+        var json=mapper.readTree(mapper.writeValueAsString(new DepositTaskService.Tasks(List.of(),0,10,0,0)));
+        assertTrue(json.has("items"));assertTrue(json.get("items").isArray());assertEquals(0,json.get("items").size());assertEquals(0,json.get("pages").asInt());
+    }
 }

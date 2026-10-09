@@ -159,3 +159,17 @@ Estructura header/modal-body/footer conforme al modal compartido; márgenes
 internos, altura limitada al viewport, cuerpo con scroll y acciones persistentes.
 Nombres largos e instituciones no desbordan. Fixture con diez instituciones,
 320 px y axe aprobado, sin escrituras a cuentas o depósitos reales.
+
+### Cuenta desde identidad y tareas vacías
+
+- Eliminado «Mi cuenta» del registro compartido de navegación para todos los
+  roles. El nombre de usuario abre un modal con el formulario existente de
+  contraseña, visibilidad por campo y validación; al cerrar borra los valores.
+  La URL antigua sigue compatible, sin enlace de menú. No se cambian credenciales
+  ni se elude la contraseña actual; éxito conserva la invalidación de sesiones.
+- Error admin reproducido en Chrome localhost: una cola vacía perdía `items`
+  debido al Jackson global NON_EMPTY. DTO Tasks ahora incluye explícitamente
+  `items: []`; prueba de serialización con la misma política global aprobada.
+- En Chrome real admin ahora muestra «Sin tareas de depósito»; modal verificado
+  en admin localhost y usuario127.0.0.1 sin enviar formularios. Fixture de menú
+  de36casos ampliado con apertura/cierre/borrado/visibilidad y axe del modal.
