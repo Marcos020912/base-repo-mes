@@ -13,6 +13,10 @@ class PreflightTest(unittest.TestCase):
   self.assertFalse(result['ready']);self.assertNotIn('SECRET_SENTINEL',str(result))
  def test_destructive_schema(self):self.assertFalse(self.check(self.valid().replace('ddl-auto=validate','ddl-auto=create-drop'))['ready'])
  def test_capture_and_wildcard(self):self.assertFalse(self.check(self.valid()+'\nrepo.mail.delivery-mode=LOCAL_CAPTURE\nspring.mail.properties.mail.smtp.ssl.trust=*')['ready'])
+ def test_public_template_jwt_is_rejected_and_redacted(self):
+  secret='vkfvoswsohwrxgjaxipuiyyjgubggzdaqrcuupbugxtnalhiegkppdgjgwxsmvdb'
+  result=self.check(self.valid().replace('x'*48,secret))
+  self.assertFalse(result['ready']);self.assertNotIn(secret,str(result))
  def test_strict_schema(self):
   text=self.valid().replace('ddl-auto=validate','ddl-auto=update');self.assertTrue(self.check(text)['ready']);self.assertFalse(self.check(text,True)['ready'])
 if __name__=='__main__':unittest.main()

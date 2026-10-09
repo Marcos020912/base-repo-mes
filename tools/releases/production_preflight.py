@@ -22,7 +22,8 @@ def inspect(filename, strict_schema=False):
     def true(key):return values.get(key,'').lower()=='true'
     require(true('repo.auth.enabled'),'Enable repo.auth.enabled')
     require(values.get('management.endpoints.web.exposure.include','health')=='health','Expose only Actuator health in production')
-    require(len(values.get('repo.auth.jwtSecret','').encode())>=32,'Set a unique repo.auth.jwtSecret of at least 32 bytes')
+    jwt_secret=values.get('repo.auth.jwtSecret','')
+    require(len(jwt_secret.encode())>=32 and jwt_secret!='vkfvoswsohwrxgjaxipuiyyjgubggzdaqrcuupbugxtnalhiegkppdgjgwxsmvdb','Set a unique repo.auth.jwtSecret of at least 32 bytes; the public template key is forbidden')
     require(values.get('repo.auth.bootstrap-admin-password') not in ('admin12345','admin','password'),'Remove the known bootstrap admin password and rotate existing credentials')
     require(values.get('spring.datasource.url','').startswith('jdbc:postgresql:'),'Production requires PostgreSQL datasource')
     require(bool(values.get('spring.datasource.password')),'Set spring.datasource.password externally')
