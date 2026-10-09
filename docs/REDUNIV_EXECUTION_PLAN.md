@@ -267,3 +267,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Identidad/publicación, campos científicos y listado de archivos con bindings es/en propios; títulos, valores, nombres y cita originales preservados. Estados desconocidos no se muestran falsamente como borrador.
 - [x] Chrome `node tools/e2e/resource-dynamic-i18n.cjs`: render dinámico, metadatos/archivos/cita y confirmación de archivo conservados, sin API por idioma. Compartidos/backend stubbed, no evidencia de edición/autorización real.
 - [ ] Mensajes de DOI, historial/calidad, políticas de archivos y vista previa de envío aún por migrar; ficha privada global permanece parcial.
+
+### DOI, historial y calidad de ficha privada — avance A07 (2026-10-08)
+- [x] Políticas de archivos, estados DOI/confirmación de reserva, historial editorial y checklist de calidad es/en; códigos DOI, actores y notas originales. Fallo de calidad limpia checks y porcentaje anterior.
+- [x] Fixture Chrome dinámica ampliada: estado DOI DRAFT sin presentar publicación, checklist conocido traducido/campo institucional desconocido original, historial con actor/nota intactos y cero consultas por idioma. Fixture UI con backend stubbed.
+- [ ] Vista previa de envío, mensajes/errores restantes y flujo completo real siguen pendientes; ficha privada todavía no finalizada.
