@@ -104,13 +104,27 @@ ALTER TABLE scientific_creators ADD COLUMN IF NOT EXISTS orcid_authenticated_by 
 
 -- OAuth authorization requests are short-lived and consumed atomically by a row lock.
 CREATE TABLE IF NOT EXISTS orcid_oauth_states (
-    state_hash char(64) PRIMARY KEY,
+    state_hash varchar(64) PRIMARY KEY,
     resource_id varchar(255) NOT NULL,
     creator_id bigint NOT NULL,
     username varchar(80) NOT NULL,
     expires_at timestamptz NOT NULL,
     consumed_at timestamptz
 );
+-- Earlier migrations used CHAR(64), but JPA String expects VARCHAR(64).
+-- Correct only the legacy fixed-width type; leave an already-correct schema unchanged.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_attribute
+        WHERE attrelid = 'orcid_oauth_states'::regclass
+          AND attname = 'state_hash' AND NOT attisdropped
+          AND atttypid = 'bpchar'::regtype
+    ) THEN
+        ALTER TABLE orcid_oauth_states ALTER COLUMN state_hash
+            TYPE varchar(64) USING state_hash::varchar(64);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_orcid_oauth_expires ON orcid_oauth_states(expires_at);
 
 -- Extra institutions per author; scientific_creators.institution/ror remains
