@@ -4,7 +4,7 @@ const resend = document.querySelector('#resend');
 const submit = form.querySelector('button');
 const params = new URLSearchParams(location.search);
 form.elements.email.value = params.get('email') || '';
-function notifyKey(key,kind=''){message.className=`message ${kind}`.trim();uiI18n.set(message,key);}
+function notifyKey(key,kind=''){message.className='message';if(kind){uiI18n.plain(message,'');toast[kind+'Key'](key);}else uiI18n.set(message,key);}
 function notifyError(error){message.className='message error';uiI18n.showError(message,error);}
 function busy(value) {
   resend.disabled = value; submit.disabled = value;

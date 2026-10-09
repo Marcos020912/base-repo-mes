@@ -8,13 +8,20 @@ const auth = {
 
 const toast = {
   show(kind, text, key, params={}) {
+    const signature=JSON.stringify([kind,text,key,params]);if(this.last?.signature===signature&&Date.now()-this.last.time<250)return;this.last={signature,time:Date.now()};
     let container = document.querySelector('#toast-container');
     if (!container) { container = document.createElement('div'); container.id = 'toast-container'; container.setAttribute('aria-live', 'polite'); document.body.append(container); }
+    const activeDialog=document.querySelector('dialog[open]');
+    if(activeDialog){activeDialog.append(container);activeDialog.addEventListener('close',()=>{if(container.parentNode===activeDialog)document.body.append(container);},{once:true});}else if(container.parentNode!==document.body)document.body.append(container);
     const item = document.createElement('div'); item.className = `toast ${kind}`;
     const icon = document.createElement('span'); icon.className = 'toast-icon'; icon.textContent = kind === 'success' ? '✓' : '×';
     const label = document.createElement('span'); if(key)uiI18n.set(label,key,params);else label.textContent = String(text);
-    item.append(icon, label);
-    container.append(item); setTimeout(() => item.remove(), 5500);
+    icon.setAttribute('aria-hidden','true');
+    label.className='toast-text';
+    const close=document.createElement('button');close.type='button';close.className='toast-close';close.textContent='×';uiI18n.attribute(close,'aria-label','notification.close');
+    const remove=()=>{clearTimeout(timer);item.remove();};close.addEventListener('click',remove);
+    item.setAttribute('role',kind==='error'?'alert':'status');item.append(icon,label,close);
+    container.append(item); const timer=setTimeout(remove,10000);
   },
   success: (text) => toast.show('success', text),
   error: (text) => toast.show('error', text),

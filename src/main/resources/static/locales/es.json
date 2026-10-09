@@ -1346,5 +1346,15 @@
   "password.show": "Mostrar contraseña",
   "password.hide": "Ocultar contraseña",
   "mail.localNotice": "Correo de prueba: los mensajes se guardan en el visor local y no se envían a tu bandeja de entrada. Abre el visor para consultar tu código de verificación.",
-  "mail.localLink": "Abrir correo de pruebas"
+  "mail.localLink": "Abrir correo de pruebas",
+  "notification.close": "Cerrar notificación",
+  "wizard.previewUpdated": "Vista previa actualizada.",
+  "wizard.previewMissingDescription": "Selecciona la descripción del proyecto para generar la vista previa.",
+  "deposit.pendingHeading": "Pendientes del depósito",
+  "deposit.pendingNote": "Los requisitos son necesarios para enviar o publicar; las recomendaciones mejoran la documentación.",
+  "deposit.pendingSummary": "{count} aspectos pendientes.",
+  "deposit.openDetails": "Ver detalles",
+  "deposit.closeDetails": "Cerrar",
+  "vocabulary.toggle": "Mostrar sugerencias",
+  "vocabulary.noMatches": "No hay sugerencias. Puedes escribir tu propio valor."
 }

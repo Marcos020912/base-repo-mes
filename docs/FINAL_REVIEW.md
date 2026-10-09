@@ -103,3 +103,29 @@ El fixture compartido incluye documentos de 3000 px en cuatro páginas para
 ambos roles, pie estable, scroll del menú a 600 px y móvil a 320 px.
 Fixture aprobado; axe: 69 estados, cero infracciones; JAR recompilado y
 aplicación reiniciada, health UP.
+
+### Asistente, avisos y tarjetas de pendientes
+
+- Avisos compartidos: errores rojos y éxitos verdes, 10 segundos, botón de cierre
+  accesible; los errores conectados de `uiI18n.showError` ya no duplican texto
+  rojo en el cuerpo. Los mensajes de progreso y los detalles diagnósticos de
+  modales conservan su función. Avisos alojados sobre el diálogo abierto para
+  evitar que la capa nativa del modal los oculte.
+- Disciplina/licencia: sugerencias con búsqueda, navegación con flechas,
+  Enter/Escape y estilos propios; conserva el campo original y permite entrada
+  libre. No hay cambios a los vocabularios ni reglas del servidor.
+- Radios de carga en tarjetas y checkbox de confirmación alineado con su texto.
+- Regeneración de vista previa: bloqueo durante lectura, resultado confirmado,
+  errores legibles y control de resultados obsoletos; no transfiere archivos.
+- Mis depósitos: tarjeta breve con «Ver detalles», modal de requisitos y
+  recomendaciones, «Cerrar» y «Completar depósito». Enlace no partido entre
+  líneas para mantener una superficie de clic fiable.
+
+Pruebas: 21 fixtures aislados aprobados; prueba específica de controles,
+modal y sugerencias con axe aprobada; auditoría base de 69 estados sin
+infracciones; 9 pruebas i18n aprobadas. Ensayo del asistente con JAR/Chrome y
+backend aislado aprobado: md, ZIP de descripción, ZIP integral, subida
+interrumpida, recuperación, versiones, permisos, curación y vocabularios.
+La compilación y el reinicio local conservan los datos del usuario; no se
+publican recursos ni se fusionan ramas. Comprobado modal real de pendientes en
+la sesión del usuario sin modificar el dataset.

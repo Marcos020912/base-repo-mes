@@ -7,8 +7,7 @@ registrationForm.addEventListener('submit', async event => {
   if (registrationSubmit.disabled) return;
   const form = new FormData(registrationForm);
   if (form.get('password') !== form.get('confirmation')) {
-    registrationMessage.className = 'message error';
-    uiI18n.set(registrationMessage,'password.mismatch'); return;
+    registrationMessage.className='message';uiI18n.plain(registrationMessage,'');toast.errorKey('password.mismatch');return;
   }
   registrationSubmit.disabled = true; registrationForm.setAttribute('aria-busy', 'true');
   registrationMessage.className = 'message'; uiI18n.set(registrationMessage,'register.busy');
@@ -18,8 +17,7 @@ registrationForm.addEventListener('submit', async event => {
     const body = await response.json().catch(() => ({}));
     const mailPending = body.code === 'VERIFICATION_MAIL_UNAVAILABLE';
     if (!response.ok && !mailPending) throw body.message?new Error(body.message):uiI18n.error('register.failed');
-    registrationMessage.className = mailPending ? 'message error' : 'message success';
-    if(mailPending&&body.message)uiI18n.plain(registrationMessage,body.message);else uiI18n.set(registrationMessage,mailPending?'mail.pending':'register.success');
+    registrationMessage.className='message';uiI18n.plain(registrationMessage,'');if(mailPending){if(body.message)toast.error(body.message);else toast.errorKey('mail.pending');}else toast.successKey('register.success');
     setTimeout(() => location.assign(`verify.html?email=${encodeURIComponent(form.get('email'))}${mailPending ? '&mailPending=1' : ''}`), mailPending ? 2200 : 900);
   } catch (error) {
     registrationMessage.className = 'message error'; uiI18n.showError(registrationMessage,error);

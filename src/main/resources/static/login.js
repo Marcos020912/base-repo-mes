@@ -18,9 +18,9 @@ loginForm.addEventListener('submit', async event => {
         navigating = true; location.assign(`verify.html?email=${encodeURIComponent(body.email || '')}`); return;
       }
       if (body.code === 'ACCOUNT_RESTRICTED') {
-        loginMessage.className = 'message error';
+        loginMessage.className = 'message';toast.errorKey('login.restricted');
         const link = document.createElement('a'); link.href = 'mailto:soporte@mes.gob.cu'; link.textContent = 'soporte@mes.gob.cu';
-        uiI18n.plain(loginMessage,'');const explanation=document.createElement('span');uiI18n.set(explanation,'login.restricted');loginMessage.replaceChildren(explanation, link, '.'); return;
+        uiI18n.plain(loginMessage,'');const explanation=document.createElement('span');uiI18n.set(explanation,'login.restricted');loginMessage.replaceChildren(link); return;
       }
       throw body.message?new Error(body.message):uiI18n.error('login.failed');
     }

@@ -77,8 +77,8 @@ function restoreDraft() {
 }
 
 function report(message,kind=''){errorBox.className=`message ${kind}`;uiI18n.plain(errorBox,message);}
-function reportKey(key,kind='',params={}){errorBox.className=`message ${kind}`;uiI18n.plain(errorBox,'');errorBox.append(uiNode('span',key,params));}
-function reportFailure(key,error,params={}){errorBox.className='message error';uiI18n.plain(errorBox,'');if(key)errorBox.append(uiNode('span',key,params),document.createTextNode(' '));const detail=document.createElement('span');uiI18n.showError(detail,error);errorBox.append(detail);}
+function reportKey(key,kind='',params={}){errorBox.className='message';uiI18n.plain(errorBox,'');if(kind==='error'){toast.errorKey(key,params);return;}if(kind==='success'){toast.successKey(key,params);return;}errorBox.append(uiNode('span',key,params));}
+function reportFailure(key,error,params={}){errorBox.className='message';uiI18n.plain(errorBox,'');const detail=error.i18nKey?uiI18n.t(error.i18nKey,error.i18nParams):error.message;toast.error((key?uiI18n.t(key,params)+' ':'')+detail);}
 function addCreator(givenName = '', familyName = '') {
   const row = document.createElement('div'); row.className = 'creator-row';
   const given = document.createElement('label'); given.append(uiNode('span','wizard.givenName'));
@@ -294,6 +294,7 @@ async function renderPreview() {
   if(packageMode()){const archive=$('#package-file').files[0];description.append(uiNode('p','wizard.previewPackage',{name:archive.name,type:value('type')}));target.append(description);const list=node('section','','wizard-preview-section');list.append(uiNode('h3','wizard.packageSelected'),node('p',`${archive.name} · ${archive.size.toLocaleString(uiI18n.locale)} bytes`));target.append(list);return;}
   target.append(description); // Mount owned labels before awaiting a local file read.
   const descriptionFile=$('#description-file').files[0];
+  if(!descriptionFile)throw uiI18n.error('wizard.previewMissingDescription');
   if(descriptionFile.name==='description.md'){if(descriptionFile.size>1024*1024)description.append(uiNode('p','wizard.markdownLarge'));else{const markdown=await descriptionFile.text();if(renderId!==previewRenderId)return;const body=node('div','','wizard-markdown');previewMarkdown(markdown,body);description.append(body);}}
   else description.append(uiNode('p','wizard.previewDescriptionZip',{name:descriptionFile.name}));target.append(description);
   const list=node('section','','wizard-preview-section');list.append(uiNode('h3','wizard.selectedFiles'));const ul=document.createElement('ul');for(const file of files()){const item=node('li',`${file.webkitRelativePath||file.name} · ${file.size.toLocaleString(uiI18n.locale)} bytes`);if(file.name.toLowerCase().endsWith('.zip'))item.append(document.createTextNode(' · '),uiNode('span','wizard.zipExtractPending'));ul.append(item);}list.append(ul);target.append(list);
@@ -362,7 +363,6 @@ async function save(submit) {
     location.assign(`resource.html?id=${encodeURIComponent(createdId)}`);
   } catch (error) {
     reportFailure(createdId?'wizard.partialFailure':null,error,{id:createdId});if(createdId)errorBox.append(document.createTextNode(' '),uiNode('span','wizard.correctDraft'));
-    toast.errorObject(error);
     if (createdId) {
       const link = document.createElement('a'); link.href = `resource.html?id=${encodeURIComponent(createdId)}`; uiI18n.set(link,'wizard.openDraft');
       errorBox.append(document.createElement('br'), link);
@@ -393,7 +393,14 @@ $('#dataset-files').addEventListener('change', updateFileCount);
 $('#description-file').addEventListener('change', updateSubmissionButton);
 $('#package-file').addEventListener('change', updateFileCount);
 form.querySelectorAll('[name="uploadMode"]').forEach(input => input.addEventListener('change', updateUploadMode));
-$('#retry-preview').addEventListener('click',()=>showStep(7));
+$('#retry-preview').addEventListener('click',async()=>{
+  if(busy||step!==7)return;
+  const button=$('#retry-preview');button.disabled=true;previewReady=false;$('#wizard-next').disabled=true;
+  const generation=++previewGeneration;
+  try {await renderPreview();if(generation===previewGeneration&&step===7){previewReady=true;$('#wizard-next').disabled=false;toast.successKey('wizard.previewUpdated');}}
+  catch(error){if(generation===previewGeneration)reportFailure('wizard.previewFailed',error);}
+  finally{button.disabled=false;}
+});
 $('#wizard-back').addEventListener('click', () => showStep(step - 1));
 $('#wizard-next').addEventListener('click', () => { if (validateStep(step)) showStep(step + 1); });
 $('#save-draft').addEventListener('click', () => save(false));

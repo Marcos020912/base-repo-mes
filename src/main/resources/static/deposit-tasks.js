@@ -18,13 +18,18 @@
         const card=text('article','');card.className='panel';const heading=text('h3',task.title);heading.className='truncate';heading.title=task.title;card.append(heading);
         const progress=document.createElement('p');progress.append(ui('span',task.status==='IN_REVIEW'?'deposit.review':'deposit.draft'),document.createTextNode(' · '),ui('span','deposit.checklistPercent',{percent:task.completionPercent}));card.append(progress,ui('p',task.status==='IN_REVIEW'?'deposit.waitReview':task.blockers?.length?'deposit.completeMetadata':'deposit.reviewSubmit'));
         if(task.status==='IN_REVIEW')card.append(ui('p','deposit.locked'));
-        const pending=text('ul','');for(const check of task.pending||[]){const item=document.createElement('li');item.append(checkLabel(check),document.createTextNode(': '),ui('span',check.required?'deposit.required':'deposit.recommended'),document.createTextNode('. '),qualityCodes.has(check.code)?ui('span',`quality.${check.code}.explanation`):check.code?.startsWith('profile:')?ui('span','quality.profileExplanation'):text('span',check.explanation||''));pending.append(item);}card.append(pending);
-        const link=ui('a',task.status==='IN_REVIEW'?'deposit.view':'deposit.complete');link.className='secondary';link.href='resource.html?id='+encodeURIComponent(task.resourceId);card.append(link);list.append(card);
+        const pending=text('ul','');for(const check of task.pending||[]){const item=document.createElement('li');item.append(checkLabel(check),document.createTextNode(': '),ui('span',check.required?'deposit.required':'deposit.recommended'),document.createTextNode('. '),qualityCodes.has(check.code)?ui('span',`quality.${check.code}.explanation`):check.code?.startsWith('profile:')?ui('span','quality.profileExplanation'):text('span',check.explanation||''));pending.append(item);}const dialog=document.createElement('dialog');dialog.className='modal task-details-modal';dialog.id=`task-details-${list.childElementCount}`;
+        const title=ui('h2','deposit.pendingHeading');title.id=dialog.id+'-title';dialog.setAttribute('aria-labelledby',title.id);
+        const details=text('div','');details.className='modal-body';details.append(text('h3',task.title),ui('p','deposit.pendingNote'),pending);
+        const footer=document.createElement('footer');const close=ui('button','deposit.closeDetails');close.type='button';close.className='secondary';close.onclick=()=>dialog.close();
+        const complete=ui('a',task.status==='IN_REVIEW'?'deposit.view':'deposit.complete');complete.className='primary';complete.href='resource.html?id='+encodeURIComponent(task.resourceId);footer.append(close,complete);const header=document.createElement('header');header.append(title);dialog.append(header,details,footer);
+        const summary=document.createElement('p');summary.append(ui('span','deposit.pendingSummary',{count:(task.pending||[]).length}));const open=ui('a','deposit.openDetails');open.className='task-details-link';open.href='#'+dialog.id;open.onclick=event=>{event.preventDefault();dialog.showModal();};summary.append(document.createTextNode(' '),open);card.append(summary,dialog);
+        list.append(card);
       }
       if(!body.total)list.append(ui('p','deposit.noTasks'));
       uiI18n.set(status,body.total?'deposit.taskTotal':'deposit.noTaskStatus',{total:body.total,page:body.page+1,pages:body.pages});
       document.querySelector('#task-previous').disabled=page===0;document.querySelector('#task-next').disabled=page+1>=pages;
-    }catch(error){if(current!==request)return;const message=document.createElement('p');uiI18n.showError(message,error);list.replaceChildren(message);uiI18n.set(status,'deposit.taskRetry');}
+    }catch(error){if(current!==request)return;toast.errorObject(error);list.replaceChildren();uiI18n.set(status,'deposit.taskRetry');}
     finally{if(current===request)section.setAttribute('aria-busy','false');}
   }
   document.querySelector('#task-previous').onclick=()=>{if(page>0){page--;load();}};

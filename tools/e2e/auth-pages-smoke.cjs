@@ -85,9 +85,9 @@ const server = http.createServer((request,response) => {
     await page.setViewport({width:1280,height:800});
     await page.goto(base+'/verify.html?mailPending=1');
     assert.equal(await page.$eval('h1',node=>node.textContent),'Verify your email');
-    assert((await page.$eval('#verify-message',node=>node.textContent)).includes('could not be sent'));
+    assert((await page.$eval('.toast:last-child .toast-text',node=>node.textContent)).includes('could not be sent'));
     await page.select('[data-ui-locale]','es');
-    assert((await page.$eval('#verify-message',node=>node.textContent)).includes('correo no salió'));
+    assert((await page.$eval('.toast:last-child .toast-text',node=>node.textContent)).includes('correo no salió'));
     assert.equal(requests+resends+registrations,0,'Cambiar idioma envió solicitudes de autenticación.');
     await page.evaluate(()=>localStorage.setItem('base-repo-token','invalid-local-fixture'));
     for (const name of ['login','register']) {
@@ -101,7 +101,7 @@ const server = http.createServer((request,response) => {
     await page.type('input[name=password]',password);
     await page.type('input[name=confirmation]',password+'different');
     await page.click('#register-form button[type=submit]');
-    await page.waitForFunction(()=>document.querySelector('#register-message').textContent==='Las contraseñas no coinciden.');
+    await page.waitForFunction(()=>document.querySelector('.toast:last-child .toast-text')?.textContent==='Las contraseñas no coinciden.');
     assert.equal(requests,0,'Se envió una solicitud con confirmación incorrecta.');
     await page.goto(base+'/login.html');
     await page.type('input[name=username]','fixture');
@@ -109,17 +109,17 @@ const server = http.createServer((request,response) => {
     await page.click('#login-form button[type=submit]');
     assert.equal(await page.$eval('#login-form button[type=submit]',el=>el.disabled),true);
     await page.evaluate(()=>document.querySelector('#login-form').requestSubmit());
-    await page.waitForFunction(()=>document.querySelector('#login-message').textContent==='Credenciales no válidas.');
+    await page.waitForFunction(()=>document.querySelector('.toast:last-child .toast-text')?.textContent==='Credenciales no válidas.');
     assert.equal(requests,1);
     assert.equal(new URL(page.url()).pathname,'/login.html');
     await page.click('#login-form button[type=submit]');
-    await page.waitForFunction(()=>document.querySelector('#login-message').textContent==='No se pudo iniciar sesión.');
+    await page.waitForFunction(()=>document.querySelector('.toast:last-child .toast-text')?.textContent==='No se pudo iniciar sesión.');
     assert.equal(requests,2,'Login duplicó solicitudes pendientes.');
-    await page.select('[data-ui-locale]','en');assert.equal(await page.$eval('#login-message',node=>node.textContent),'Unable to sign in.');
+    await page.select('[data-ui-locale]','en');assert.equal(await page.$eval('.toast:last-child .toast-text',node=>node.textContent),'Unable to sign in.');
     assert.equal(await page.$eval('input[name=password]',node=>node.value),password);
     await page.select('[data-ui-locale]','es');
     await page.click('#login-form button[type=submit]');
-    await page.waitForFunction(()=>document.querySelector('#login-message').textContent.includes('respuesta del servidor no es válida'));
+    await page.waitForFunction(()=>document.querySelector('.toast:last-child .toast-text')?.textContent.includes('respuesta del servidor no es válida'));
     assert.equal(new URL(page.url()).pathname,'/login.html');
     assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-token')),'invalid-local-fixture');
     assert.equal(await page.evaluate(()=>localStorage.getItem('base-repo-user')),null);
@@ -138,7 +138,7 @@ const server = http.createServer((request,response) => {
     await page.waitForFunction(()=>location.pathname==='/verify.html');
     assert.equal(registrations,1,'Registro duplicó solicitudes pendientes.');
     assert.equal(new URL(page.url()).searchParams.get('mailPending'),'1');
-    assert((await page.$eval('#verify-message',el=>el.textContent)).includes('cuenta fue creada'));
+    assert((await page.$eval('.toast:last-child .toast-text',el=>el.textContent)).includes('cuenta fue creada'));
 
     assert.equal(await page.$eval('input[name=email]', el=>el.value),'fixture@example.invalid');
     for (const invalid of ['', 'not-an-email']) {
@@ -151,15 +151,15 @@ const server = http.createServer((request,response) => {
     await page.click('#resend');
     assert.equal(await page.$eval('#verify-form button',el=>el.disabled),true);
     await page.evaluate(()=>document.querySelector('#resend').click());
-    await page.waitForFunction(()=>document.querySelector('#verify-message').textContent==='Correo temporalmente no disponible.');
+    await page.waitForFunction(()=>document.querySelector('.toast:last-child .toast-text')?.textContent==='Correo temporalmente no disponible.');
     assert.equal(resends,1,'Se duplicó el reenvío pendiente.');
     await page.click('#resend');
-    await page.waitForFunction(()=>document.querySelector('#verify-message').classList.contains('success'));
+    await page.waitForFunction(()=>Boolean(document.querySelector('.toast.success')));
     assert.equal(resends,2);
     assert.equal(await page.$eval('#verify-message',el=>el.classList.contains('error')),false);
     await page.type('input[name=code]','123456');
     await page.click('#verify-form button');
-    await page.waitForFunction(()=>document.querySelector('#verify-message')?.textContent==='Correo verificado. Redirigiendo…');
+    await page.waitForFunction(()=>document.querySelector('.toast:last-child .toast-text')?.textContent==='Correo verificado. Redirigiendo…');
     assert.equal(await page.$eval('#resend',el=>el.disabled),true);
     await page.waitForFunction(()=>location.pathname==='/login.html');
     await page.goto(base+'/account.html');
@@ -191,7 +191,7 @@ const server = http.createServer((request,response) => {
     await restricted.setRequestInterception(true);restricted.on('request',request=>{if(new URL(request.url()).pathname==='/api/v1/auth/login')request.respond({status:403,contentType:'application/json',body:JSON.stringify({code:'ACCOUNT_RESTRICTED'})});else request.continue();});
     await restricted.goto(base+'/login.html');await restricted.type('input[name=username]','fixture');await restricted.type('input[name=password]',password);await restricted.click('#login-form button[type=submit]');
     await restricted.waitForSelector('#login-message a[href="mailto:soporte@mes.gob.cu"]');await restricted.select('[data-ui-locale]','en');
-    assert((await restricted.$eval('#login-message',node=>node.textContent)).includes('Your account has been restricted.'));
+    assert((await restricted.$eval('.toast:last-child .toast-text',node=>node.textContent)).includes('Your account has been restricted.'));
     assert.equal(await restricted.$eval('#login-message a',node=>node.getAttribute('href')),'mailto:soporte@mes.gob.cu');await restricted.close();
     const blocked=await browser.newPage();blocked.on('pageerror',error=>errors.push(error.message));
     await blocked.evaluateOnNewDocument(()=>Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Storage disabled','SecurityError');}}));

@@ -17,7 +17,7 @@
   }
   function plain(target,value){textBindings.delete(target);delete target.dataset.i18n;target.removeAttribute('lang');target.textContent=value;}
   function error(key,params={}){const failure=new Error(t(key,params));failure.i18nKey=key;failure.i18nParams={...params};return failure;}
-  function showError(target,failure){if(failure.i18nKey)set(target,failure.i18nKey,failure.i18nParams);else plain(target,failure.message);}
+  function showError(target,failure){if(target.isConnected&&typeof toast!=='undefined'){target.classList.remove('error');plain(target,'');toast.errorObject(failure);return;}if(failure.i18nKey)set(target,failure.i18nKey,failure.i18nParams);else plain(target,failure.message);}
   function render(){
     if(document.documentElement.hasAttribute('data-ui-page-localized'))document.documentElement.lang=locale;
     for(const [target,binding] of textBindings){if(target.isConnected)set(target,binding.key,binding.params);else textBindings.delete(target);}

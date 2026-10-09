@@ -1346,5 +1346,15 @@
   "password.show": "Show password",
   "password.hide": "Hide password",
   "mail.localNotice": "Test email: messages are stored in the local viewer and are not sent to your inbox. Open the viewer to find your verification code.",
-  "mail.localLink": "Open test email"
+  "mail.localLink": "Open test email",
+  "notification.close": "Dismiss notification",
+  "wizard.previewUpdated": "Preview updated.",
+  "wizard.previewMissingDescription": "Select the project description to generate the preview.",
+  "deposit.pendingHeading": "Deposit checklist",
+  "deposit.pendingNote": "Requirements are needed for submission or publication; recommendations improve documentation.",
+  "deposit.pendingSummary": "{count} pending items.",
+  "deposit.openDetails": "View details",
+  "deposit.closeDetails": "Close",
+  "vocabulary.toggle": "Show suggestions",
+  "vocabulary.noMatches": "No suggestions. You can enter your own value."
 }

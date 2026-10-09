@@ -229,3 +229,14 @@ una captura de la barra lateral del fixture.
 El fixture compartido también comprueba que documentos largos no estiren la
 barra de escritorio: usuario/admin, cuatro páginas de 3000 px, scroll del
 contenido y posición estable del pie; a 600 px el menú tiene su propio scroll.
+
+### Controles del asistente y avisos flotantes
+
+`node tools/e2e/wizard-controls-smoke.cjs` usa APIs sintéticas y archivos locales
+para comprobar sugerencias filtrables y teclado sin enviar el formulario,
+valores libres, regeneración de vista previa con confirmación, avisos cerrables
+que desaparecen a los 10 segundos, radios/checkboxes compactos y modal de
+pendientes con cierre y enlace para completar. Comprueba axe con sugerencias
+abiertas y con modal abierto, y que no existan escrituras HTTP. Los avisos
+permanecen visibles también sobre diálogos nativos abiertos.
+`E2E_SCREENSHOT_PATH` guarda una captura sintética del modal.
