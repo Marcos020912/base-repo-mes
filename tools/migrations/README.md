@@ -24,3 +24,22 @@ sustituye esas verificaciones ni modifica la producción.
 El ensayo necesita espacio temporal para el clúster, dump y tres copias de los
 archivos. Rechaza enlaces simbólicos en el directorio fuente porque `cp -a`
 solo conservaría el enlace, no los datos del destino externo.
+
+## Diagnóstico de diferencias
+
+La comparación normaliza únicamente las claves aleatorias de las líneas psql
+`\restrict`/`\unrestrict` emitidas por algunas versiones de pg_dump; no modifica
+SQL ni el dump utilizado para restaurar. La detección de `--restrict-key` no usa
+una tubería que pueda fallar por SIGPIPE con `pipefail`. Un cambio real de tablas,
+columnas o datos sigue bloqueando el ensayo.
+
+Para conservar diferencias cuando falla una comparación:
+
+```bash
+tools/migrations/rehearse.sh --db-dump /ruta/segura/database.dump \
+  --diagnostics /ruta/segura/diagnostico-nuevo
+```
+
+El directorio debe ser nuevo. Se crea privado (0700; archivos0600) e incluye los
+dumps comparados, diferencia y logs. Puede contener datos personales y secretos:
+no publicarlo ni pegarlo completo en un chat. El clúster temporal se limpia igual.

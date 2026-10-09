@@ -6,10 +6,12 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 MIGRATION="$ROOT/docs/migrations/2026-09-scientific-records.sql"
 SOURCE_DUMP=""
 SOURCE_FILES=""
+DIAGNOSTICS=""
 
 usage() {
   cat <<'EOF'
 Uso: tools/migrations/rehearse.sh [--db-dump respaldo.dump] [--files directorio]
+                                [--diagnostics directorio-nuevo-privado]
 
 Sin argumentos crea una base y archivos ficticios. Para ensayar una copia de
 staging, use un pg_dump en formato custom (-Fc) y el directorio de datos
@@ -20,6 +22,7 @@ while (($#)); do
   case "$1" in
     --db-dump) (($# >= 2)) || { usage >&2; exit 2; }; SOURCE_DUMP="$2"; shift 2 ;;
     --files) (($# >= 2)) || { usage >&2; exit 2; }; SOURCE_FILES="$2"; shift 2 ;;
+    --diagnostics) (($# >= 2)) || { usage >&2; exit 2; }; DIAGNOSTICS="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
   esac
@@ -39,6 +42,29 @@ for command in initdb pg_ctl createdb dropdb psql pg_dump pg_restore; do
 done
 
 umask 077
+if [[ -n "$DIAGNOSTICS" ]]; then
+  mkdir -m 700 -- "$DIAGNOSTICS" || { echo 'Use un directorio nuevo para diagnósticos privados.' >&2; exit 2; }
+  DIAGNOSTICS="$(cd "$DIAGNOSTICS" && pwd)"
+fi
+# Preserve SQL exactly except pg_dump's random psql restriction token.
+normalize_dump() {
+  sed -E 's/^(\\(un)?restrict)[[:space:]]+[A-Za-z0-9]+$/\1 REDUNIV_COMPARISON_KEY/'
+}
+dump_for_comparison() {
+  "$PG_BIN/pg_dump" "${dump_args[@]}" "$@" | normalize_dump
+}
+compare_dump() {
+  local first=$1 second=$2 message=$3
+  if cmp -s "$first" "$second"; then return 0; fi
+  echo "$message" >&2
+  if [[ -n "$DIAGNOSTICS" ]]; then
+    cp -- "$first" "$second" "$DIAGNOSTICS/"
+    diff -u -- "$first" "$second" > "$DIAGNOSTICS/difference.diff" || true
+    cp -- "$TEMP"/*.log "$DIAGNOSTICS/"
+    echo "Diagnóstico privado: $DIAGNOSTICS (puede contener datos sensibles; no publicar)." >&2
+  fi
+  return 1
+}
 TEMP="$(mktemp -d /tmp/reduniv-migration.XXXXXXXX)"
 mkdir -m 700 "$TEMP/socket" "$TEMP/files-original" "$TEMP/files-working" "$TEMP/files-backup"
 started=false
@@ -69,12 +95,13 @@ SQL
 fi
 
 dump_args=(--no-owner --no-acl)
-if "$PG_BIN/pg_dump" --help | grep -q -- '--restrict-key'; then dump_args+=(--restrict-key=redunivrehearsal); fi
+DUMP_HELP="$("$PG_BIN/pg_dump" --help)"
+if grep -q -- '--restrict-key' <<< "$DUMP_HELP"; then dump_args+=(--restrict-key=redunivrehearsal); fi
 "$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -d reduniv_rehearsal -f "$MIGRATION" > "$TEMP/migration-first.log"
-"$PG_BIN/pg_dump" "${dump_args[@]}" --schema-only -d reduniv_rehearsal > "$TEMP/schema-first.sql"
+dump_for_comparison --schema-only -d reduniv_rehearsal > "$TEMP/schema-first.sql"
 "$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -d reduniv_rehearsal -f "$MIGRATION" > "$TEMP/migration-second.log"
-"$PG_BIN/pg_dump" "${dump_args[@]}" --schema-only -d reduniv_rehearsal > "$TEMP/schema-second.sql"
-cmp -s "$TEMP/schema-first.sql" "$TEMP/schema-second.sql" || { echo 'La migración no es idempotente.' >&2; exit 1; }
+dump_for_comparison --schema-only -d reduniv_rehearsal > "$TEMP/schema-second.sql"
+compare_dump "$TEMP/schema-first.sql" "$TEMP/schema-second.sql" 'La migración no es idempotente.'
 
 if [[ -z "$SOURCE_DUMP" ]]; then
   "$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -d reduniv_rehearsal <<'SQL' > "$TEMP/data-fixture.log"
@@ -85,16 +112,16 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'COMPLETED', now(), 2);
 SQL
 fi
 
-"$PG_BIN/pg_dump" "${dump_args[@]}" --data-only -d reduniv_rehearsal > "$TEMP/data-before.sql"
-"$PG_BIN/pg_dump" "${dump_args[@]}" --schema-only -d reduniv_rehearsal > "$TEMP/schema-before.sql"
+dump_for_comparison --data-only -d reduniv_rehearsal > "$TEMP/data-before.sql"
+dump_for_comparison --schema-only -d reduniv_rehearsal > "$TEMP/schema-before.sql"
 "$PG_BIN/pg_dump" -Fc --no-owner --no-acl -d reduniv_rehearsal -f "$TEMP/backup.dump"
 "$PG_BIN/dropdb" reduniv_rehearsal
 "$PG_BIN/createdb" reduniv_rehearsal
 "$PG_BIN/pg_restore" --no-owner --no-acl --exit-on-error -d reduniv_rehearsal "$TEMP/backup.dump" > "$TEMP/restore-rehearsal.log"
-"$PG_BIN/pg_dump" "${dump_args[@]}" --data-only -d reduniv_rehearsal > "$TEMP/data-after.sql"
-"$PG_BIN/pg_dump" "${dump_args[@]}" --schema-only -d reduniv_rehearsal > "$TEMP/schema-after.sql"
-cmp -s "$TEMP/schema-before.sql" "$TEMP/schema-after.sql" || { echo 'El esquema cambió después de restaurar.' >&2; exit 1; }
-cmp -s "$TEMP/data-before.sql" "$TEMP/data-after.sql" || { echo 'Los datos cambiaron después de restaurar.' >&2; exit 1; }
+dump_for_comparison --data-only -d reduniv_rehearsal > "$TEMP/data-after.sql"
+dump_for_comparison --schema-only -d reduniv_rehearsal > "$TEMP/schema-after.sql"
+compare_dump "$TEMP/schema-before.sql" "$TEMP/schema-after.sql" 'El esquema cambió después de restaurar.'
+compare_dump "$TEMP/data-before.sql" "$TEMP/data-after.sql" 'Los datos cambiaron después de restaurar.'
 
 if [[ -n "$SOURCE_FILES" ]]; then
   if [[ -n "$(find "$SOURCE_FILES" -type l -print -quit)" ]]; then
