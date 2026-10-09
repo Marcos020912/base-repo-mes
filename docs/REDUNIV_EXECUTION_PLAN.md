@@ -360,3 +360,9 @@ El objetivo global no se da por terminado con esta regresión.
 - [x] E2E inicial terminal0: funding bloqueado por rowlock SQL independiente (sin advisory), espera acotada, otro dataset editable, ficha intacta, recuperación tras rollback y todos los demás flujos/restauración aprobados. /tmp/reduniv-rowfence-e2e.log.
 - [x] Regresión final Java60suites1335tests0fallos/errores/omitidos y JAR aprobados, /tmp/reduniv-rowfence-final-{java,jar}.log. E2E final ampliado a nueve escrituras y privacidad terminal0: /tmp/reduniv-rowfence-nine-e2e.log, restauración completa y sin errores JS.
 - [ ] No cerrar F15: extender fencing a legacy/DOI sin romper transacciones recuperables, probar sesión perdida en multipart/dos JVM, auditar writers internos/filesystem.
+
+### Adjuntos/descripción ante pérdida de sesión — avance F15 (2026-10-08)
+- [x] Uploads transaccionales después de parse multipart; rowlock/refresco/recheckDRAFT antes de escribir; IOException capturada marca rollback-only. Tomcat onRead admite autorización antes de cuerpo Expect100.
+- [x] Cinco pruebas de rowfence y prueba de Connector real aprobadas; regresión61suites1337tests0fallos/errores/omitidos /tmp/reduniv-uploadfence-final-java.log, terminal0. JARtransport compilado10/11s.
+- [x] E2E finalCRLF28361 terminal0, /tmp/reduniv-uploadfence-crlf-e2e.log: killleasebackend durante multipart+estadoIN_REVIEWcomprometido rechazaadjunto/Markdown409; CSVausente, bytesdescripciónidénticos, poolrecupera. Todosflujos/restauraciónaprobados. Dos primeros harness fallaron regex/tramaLF; no aprobados.
+- [ ] F15 no cerrado: rootCRUD/rawcontent/contentmetadata legacy, DOIautomatizado, dosJVM y auditwriters/versionstore. RootindexResource inmediato modifica objetos gestionados potencialmente: diseñar aftercommit/outbox antes de txroot. Auditar PATCH tipoOTHER.

@@ -35,17 +35,20 @@ public class DescriptionPackageController {
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp", "svg", "tif", "tiff", "bmp");
     private final RepoBaseConfiguration repository;
     private final ContentDigestService digests;
+    private final edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock;
 
-    public DescriptionPackageController(RepoBaseConfiguration repository, ContentDigestService digests) {
+    public DescriptionPackageController(RepoBaseConfiguration repository, ContentDigestService digests, edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock) {
         this.repository = repository;
-        this.digests = digests;
+        this.digests = digests; this.writeLock = writeLock;
     }
 
     @PostMapping(consumes = "multipart/form-data")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> upload(@PathVariable String id, @RequestPart("file") MultipartFile file) {
         if (file == null || file.isEmpty()) return ResponseEntity.badRequest().body("Debe seleccionar una descripción.");
         try {
-            DataResource resource = DataResourceUtils.getResourceByIdentifierOrRedirect(repository, id, null, value -> value);
+            DataResource resolved = DataResourceUtils.getResourceByIdentifierOrRedirect(repository, id, null, value -> value);
+            DataResource resource = writeLock.acquireEditable(resolved.getId());
             String filename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
             List<Upload> files;
             if (filename.toLowerCase(Locale.ROOT).endsWith(".zip")) {
@@ -68,6 +71,7 @@ public class DescriptionPackageController {
             }
             return ResponseEntity.status(HttpStatus.CREATED).body(new UploadResult(files.size(), "description.md"));
         } catch (IOException | IllegalArgumentException ex) {
+            org.springframework.transaction.interceptor.TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return ResponseEntity.badRequest().body(ex.getMessage());
         }
     }

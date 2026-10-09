@@ -16,7 +16,7 @@ public class ScientificResourceWriteLockTest {
     private final EntityManager entities = mock(EntityManager.class);
     private ScientificResourceWriteLock service(String url) {
         var database = new DataSourceProperties(); database.setUrl(url);
-        return new ScientificResourceWriteLock(entities, database);
+        return new ScientificResourceWriteLock(entities, database, mock(edu.kit.datamanager.repo.repository.ScientificRecordRepository.class));
     }
     @After public void cleanup() { TransactionSynchronizationManager.clear(); }
     @Test public void rejectsMissingOrReadOnlyTransactionWithoutTouchingDatabase() {
@@ -59,4 +59,28 @@ public class ScientificResourceWriteLockTest {
         assertEquals(409,denied.getStatusCode().value());
         assertFalse(denied.getReason().contains("SQL"));
     }
+    @Test public void editableUploadRefreshesBeforeCheckingCurrentState() {
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        var database=new DataSourceProperties();database.setUrl("jdbc:h2:mem:fence");
+        var records=mock(edu.kit.datamanager.repo.repository.ScientificRecordRepository.class);
+        var row=DataResource.factoryNewDataResource("r1");
+        when(entities.find(eq(DataResource.class),eq("r1"),eq(LockModeType.PESSIMISTIC_WRITE),anyMap())).thenReturn(row);
+        var science=new edu.kit.datamanager.repo.domain.ScientificRecord("r1");
+        when(records.findById("r1")).thenReturn(java.util.Optional.of(science));
+        var locks=new ScientificResourceWriteLock(entities,database,records);
+        assertSame(row,locks.acquireEditable("r1"));
+        var order=inOrder(entities,records);
+        order.verify(entities).find(eq(DataResource.class),eq("r1"),eq(LockModeType.PESSIMISTIC_WRITE),anyMap());
+        order.verify(entities).refresh(eq(row),eq(LockModeType.PESSIMISTIC_WRITE),anyMap());
+        order.verify(records).findById("r1");
+        for(var state:edu.kit.datamanager.repo.domain.PublicationStatus.values()) {
+            if(state==edu.kit.datamanager.repo.domain.PublicationStatus.DRAFT)continue;
+            science.setStatus(state);
+            assertEquals(409,assertThrows(ResponseStatusException.class,()->locks.acquireEditable("r1")).getStatusCode().value());
+        }
+        // Existing legacy resources without a scientific record retain their ACL flow.
+        when(records.findById("r1")).thenReturn(java.util.Optional.empty());
+        assertSame(row,locks.acquireEditable("r1"));
+    }
+
 }

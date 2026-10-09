@@ -114,3 +114,53 @@ no puede escribir hasta que la transacción primaria lo permita. Se verifican 40
 espera acotada, ausencia de cambios, independencia de otro dataset y recuperación tras
 rollback. Esto no es todavía una prueba de dos JVM ni de matar una sesión mientras
 una subida multipart sigue activa.
+
+## Subidas adjuntas y descripción — prueba de pérdida de sesión
+
+Los endpoints `/api/v1/dataresources/{id}/attachments` y `/{id}/description` ahora
+son transaccionales. Después de resolver el identificador adquieren la fila primaria,
+la refrescan y revalidan **DRAFT antes de escribir archivos**. La transacción se abre
+al entrar en el controlador, después del parse multipart; no retiene una conexión
+primaria mientras llegan todos los bytes. Un cambio de estado mientras se recibe el
+cuerpo invalida la subida cuando finalmente entra en el controlador. Las IOException
+capturadas marcan rollback-only, para no convertir una respuesta de error en commit
+parcial de metadatos. Los ZIP se siguen validando íntegramente antes de su escritura.
+
+La configuración Tomcat usa `continueResponseTiming=onRead`: permite evaluar cabeceras
+y autorización antes de que un cliente que espera `100 Continue` envíe el cuerpo.
+No asumir esto del valor por defecto (`immediately`). Fuente:
+[API oficial Tomcat](https://tomcat.apache.org/tomcat-10.1-doc/api/org/apache/coyote/ContinueResponseTiming.html).
+Un HAProxy puede gestionar su propio `100 Continue`; la prueba local conecta directamente
+con Tomcat y no acredita el comportamiento del proxy remoto.
+
+E2E final `/tmp/reduniv-uploadfence-crlf-e2e.log`, terminal0:
+
+1. Inicia multipart con `Expect: 100-continue`, recibe confirmación onRead y mantiene
+   el cuerpo incompleto; la petición ya pasó el guard inicial de autoría/estado.
+2. Identifica y termina **la sesión PostgreSQL dedicada** que tiene la lease del ID.
+3. Una transacción SQL independiente simula el cambio comprometido a IN_REVIEW.
+4. Completa el multipart: adjunto CSV y reemplazo Markdown reciben 409 de revalidación.
+5. El CSV no aparece y la descripción conserva exactamente sus bytes; restaurando
+   el estado sintético, una petición nueva funciona y el pool no queda envenenado.
+6. Todo el resto de la E2E PostgreSQL/SMTP/Chrome y restauración también pasa.
+
+Primera prueba falló por regex del harness; segunda cargó una trama LF inválida y
+falló parse multipart. Solo la tercera, con trama CRLF y configuración onRead, se
+considera evidencia aprobada. Se conserva la distinción con una prueba de dos JVM.
+
+La suite Java final: 61 suites, 1337 tests sin fallos/errores/omitidos,
+`/tmp/reduniv-uploadfence-final-java.log`. Incluye contrato editable/refresco/estados y
+configuración real de Connector, además de matrices y regresiones previas.
+
+### Todavía pendiente en F15
+
+- Rutas legacy generales de DataResourceController (CRUD, raw data y content metadata).
+- Flujo DOI automatizado dentro de sus transacciones cortas y snapshots de publicación.
+- Prueba de dos JVM y auditoría de filesystem/rollback/versionado/escritores no coordinados.
+
+Antes de envolver los controladores legacy en transacciones, corregir su indexación:
+`indexResource` hoy guarda en Elasticsearch inmediatamente y modifica parentResource
+sobre objetos de contenido. Una transacción exterior podría indexar antes del commit
+y ensuciar entidades gestionadas. Hace falta coordinación after-commit/reintentos y
+snapshots sin modificar entidades persistentes. No declarar esta segunda barrera
+aplicada a esas rutas porque solo se probó el gate de petición.

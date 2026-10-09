@@ -40,15 +40,18 @@ public class ResourceAttachmentController {
             ResourceType.TYPE_GENERAL.DATASET, Set.of("csv", "tsv", "tab", "xls", "xlsx", "ods", "parquet", "sav", "dta", "json", "xml"));
     private final RepoBaseConfiguration repository;
     private final ContentDigestService digests;
-    public ResourceAttachmentController(RepoBaseConfiguration repository, ContentDigestService digests) { this.repository = repository; this.digests = digests; }
+    private final edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock;
+    public ResourceAttachmentController(RepoBaseConfiguration repository, ContentDigestService digests, edu.kit.datamanager.repo.service.ScientificResourceWriteLock writeLock) { this.repository = repository; this.digests = digests; this.writeLock = writeLock; }
 
     @PostMapping(consumes = "multipart/form-data")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> upload(@PathVariable String id, @RequestParam String path,
                                     @RequestParam(name = "package", defaultValue = "false") boolean packageMode,
                                     @RequestPart("file") MultipartFile file) {
         if (file == null || file.isEmpty()) return ResponseEntity.badRequest().body("Debe seleccionar un archivo.");
         String cleanPath = ArchiveUploadPaths.clean(path); if (cleanPath == null) return ResponseEntity.badRequest().body("Ruta de archivo no válida.");
-        DataResource resource = DataResourceUtils.getResourceByIdentifierOrRedirect(repository, id, null, value -> value);
+        DataResource resolved = DataResourceUtils.getResourceByIdentifierOrRedirect(repository, id, null, value -> value);
+        DataResource resource = writeLock.acquireEditable(resolved.getId());
         Set<String> allowed = ALLOWED.get(resource.getResourceType().getTypeGeneral());
         try {
             if (extension(cleanPath).equals("zip")) {
@@ -63,7 +66,7 @@ public class ResourceAttachmentController {
             validate(allowed, cleanPath);
             digests.record(ContentDataUtils.addFile(repository, resource, file, cleanPath, null, true, value -> value));
             return ResponseEntity.noContent().build();
-        } catch (IOException ex) { return ResponseEntity.badRequest().body(ex.getMessage()); }
+        } catch (IOException ex) { org.springframework.transaction.interceptor.TransactionAspectSupport.currentTransactionStatus().setRollbackOnly(); return ResponseEntity.badRequest().body(ex.getMessage()); }
     }
     private List<Entry> prepare(List<Entry> entries, Set<String> allowed, boolean packageMode) throws IOException {
         if (entries.isEmpty()) throw new IOException("El ZIP está vacío.");

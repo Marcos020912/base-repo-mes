@@ -514,6 +514,63 @@ async function deriveNewVersion(page, base, files, previous) {
     'La nueva versión no conservó el DOI conceptual del conjunto.');
   return id;
 }
+async function verifyUploadLeaseLoss(page,base,dataset) {
+  if(!postgres)return;
+  assert(/^[a-zA-Z0-9-]+$/.test(dataset.id),'Synthetic ID must be SQL-safe.');
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,Accept:'application/octet-stream'};
+  const args=['-X','-At','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-p',String(postgres.port),'-U','e2e_admin','-d',postgres.database];
+  const env={...process.env,PGPASSWORD:postgres.secret};
+  function sql(query){const result=spawnSync(path.join(postgres.bin,'psql'),[...args,'-c',query],{env,encoding:'utf8'});assert(result.status===0,'Lease loss SQL failed: '+result.stderr);return result.stdout.trim();}
+  const key=crypto.createHash('sha256').update('reduniv:resource-mutation:'+dataset.id).digest().readBigInt64BE(0).toString();
+  const initial=await fetch(base+'/api/v1/dataresources/'+dataset.id+'/data/description.md',{headers});assert(initial.ok,'Missing original description.');
+  const original=Buffer.from(await initial.arrayBuffer());
+  for(const kind of ['attachments','description']) {
+    const boundary='reduniv-session-loss-'+Date.now();
+    const filename=kind==='description'?'description.md':'lease-loss.csv';
+    const crlf=String.fromCharCode(13,10);
+    const prefix=Buffer.from([`--${boundary}`,`Content-Disposition: form-data; name="file"; filename="${filename}"`,
+      'Content-Type: text/plain','','Blocked upload must never become visible',''].join(crlf));
+    const tail=Buffer.from(['end',`--${boundary}--`,''].join(crlf));
+    let request,parsedResolve,parsedReject;
+    const parsing=new Promise((resolve,reject)=>{parsedResolve=resolve;parsedReject=reject;});
+    const uploaded=new Promise((resolve,reject)=>{
+      request=require('node:http').request(base+'/api/v1/dataresources/'+dataset.id+'/'+kind+(kind==='attachments'?'?path=lease-loss.csv':''),{
+        method:'POST',headers:{Authorization:`Bearer ${token}`,Expect:'100-continue','Content-Type':'multipart/form-data; boundary='+boundary,'Content-Length':prefix.length+tail.length}
+      },response=>{const chunks=[];response.on('data',part=>chunks.push(part));response.on('end',()=>resolve({status:response.statusCode,body:Buffer.concat(chunks).toString()}));});
+      request.on('continue',parsedResolve);request.on('error',error=>{parsedReject(error);reject(error);});request.flushHeaders();
+    });
+    let timer;
+    try {
+      // Configured continueResponseTiming=onRead acknowledges servlet body reads;
+      // this proves the pre-body ownership filter already accepted DRAFT.
+      await Promise.race([parsing,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Multipart parser did not acknowledge 100-continue.')),10000);})]);clearTimeout(timer);
+      request.write(prefix);
+      let backend='';
+      for(let i=0;i<40;i++) {
+        backend=sql(`SELECT pid FROM pg_locks WHERE locktype='advisory' AND granted AND objsubid=1 AND classid=(((${key})::bigint >> 32) & 4294967295)::oid AND objid=(((${key})::bigint) & 4294967295)::oid`);
+        if(/^[0-9]+$/.test(backend))break;
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+      assert(/^[0-9]+$/.test(backend),'Expected exactly one lease session during multipart parse; matching sessions='+backend.split(String.fromCharCode(10)).filter(Boolean).length+'.');
+      assert(sql(`SELECT pg_terminate_backend(${backend})`)==='t','Could not terminate dedicated lease session.');
+      // Simulate a committed state transition from an independent writer after
+      // the request passed its initial guard but before the body is complete.
+      sql(`UPDATE scientific_records SET status='IN_REVIEW' WHERE resource_id='${dataset.id}'`);
+      request.end(tail);const result=await uploaded;
+      assert(result.status===409 && result.body.includes('no es un borrador editable'),'Late '+kind+' upload bypassed primary state recheck: '+result.status+' '+result.body);
+    } finally {
+      clearTimeout(timer);request.destroy();await uploaded.catch(()=>{});
+      sql(`UPDATE scientific_records SET status='DRAFT' WHERE resource_id='${dataset.id}'`);
+    }
+    const absent=await fetch(base+'/api/v1/dataresources/'+dataset.id+'/data/lease-loss.csv',{headers});assert(absent.status===404,'Failed upload registered content.');
+    const current=await fetch(base+'/api/v1/dataresources/'+dataset.id+'/data/description.md',{headers});assert(current.ok&&Buffer.from(await current.arrayBuffer()).equals(original),'Failed upload changed original description bytes.');
+    const recovery=await fetch(base+'/api/v1/scientific/'+dataset.id+'/funding',{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:'[]'});
+    assert(recovery.ok,'Session-loss recovery retained a poisoned lease connection.');
+  }
+  process.stdout.write('Upload session-loss fence OK: onRead/CRLF 100-continue proves parsing after initial guard; terminated lease cannot append CSV or replace Markdown after state transition; recovery succeeds.\n');
+}
+
 async function verifyPrimaryRowFence(page,base,dataset,other) {
   if(!postgres)return;
   assert(/^[a-zA-Z0-9-]+$/.test(dataset.id),'Synthetic resource ID must be SQL-safe.');
@@ -1072,6 +1129,7 @@ async function main() {
     const packaged = await deposit(page, base, files, 'package');
     await verifyMutationCoordination(page,base,markdown,zipped);
     await verifyPrimaryRowFence(page,base,markdown,zipped);
+    await verifyUploadLeaseLoss(page,base,markdown);
     const before = await page.$eval('#download-list', element => element.textContent);
     await rejectPackage(page, base, packaged.id, files.missingDescriptionZip, 'description/description.md');
     await rejectPackage(page, base, packaged.id, files.invalidTypeZip, 'no admite archivos .exe');
