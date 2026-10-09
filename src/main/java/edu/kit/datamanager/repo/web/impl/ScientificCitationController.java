@@ -74,7 +74,7 @@ public class ScientificCitationController {
             }
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato de cita no admitido.");
         }
-        return ResponseEntity.ok().contentType(mime).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "." + extension + "\"").body(result);
+        return ResponseEntity.ok().contentType(new MediaType(mime, java.nio.charset.StandardCharsets.UTF_8)).header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "." + extension + "\"").body(result);
     }
 
     private static String safe(String input) { return input == null ? "" : input.replaceAll("[\\r\\n\\t]+", " ").trim(); }
@@ -108,14 +108,18 @@ public class ScientificCitationController {
     private static String initials(String given) {
         if (given == null || given.isBlank()) return "";
         return java.util.Arrays.stream(given.trim().split("\\s+"))
-                .filter(part -> !part.isBlank()).map(part -> part.substring(0, 1).toUpperCase()).reduce("", String::concat);
+                .filter(part -> !part.isBlank()).map(part -> new String(Character.toChars(part.codePointAt(0))).toUpperCase(java.util.Locale.ROOT)).reduce("", String::concat);
     }
     private static String vancouverName(Agent author) {
-        return (safe(author.getFamilyName()) + " " + initials(author.getGivenName())).trim();
+        String family = safe(author.getFamilyName());
+        if (family.isBlank()) return safe(author.getGivenName());
+        return (family + " " + initials(author.getGivenName())).trim();
     }
     private static String ieeeName(Agent author) {
+        if (safe(author.getFamilyName()).isBlank()) return safe(author.getGivenName());
         String first = initials(author.getGivenName());
-        String dotted = first.replaceAll("(.)", "$1.");
+        String dotted = first.codePoints().mapToObj(code -> new String(Character.toChars(code)) + ".")
+                .collect(java.util.stream.Collectors.joining());
         return (dotted + " " + safe(author.getFamilyName())).trim();
     }
 }

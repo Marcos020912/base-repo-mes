@@ -347,3 +347,9 @@ El objetivo global no se da por terminado con esta regresión.
 - [x] Java final:59suites1331tests0fallos/errores/omitidos,1m9s; /tmp/reduniv-mutation-final-full-java.log.
 - [x] E2E final PostgreSQL/SMTP/restauración terminal0: sesión independiente bloquea nueve mutaciones, otro dataset editable, multipart real bloquea envío, liberar permite continuar; DELETE codificado no elimina publicado incluso admin. /tmp/reduniv-mutation-final-e2e.log. Sin errores JS.
 - [ ] F15 no cerrado: falta fencing/guarda transaccional ante pérdida de la sesión dedicada durante escritura, pruebas dos JVM y auditoría completa de escritores. Documentado SCIENTIFIC_MUTATION_COORDINATION.md.
+
+### Citas interoperables — avance F05 (2026-10-08)
+- [x] Vancouver/IEEE mantienen organización literal completa; iniciales por codepoint Unicode y Locale.ROOT; siete formatos declaran UTF-8. Prueba dirigida aprobada.
+- [x] Fixtures del exportador Java pasan parsers independientes: Pybtex interpreta identidades; Bibtexparser conserva campos/escapes en round-trip; Rispy conserva DOI/versión/autores/título. CSL coincide. Cuatro pruebas positivas/negativas del verificador aprobadas.
+- [x] Regresión Java completa aprobada: 59 suites, 1331 tests sin fallos/errores/omitidos; /tmp/reduniv-citation-full-java.log, terminal0.
+- [ ] F05 sigue parcial: revisión bibliotecaria de estilos, importación visual por gestor y auditoría de dos acciones. Procedimiento tools/citations/README.md.

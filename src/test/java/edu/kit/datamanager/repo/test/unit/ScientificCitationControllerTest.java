@@ -67,10 +67,30 @@ public class ScientificCitationControllerTest {
         assertEquals(2, csl.get("author").size());
         assertEquals("Research and Development", csl.get("author").get(1).get("literal").asText());
         assertEquals("Pérez", csl.get("author").get(0).get("family").asText());
+        for (String format : java.util.List.of("apa", "vancouver", "chicago", "ieee")) {
+            var response = controller.export("r1", format);
+            assertTrue(format, response.getBody().contains("Research and Development"));
+            assertEquals(java.nio.charset.StandardCharsets.UTF_8, response.getHeaders().getContentType().getCharset());
+        }
+        when(person.getGivenName()).thenReturn("𐐨na İpek");
+        assertTrue(controller.export("r1", "vancouver").getBody().contains("Pérez 𐐀İ"));
+        assertTrue(controller.export("r1", "ieee").getBody().contains("𐐀.İ. Pérez"));
+        when(person.getGivenName()).thenReturn("Ana María");
         String ris = controller.export("r1", "ris").getBody();
         assertTrue(ris.contains("AU  - Pérez, Ana María\n"));
         assertTrue(ris.contains("TI  - " + title.getValue() + "\n"));
         assertTrue(ris.contains("DO  - 10.1234/exact-v2\nET  - 2.0\nER  - "));
+        // Artifacts from the actual exporter, consumed by independent Pybtex/Rispy checks.
+        var fixture = java.nio.file.Path.of("build", "citation-fixtures");
+        java.nio.file.Files.createDirectories(fixture);
+        for (String format : java.util.List.of("bibtex", "ris", "csl-json"))
+            java.nio.file.Files.writeString(fixture.resolve("citation." + format), controller.export("r1", format).getBody(),
+                    java.nio.charset.StandardCharsets.UTF_8);
+        java.nio.file.Files.writeString(fixture.resolve("expected.json"), new ObjectMapper().writeValueAsString(
+                java.util.Map.of("title", title.getValue(), "publisher", "RedUniv", "year", "2026",
+                        "doi", "10.1234/exact-v2", "version", "2.0", "personGiven", "Ana María",
+                        "personFamily", "Pérez", "organization", "Research and Development")),
+                java.nio.charset.StandardCharsets.UTF_8);
     }
     @Test public void allFormatsRejectEveryUnpublishedStateWithoutReadingResource() {
         IDataResourceDao resources=mock(IDataResourceDao.class);

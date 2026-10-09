@@ -1,0 +1,6 @@
+bibtexparser==1.4.3
+latexcodec==3.0.1
+pybtex==0.26.1
+pyparsing==3.3.3
+PyYAML==6.0.3
+rispy==0.10.0
