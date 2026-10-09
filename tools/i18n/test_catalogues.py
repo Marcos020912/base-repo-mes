@@ -33,6 +33,12 @@ class CatalogueTest(unittest.TestCase):
             used.update(re.findall(r"notifyKey\('([^']+)'",script))
             self.assertIn('ui-i18n.js',(STATIC/f'{page}.html').read_text())
         self.assertTrue(used);self.assertEqual(used-keys,set())
+    def test_help_guide_leaf_bindings_and_catalogue_keys(self):
+        keys=set(json.loads((STATIC/'locales/es.json').read_text()))
+        parser=Bindings();parser.feed((STATIC/'help.html').read_text())
+        self.assertTrue(parser.keys);self.assertEqual(parser.keys-keys,set())
+        self.assertIn('data-ui-page-localized="true"',(STATIC/'help.html').read_text())
+
     def test_scientific_ui_literal_keys_exist(self):
         keys=set(json.loads((STATIC/'locales/es.json').read_text()))
         domains={'wizard','profile','privacy','metadataFields','metadataTranslations','transfer','catalog','deposit','quality','users','versions','relations','funding','creators','reviewAccess','publicRecord','vocabulary','profilesAdmin','collections'}

@@ -49,3 +49,5 @@ Administración de vocabularios: `node tools/e2e/vocabulary-i18n.cjs` valida eti
 Perfiles administrativos: `node tools/e2e/profiles-admin-i18n.cjs` comprueba etiquetas es/en, definición original, requisitos conocidos traducidos por código y etiquetas institucionales desconocidas conservadas, selección de checkbox y aprobación con revisión explícita. No sustituye pruebas del backend ni de snapshots congelados de los datasets.
 
 Colecciones: `node tools/e2e/collections-i18n.cjs` prueba modos público/gestión, datos originales y formularios conservados, revisión en PUT y eliminación explícita de pertenencia. Cambiar idioma no consulta API ni cambia URL/filtros. No prueba permisos reales de servidor ni que un borrador se oculte correctamente en publicación.
+
+Guía de ayuda: `node tools/e2e/help-i18n.cjs` comprueba español/inglés, enlaces y comandos intactos, avisos de política pendiente y limitaciones de descarga/certificación, sin API, axe automático y overflow a 320px. Los párrafos con links/code usan spans hoja, nunca bindings del contenedor. La suite de catálogos cuenta ahora con siete pruebas.

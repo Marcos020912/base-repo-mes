@@ -246,3 +246,9 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Vista de colecciones, fichas agrupadas, filtros/paginación, creación/edición y confirmaciones es/en; títulos, descripción, autoría y valores de categorías permanecen originales.
 - [x] Chrome `node tools/e2e/collections-i18n.cjs`: público/gestión, sin consultas ni cambios de URL por idioma, formulario conservado, PUT con revisión y eliminación de pertenencia solo tras confirmación. Fixture UI no demuestra permisos de servidor.
 - [ ] Ficha privada, revisiones, ayuda y comprobación integrada general siguen pendientes; objetivo global activo.
+
+### Guía de ayuda bilingüe — avance A07 (2026-10-08)
+- [x] Guía completa es/en para búsqueda/descarga, depósito, citación, integridad, políticas y soporte; enlaces y comandos originales intactos. No presenta políticas pendientes ni exportaciones preliminares como aprobadas/certificadas.
+- [x] Chrome `node tools/e2e/help-i18n.cjs`: textos/caveats, links/code conservados, sin API, inglés a 320px sin overflow ni violaciones axe automáticas WCAG2/2.1/2.2. No sustituye revisión manual ni certifica cumplimiento WCAG.
+- [x] Siete pruebas de catálogos aprobadas incluyendo bindings hoja de ayuda.
+- [ ] Ficha privada y revisiones pendientes, así como comprobación integrada y requisitos globales.
