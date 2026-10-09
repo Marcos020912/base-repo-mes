@@ -55,3 +55,5 @@ Guía de ayuda: `node tools/e2e/help-i18n.cjs` comprueba español/inglés, enlac
 Curación: `node tools/e2e/reviews-i18n.cjs` valida vista previa es/en, metadatos y nota privada intactos, enlace temporal conservado en su control y cero solicitudes por cambio de idioma. Las notas/códigos del servidor no se traducen automáticamente. No prueba publicación real DataCite ni autorización curatorial.
 
 Ficha privada, avance estático: `node tools/e2e/resource-static-i18n.cjs` comprueba modales y valores de formulario conservados. Excluye scripts de negocio; `resource.js` sigue pendiente y la página no declara todavía idioma global inglés. No confundir esta prueba con flujo de edición/DOI/subida completo.
+
+Ficha privada dinámica, avance: `node tools/e2e/resource-dynamic-i18n.cjs` valida identidad y campos/listado original con bindings propios sin consultas por idioma; compartidos y backend stubbed. DOI/calidad/historial/políticas/vista previa todavía pendientes. Estados desconocidos se muestran originales, no como borrador.

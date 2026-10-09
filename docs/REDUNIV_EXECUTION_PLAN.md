@@ -262,3 +262,8 @@ Las casillas de base local permanecen abiertas hasta auditoría individual; esto
 - [x] Etiquetas estáticas, formularios y modales de resource.html en es/en; controles, códigos de acceso/tipo y rutas/nombre description.md intactos.
 - [x] Chrome `node tools/e2e/resource-static-i18n.cjs`: controles originales y valores preservados al cambiar idioma. Excluye scripts de negocio deliberadamente; no demuestra el flujo de ficha ni backend.
 - [ ] Contenido dinámico de resource.js y verificación integrada pendientes. No se activa lang global inglés mientras la ficha dinámica siga sin migrar.
+
+### Identidad y archivos de ficha privada — avance dinámico A07 (2026-10-08)
+- [x] Identidad/publicación, campos científicos y listado de archivos con bindings es/en propios; títulos, valores, nombres y cita originales preservados. Estados desconocidos no se muestran falsamente como borrador.
+- [x] Chrome `node tools/e2e/resource-dynamic-i18n.cjs`: render dinámico, metadatos/archivos/cita y confirmación de archivo conservados, sin API por idioma. Compartidos/backend stubbed, no evidencia de edición/autorización real.
+- [ ] Mensajes de DOI, historial/calidad, políticas de archivos y vista previa de envío aún por migrar; ficha privada global permanece parcial.
