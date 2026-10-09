@@ -99,7 +99,7 @@ No transformar este cierre en certificación o autorización productiva.
 | A01 | Cola y validación de metadatos/archivos | Base local: Curación/calidad; validación bibliotecaria/formatos real pendiente. |
 | A02 | Control de identificadores, vocabularios y perfiles | Parcial institucional: vocabularios y perfiles persistentes con propuesta/aprobación, revisión concurrente y reglas congeladas por dataset verificados localmente. Control de identidad/listas institucionales y su aprobación externa no acreditados. |
 | A03 | Licencias, privacidad y datos sensibles en curación | Implementado local: revisión privada con control concurrente, aprobación obligatoria y revocación al devolver borrador; tests y E2E aprobados. Validación institucional pendiente. |
-| A04 | Usuarios, roles e integraciones DOI/OIDC/correo | Parcial: usuarios/DOI/correo/ORCID; OIDC institucional de acceso no equivale a OAuth ORCID. |
+| A04 | Usuarios, roles e integraciones DOI/OIDC/correo | Usuarios/DOI/correo/ORCID implementados; por decisión del usuario se mantiene login propio y OIDC institucional no se exige. Validaciones operativas se registran por separado. |
 | A05 | Estado almacenamiento/fixity, auditoría/reportes operativos | Implementado local: consola CURATOR/ADMIN de volumen local, inventario técnico/fixity y veinte auditorías con informe JSON fechado; tests/E2E aprobados. No equivale a monitorización/backup institucional. |
 | A06 | Metadatos multilingües | Implementado local: traducciones declaradas de título/resumen por idioma BCP47, persistidas por versión y visibles en ficha/DataCite. Editor compartido sin JSON técnico. No equivale a internacionalización UI. |
 | A07 | Internacionalización sin textos incrustados en JS | Cierre técnico local:18 páginas,1272 claves es/en;8 pruebas de catálogos y16 fixtures Chrome aprobados, guard de datos científicos originales y cero solicitudes al cambiar idioma. JAR55assets idénticos y E2E PostgreSQL/SMTP/restauración aprobados. Resta aceptación institucional de terminología inglesa y accesibilidad manual, no otra migración de páginas pendiente; ver tools/i18n/README.md. |
@@ -131,7 +131,7 @@ No transformar este cierre en certificación o autorización productiva.
 
 ## Pendientes actuales después de los avances locales
 
-- OIDC institucional de acceso: confirmar proveedor/issuer, registro de cliente y política de vinculación de cuentas; no confundirlo con ORCID OAuth.
+- Acceso: el usuario confirmó mantener registro y login propios. OIDC institucional fuera del alcance actual; no confundirlo con ORCID OAuth.
 - Certificación COUNTER si se exige, activación institucional del tracker DataCite y evidencia de recepción/informe mensual. La integración de código está implementada; no son certificaciones ni eventos reales acreditados.
 - Definir/aprobar perfiles OAIS institucionales y reunir evidencia documental de los 16 requisitos de autoevaluación. La herramienta está disponible; completar el expediente y certificarlo no son tareas automáticas del código.
 - Validación DOI, correo y HAProxy en infraestructura institucional; aprobación de políticas, estilos bibliotecarios y recorridos de accesibilidad manual.

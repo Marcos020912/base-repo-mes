@@ -29,15 +29,16 @@ para demostrar correspondencia con un tag aprobado que aún no se ha publicado.
 
 ## Únicos siguientes pasos que necesitan entrada externa
 
-1. Confirmar existencia/proveedor de acceso institucional y reglas de cuenta,
-   o aprobar mantener login local.
-2. Configuración privada/autorización DataCite para ensayo Test→staging→producción.
-3. ID de estadísticas y aprobación de transferencia; recepción autorizada y
-   comprobación del reporte mensual posterior/certificación si se exige.
-4. Entorno/permiso de staging, HAProxy/DNS/CA SMTP y cuenta de correo de prueba;
-   volumen/condiciones de operación institucional representativos.
-5. Responsables y aprobación de políticas/perfiles de preservación/evidencias.
-6. Personas para revisión bibliotecaria, accesibilidad, idioma y usabilidad.
+1. **Resuelto por decisión del usuario:** mantener registro y login propios.
+   OIDC institucional queda fuera del alcance actual y no bloquea la entrega.
+2. **Confirmado resuelto por el usuario:** integración DOI. No se vuelven a solicitar sus datos; esta revisión local no emite DOI reales.
+3. **Resuelto por decisión del usuario:** estadísticas locales únicamente.
+   Activación de DataCite Usage Tracker y validación mensual externa fuera del alcance.
+4. **Entorno de pruebas confirmado:** PC del usuario, quien también asume DevOps.
+   HAProxy/SMTP productivos solo se comprueban en despliegue autorizado.
+5. **Responsable confirmado:** administrador para gestión de políticas de acceso.
+6. **Responsable confirmado:** administrador para revisión funcional/humana.
+   Las comprobaciones automáticas no equivalen a certificación institucional.
 7. Seguridad autoriza evaluación/rotación de credenciales históricas y artefactos
    ya publicados; no se altera el historial ni cuentas reales unilateralmente.
 8. Autorización de revisión/merge/Release y ventana de despliegue con respaldo.

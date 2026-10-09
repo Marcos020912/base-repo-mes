@@ -6,12 +6,12 @@ No enviar secretos por chat, correo ordinario ni Git.
 
 | Responsable | Entrega concreta | Qué permite cerrar |
 |---|---|---|
-| Infraestructura/identidad | Confirmar si hay inicio de sesión institucional. Si existe: proveedor, URL de descubrimiento OIDC, cliente y callback autorizados por canal seguro; reglas de vinculación de cuentas. Si no existe: aprobar login local. | Integración y ensayo de acceso institucional, sin confundir ORCID con login. |
-| Responsable DOI | Cuenta/prefijo y configuración privada Test/producción; autorización para reserva/publicación/versiones de un dataset sintético; dominio permanente aprobado. | Ensayo externo Test→staging→producción sin acuñar DOI reales a ciegas. |
-| Responsable estadísticas | ID DataCite `da-...`, aprobación de la transferencia a terceros y permiso para emitir eventos de prueba humana. | Activar tracker; comprobar recepción y reporte mensual siguiente. No otorga certificación por sí solo. |
-| Infraestructura | VM de staging, configuración HAProxy/DNS/TLS, nombres/CA SMTP y cuenta destinataria autorizada; límites y volumen representativo. | Comprobar registro, entrega, carga/búsqueda/descarga, tiempos y capacidad reales. |
-| Dirección/curación | Responsable y aprobación de políticas de acceso, privacidad, conservación, retirada y perfiles de archivo. | Convertir propuesta técnica y expediente de autoevaluación en decisiones institucionales. |
-| Biblioteca/usuarios | Personas designadas para revisar citas e importación, teclado/lector de pantalla, terminología es/en y tareas de investigación/curación. | Aceptación humana; pruebas automáticas no la sustituyen. |
+| Acceso — decisión confirmada | Mantener registro y login propios de la plataforma. No solicitar proveedor ni cliente OIDC. | Acceso institucional fuera del alcance actual; no es un pendiente. |
+| DOI — confirmado por el usuario | Integración ya resuelta. | No solicitar nuevamente sus credenciales; ensayos locales no publican DOI reales. |
+| Estadísticas — decisión confirmada | Conservar únicamente métricas locales; tracker externo desactivado. | No se requiere ID DataCite, transferencia externa ni reporte mensual del proveedor para esta entrega. |
+| Pruebas / DevOps | PC del usuario como entorno de pruebas; el usuario coordina DevOps. | Validación local ahora; cambios en producción solo con autorización. |
+| Administración | Administrador responsable de las políticas de acceso. | Revisar reglas de la plataforma; no implica certificación externa. |
+| Revisión humana | Administrador responsable de revisión funcional, terminología y usabilidad. | Complementar pruebas automáticas; no afirmar certificación de accesibilidad. |
 | Seguridad | Responsable/autorización para revisar y rotar credenciales antiguas, analizar artefactos históricos y coordinar historia Git/releases si es necesario. | Cerrar exposición histórica sin romper instalaciones/clones unilateralmente. |
 | Responsable de publicación | Autorización de revisión/merge y ventana de mantenimiento; Release/JAR/SHA-256 aprobado. | Entregar los cambios desarrollados a staging y después a producción. |
 

@@ -16,9 +16,12 @@ const server = http.createServer((request, response) => {
   unauthorizedHeader ||= Boolean(request.headers.authorization);
   if (request.url === '/') {
     response.setHeader('Content-Type', 'text/html; charset=utf-8');
-    response.end('<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><title>Transferencias fixture</title></head><body><header class="page-header"></header><script src="/transfers.js"></script></body></html>');
+    response.end('<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><title>Transferencias fixture</title></head><body><header class="page-header"></header><script src="/ui-locales.js"></script><script src="/ui-i18n.js"></script><script src="/transfers.js"></script></body></html>');
   } else if (request.url === '/styles.css') {
     response.setHeader('Content-Type','text/css; charset=utf-8'); response.end(styles);
+  } else if (['/ui-locales.js','/ui-i18n.js'].includes(request.url)) {
+    response.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    response.end(fs.readFileSync(path.resolve(__dirname, '../../src/main/resources/static', request.url.slice(1))));
   } else if (request.url === '/transfers.js') {
     response.setHeader('Content-Type', 'application/javascript; charset=utf-8'); response.end(script);
   } else if (request.url === '/upload') {

@@ -446,4 +446,24 @@ infraestructura, clientes desconocidos o políticas de la institución.
 - [x] Otros gates:7validaciónexterna,9seguridad/despliegue,7release/respaldo,2inventarioalmacenamiento,4roundtripbibliográfico en venv; ensayo aislado de migración/restauración terminal0 `/tmp/reduniv-independent-migration.log`. Sistema Python sin venv no tenía pybtex; repetir con el entorno documentado pasó. No se silencian avisos de parsers.
 - [x] Corridas intermedias no usadas como aprobación: E2E inicial falló por POST colección sin barra (harnesscorregido); ejecución Gradle solapada/escritos durante corrida dio expectativaantigua y conflicto XML. Última suite serial, código congelado y terminal0 es la evidencia válida.
 - [x] Cierre E2E del último JAR: `/tmp/reduniv-local-closure-e2e.log`, terminal0. PostgreSQL/SMTP local/Chrome/dos JVM,132 operaciones protegidas, permisos multiusuario,221 registros/217 públicos/11 páginas, respaldos con hashes, migración doble, tablas restauradas idénticas y descarga posterior. Ningún servicio productivo alterado.
-- [ ] Solo entradas externas: sistema/login institucional o decisión mantenerlocal; configuración/autorización DOI; ID/aprobación/mes real estadística; staging/HAProxy/SMTP/volumen; políticas/perfiles/evidencias; personas para revisión; seguridad autoriza rotaciónhistorial; aprobación merge/Release/despliegue. Tabla completa: `INSTITUTIONAL_ACCEPTANCE.md`.
+- [ ] Solo entradas externas (login propio confirmado, OIDC excluido): configuración/autorización DOI; ID/aprobación/mes real estadística; staging/HAProxy/SMTP/volumen; políticas/perfiles/evidencias; personas para revisión; seguridad autoriza rotaciónhistorial; aprobación merge/Release/despliegue. Tabla completa: `INSTITUTIONAL_ACCEPTANCE.md`.
+
+## Decisión de alcance — acceso
+
+- [x] El usuario confirmó mantener registro y login propios de la plataforma.
+- OIDC institucional queda fuera del alcance actual. Las menciones anteriores a su integración pendiente son históricas y no bloquean esta entrega.
+- No se requieren proveedor, issuer ni cliente institucional; ORCID conserva su finalidad independiente.
+
+## Decisión de alcance — estadísticas
+
+- [x] El usuario confirmó conservar únicamente estadísticas locales.
+- DataCite Usage Tracker permanece opcional y desactivado por defecto; su activación y comprobación externa no son pendientes de esta entrega.
+- Las referencias anteriores a ID institucional, consentimiento externo e informes mensuales del proveedor quedan fuera del alcance actual. Esta decisión no modifica el flujo DOI.
+
+## Revisión final solicitada por el usuario
+
+- [x] Revisión final automatizada local aprobada: `FINAL_REVIEW.md`.
+- [x] Java1374, Chrome18fixtures, axe69estados, PostgreSQL/SMTP/dosJVM y restauración terminal0.
+- [x] Corregido fixture de transferencias que omitía dependencias i18n; repetición aprobada.
+- [x] Alcance confirmado: login propio, estadísticas locales, DOI resuelto por usuario, PC como pruebas, administración responsable de revisión/políticas.
+- [ ] Fusión/despliegue: únicamente con autorización explícita del usuario.
