@@ -366,3 +366,10 @@ El objetivo global no se da por terminado con esta regresión.
 - [x] Cinco pruebas de rowfence y prueba de Connector real aprobadas; regresión61suites1337tests0fallos/errores/omitidos /tmp/reduniv-uploadfence-final-java.log, terminal0. JARtransport compilado10/11s.
 - [x] E2E finalCRLF28361 terminal0, /tmp/reduniv-uploadfence-crlf-e2e.log: killleasebackend durante multipart+estadoIN_REVIEWcomprometido rechazaadjunto/Markdown409; CSVausente, bytesdescripciónidénticos, poolrecupera. Todosflujos/restauraciónaprobados. Dos primeros harness fallaron regex/tramaLF; no aprobados.
 - [ ] F15 no cerrado: rootCRUD/rawcontent/contentmetadata legacy, DOIautomatizado, dosJVM y auditwriters/versionstore. RootindexResource inmediato modifica objetos gestionados potencialmente: diseñar aftercommit/outbox antes de txroot. Auditar PATCH tipoOTHER.
+
+### Regla original de tipo — PUT y PATCH sin vías de evasión (2026-10-08)
+- [x] `ResourceTypeTransitionPolicy` comparte la regla entre PUT/PATCH: tipo igual o una transición a OTHER, que es terminal. Preview JSON separado aplica todas las operaciones, incluso reemplazo raíz/copy/move, sin cambiar la entidad.
+- [x] Conserva readonly, anonimato, ACL WRITE, If-Match y campos prohibidos legacy. Dos primeras regresiones fallaron por prioridad de errores/legacysinTipo; corregidas sin modificar expectativas existentes.
+- [x] Java62suites1339tests0fallos/errores/omitidos y JAR11s terminal0: /tmp/reduniv-typepolicy-full-java.log y /tmp/reduniv-typepolicy-jar.log.
+- [x] HTTP real PostgreSQL y restauración final terminal0: /tmp/reduniv-typepolicy-e2e.log. PATCH IMAGE→TEXT rechazado con ficha/ETag intactos; IMAGE→OTHER aceptado; OTHER→IMAGE rechazado por PATCH y PUT con ficha/ETag intactos; recurso sintético eliminado. Todos los flujos y guard JS aprobados.
+- [ ] Sigue pendiente fencing primario rootlegacy/DOI y coordinación SQL/Elasticsearch beforecommit; esta política no serializa por sí sola todas las mutaciones ni cierra F15.

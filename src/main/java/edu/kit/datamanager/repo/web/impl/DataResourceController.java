@@ -261,6 +261,12 @@ public class DataResourceController implements IDataResourceController {
         };
         //String path = ContentDataUtils.getContentPathFromRequest(request);
         String eTag = ControllerUtils.getEtagFromHeader(request);
+        if (repositoryProperties.isReadOnly()) throw new edu.kit.datamanager.exceptions.ServiceUnavailableException("Repository is in read-only mode. Patch request denied.");
+        ControllerUtils.checkAnonymousAccess();
+        DataResource existing = DataResourceUtils.getResourceByIdentifierOrRedirect(repositoryProperties, identifier, null, patchDataResource);
+        DataResourceUtils.performPermissionCheck(existing, PERMISSION.WRITE);
+        ControllerUtils.checkEtag(eTag, existing);
+        edu.kit.datamanager.repo.service.ResourceTypeTransitionPolicy.validatePatch(existing, patch);
         DataResourceUtils.patchResource(repositoryProperties, identifier, patch, eTag, patchDataResource);
 
         indexResource(identifier, true);
@@ -290,12 +296,8 @@ public class DataResourceController implements IDataResourceController {
             final HttpServletResponse response) {
         LOGGER.trace("Update resource with id '{}': new resource: '{}'", identifier, newResource);
         DataResource existing = dataResourceDao.findById(identifier).orElse(null);
-        if (existing != null && existing.getResourceType() != null && newResource.getResourceType() != null
-                && existing.getResourceType().getTypeGeneral() != newResource.getResourceType().getTypeGeneral()
-                && !(existing.getResourceType().getTypeGeneral() != edu.kit.datamanager.repo.domain.ResourceType.TYPE_GENERAL.OTHER
-                && newResource.getResourceType().getTypeGeneral() == edu.kit.datamanager.repo.domain.ResourceType.TYPE_GENERAL.OTHER)) {
-            return ResponseEntity.badRequest().body("El tipo solo puede cambiarse una vez a OTHER.");
-        }
+        if (existing != null) edu.kit.datamanager.repo.service.ResourceTypeTransitionPolicy.validate(
+                existing.getResourceType(), newResource.getResourceType());
         Function<String, String> putWithId;
         putWithId = (t) -> {
             return WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).put(t, newResource, request, response)).toString();

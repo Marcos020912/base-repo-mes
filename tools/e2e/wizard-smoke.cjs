@@ -514,6 +514,36 @@ async function deriveNewVersion(page, base, files, previous) {
     'La nueva versión no conservó el DOI conceptual del conjunto.');
   return id;
 }
+async function verifyTypeTransitionPolicy(page,base) {
+  const token=await page.evaluate(()=>localStorage.getItem('base-repo-token'));
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  const response=await fetch(base+'/api/v1/dataresources/',{method:'POST',headers,body:JSON.stringify({
+    titles:[{value:'Synthetic type transition policy'}],creators:[{givenName:'Local regression'}],
+    resourceType:{value:'IMAGE',typeGeneral:'IMAGE'},publisher:'Synthetic local test',publicationYear:'2026'
+  })});
+  const createBody=await response.text();
+  assert(response.status===201,'Could not create synthetic type policy resource: '+response.status+' '+createBody);
+  const resource=JSON.parse(createBody);const url=base+'/api/v1/dataresources/'+resource.id;
+  async function snapshot(){const result=await fetch(url,{headers});assert(result.ok,'Type resource read failed.');return {resource:await result.json(),etag:result.headers.get('etag')};}
+  async function change(operations,expected){const before=await snapshot();const result=await fetch(url,{method:'PATCH',headers:{...headers,'Content-Type':'application/json-patch+json','If-Match':before.etag},body:JSON.stringify(operations)});assert(result.status===expected,'Type patch returned '+result.status+' instead of '+expected+': '+await result.text());return snapshot();}
+  try {
+    const initial=await snapshot();
+    const denied=await change([{op:'replace',path:'/resourceType/typeGeneral',value:'TEXT'}],400);
+    assert(denied.resource.resourceType.typeGeneral==='IMAGE'&&denied.etag===initial.etag,'Rejected patch mutated type/version.');
+    const other=await change([{op:'replace',path:'/resourceType/typeGeneral',value:'OTHER'},{op:'replace',path:'/resourceType/value',value:'OTHER'}],204);
+    assert(other.resource.resourceType.typeGeneral==='OTHER','Valid OTHER transition was not persisted.');
+    await change([{op:'replace',path:'/resourceType/typeGeneral',value:'IMAGE'}],400);
+    const current=await snapshot();
+    const put=await fetch(url,{method:'PUT',headers:{...headers,'If-Match':current.etag},body:JSON.stringify({...current.resource,resourceType:{...current.resource.resourceType,typeGeneral:'IMAGE'}})});
+    assert(put.status===400,'PUT bypassed terminal OTHER type.');
+    const final=await snapshot();assert(final.resource.resourceType.typeGeneral==='OTHER'&&final.etag===current.etag,'Rejected PUT mutated type/version.');
+  } finally {
+    const current=await snapshot();const removed=await fetch(url,{method:'DELETE',headers:{...headers,'If-Match':current.etag}});
+    assert(removed.status===204,'Synthetic type resource cleanup failed.');
+  }
+  process.stdout.write('Type transition policy OK: rejected PATCH unchanged/ETag, IMAGE to OTHER accepted, OTHER terminal for PATCH and PUT, temporary resource removed.'+String.fromCharCode(10));
+}
+
 async function verifyUploadLeaseLoss(page,base,dataset) {
   if(!postgres)return;
   assert(/^[a-zA-Z0-9-]+$/.test(dataset.id),'Synthetic ID must be SQL-safe.');
@@ -1127,6 +1157,7 @@ async function main() {
     const markdown = await deposit(page, base, files, 'md');
     const zipped = await deposit(page, base, files, 'zip');
     const packaged = await deposit(page, base, files, 'package');
+    await verifyTypeTransitionPolicy(page,base);
     await verifyMutationCoordination(page,base,markdown,zipped);
     await verifyPrimaryRowFence(page,base,markdown,zipped);
     await verifyUploadLeaseLoss(page,base,markdown);

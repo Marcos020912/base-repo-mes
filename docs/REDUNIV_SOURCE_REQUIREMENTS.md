@@ -131,3 +131,9 @@ individual completa; **Parcial** = falta implementación o evidencia del alcance
 6. Preparar evidencias institucionales de preservación/medición y aceptación humana.
 
 Este orden no elimina las demás filas ni sustituye la evaluación requerida.
+
+## Restricciones originales del usuario contrastadas adicionalmente
+
+| ID | Requisito anterior a los tres documentos | Evidencia actual |
+|---|---|---|
+| U01 | Después de crear, un tipo solo cambia a Otro; Otro no cambia | PUT y PATCH comparten política; preview separado cubre operaciones compuestas/raíz/copy/move. Java62suites1339 y HTTP real prueban rechazo sin cambios de ficha/ETag y transición aceptada; `ResourceTypeTransitionPolicyTest`, `verifyTypeTransitionPolicy` en E2E. No equivale a cerrar la concurrencia legacy F15. |
