@@ -37,7 +37,10 @@ def package(dump, files, config, output, writes_stopped=False, pg_restore='pg_re
                 with os.fdopen(fd,'rb') as source:
                     before=os.fstat(source.fileno())
                     if not stat.S_ISREG(before.st_mode):raise ValueError('Source changed type.')
-                    digest=hashlib.file_digest(source,'sha256').hexdigest();source.seek(0)
+                    hasher=hashlib.sha256()
+                    for chunk in iter(lambda: source.read(1024*1024), b''):
+                        hasher.update(chunk)
+                    digest=hasher.hexdigest();source.seek(0)
                     header=tarfile.TarInfo(name);header.size=before.st_size;header.mode=0o600;header.mtime=int(before.st_mtime)
                     archive.addfile(header,source);after=os.fstat(source.fileno())
                     if (before.st_size,before.st_mtime_ns)!=(after.st_size,after.st_mtime_ns):raise ValueError('Source changed during backup.')

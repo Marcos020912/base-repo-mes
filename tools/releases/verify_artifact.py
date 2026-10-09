@@ -17,7 +17,10 @@ def verify(filename, expected):
     if not re.fullmatch(r'[a-fA-F0-9]{64}',expected):
         raise ValueError('SHA-256 esperado inválido; obténgalo de la Release aprobada.')
     with open(filename,'rb') as stream:
-        digest=hashlib.file_digest(stream,'sha256').hexdigest()
+        hasher=hashlib.sha256()
+        for chunk in iter(lambda: stream.read(1024*1024), b''):
+            hasher.update(chunk)
+        digest=hasher.hexdigest()
     if not hmac.compare_digest(digest,expected.lower()):
         raise ValueError('El SHA-256 no coincide; no iniciar ni instalar este JAR.')
     findings=[]; scanned=0

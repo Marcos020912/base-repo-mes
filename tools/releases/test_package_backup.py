@@ -13,6 +13,18 @@ class BackupTest(unittest.TestCase):
         dump=root/'fixture.dump';dump.write_bytes(b'PGDMP fixture');conf=root/'application.properties';conf.write_text('private config')
         return dump,data,conf,root/'backup.tar.gz'
     @patch('package_backup.subprocess.run')
+    def test_python310_without_file_digest(self, run):
+        with tempfile.TemporaryDirectory() as folder:
+            args=self.setup(folder)
+            with patch.object(hashlib,'file_digest',None,create=True):
+                package(*args,writes_stopped=True)
+            with tarfile.open(args[3]) as archive:
+                manifest=json.load(archive.extractfile('manifest.json'))
+                for entry in manifest['files']:
+                    data=archive.extractfile(entry['path']).read()
+                    self.assertEqual(hashlib.sha256(data).hexdigest(),entry['sha256'])
+
+    @patch('package_backup.subprocess.run')
     def test_private_manifest_exact_content_no_overwrite(self, run):
         with tempfile.TemporaryDirectory() as folder:
             args=self.setup(folder);package(*args,writes_stopped=True)

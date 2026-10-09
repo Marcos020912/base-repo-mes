@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 from verify_artifact import verify
 class ArtifactTest(unittest.TestCase):
     def artifact(self, folder, extra=None):
@@ -25,6 +26,13 @@ class ArtifactTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             file,digest=self.artifact(folder,{'BOOT-INF/classes/application.properties':'spring.mail.password=synthetic-credential\n'})
             result=verify(file,digest);self.assertEqual(2,result['count']);self.assertNotIn('synthetic-credential',str(result))
+    def test_python310_without_file_digest(self):
+        with tempfile.TemporaryDirectory() as folder:
+            file,digest=self.artifact(folder,{'BOOT-INF/classes/large.txt':'x'*(2*1024*1024)})
+            with patch.object(hashlib,'file_digest',None,create=True):
+                self.assertEqual(0,verify(file,digest)['count'])
+                with self.assertRaises(ValueError):verify(file,'0'*64)
+
     def test_unsafe_paths_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
             file,digest=self.artifact(folder,{'../escape.txt':'bad'})
