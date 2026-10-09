@@ -188,6 +188,13 @@ main:focus { outline:none; }
 .sidebar { gap:22px; }
 .sidebar-locale { display:grid; gap:7px; margin:0; color:#e9f2ff; font-size:13px; }
 .sidebar-locale select { width:100%; min-width:0; color:var(--ink); background:#fff; }
+/* Desktop navigation belongs to the viewport, not to the document height.
+   Only the links scroll; identity/logout stay reachable below the menu. */
+@media(min-width:801px) {
+  .sidebar { position:sticky; top:0; align-self:start; height:100vh; height:100dvh; min-height:0; overflow:hidden; }
+  .sidebar > .brand,.sidebar-locale,.sidebar-bottom { flex-shrink:0; }
+  .sidebar nav { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; align-content:start; }
+}
 .password-control { display:flex; align-items:stretch; gap:8px; width:100%; min-width:0; }
 .password-control input { min-width:0; flex:1; width:0; }
 .password-toggle { flex:none; padding:10px; font-size:12px; background:#e7f0ff; color:#003a78; border:1px solid #b9d2ef; border-radius:8px; cursor:pointer; }

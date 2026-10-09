@@ -88,3 +88,18 @@ SMTP y configurar el servidor real mediante `spring.mail.*`.
 
 Cambios solo en `develop-reduniv`, sin fusión ni publicación. La aplicación
 local se recompiló y reinició conservando PostgreSQL y el índice de demo.
+
+### Barra lateral independiente del documento
+
+La barra lateral de escritorio ahora se limita al alto visible (`100dvh`),
+permanece adherida arriba y no se estira con la fila del grid. Solo los enlaces
+se desplazan dentro del menú; logo, idioma e identidad/cierre de sesión se
+conservan. En móvil permanece la navegación adaptable anterior.
+
+Comprobado en Chrome real con admin (`localhost`) y usuario (`127.0.0.1`):
+desplazar el catálogo 179/87 px deja la barra en top=0 y el pie en la misma
+posición que en Mi cuenta. No se modifican sesiones, contraseñas ni datos.
+El fixture compartido incluye documentos de 3000 px en cuatro páginas para
+ambos roles, pie estable, scroll del menú a 600 px y móvil a 320 px.
+Fixture aprobado; axe: 69 estados, cero infracciones; JAR recompilado y
+aplicación reiniciada, health UP.

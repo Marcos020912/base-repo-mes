@@ -226,3 +226,6 @@ contraseñas visibles/ocultas sin perder el valor ni enviar el formulario,
 instrucciones del correo capturado y ausencia de desbordamiento a 320 px.
 No usa cuentas reales ni envía mensajes. `E2E_SCREENSHOT_PATH` permite guardar
 una captura de la barra lateral del fixture.
+El fixture compartido también comprueba que documentos largos no estiren la
+barra de escritorio: usuario/admin, cuatro páginas de 3000 px, scroll del
+contenido y posición estable del pie; a 600 px el menú tiene su propio scroll.

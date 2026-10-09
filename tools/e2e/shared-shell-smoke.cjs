@@ -34,6 +34,25 @@ const server=http.createServer((req,res)=>{
  await page.select('[data-ui-locale]','es');assert.equal(await page.$eval('[name=password]',x=>x.value),'synthetic-fixture-only');await page.click('.password-toggle');assert.equal(await page.$eval('[name=password]',x=>x.type),'password');
  assert.equal(await page.$eval('#register-form button[type=submit]',x=>x.type),'submit');
  await page.goto(base+'/verify.html');await page.waitForSelector('.mail-delivery-notice');
+ // Long documents must not stretch the desktop sidebar or move logout.
+ await page.setViewport({width:1440,height:841});
+ for(const role of ['USER','ADMINISTRATOR']){
+  await page.evaluate(role=>localStorage.setItem('base-repo-user',JSON.stringify({username:'fixture',role})),role);
+  let footerBottom;
+  for(const section of ['index.html','my-datasets.html','account.html','create.html']){
+   await page.goto(base+'/'+section);
+   await page.evaluate(()=>{document.querySelector('main').style.minHeight='3000px';});
+   const before=await page.evaluate(()=>({height:document.querySelector('.sidebar').getBoundingClientRect().height,bottom:document.querySelector('.sidebar-bottom').getBoundingClientRect().bottom,viewport:innerHeight}));
+   assert(Math.abs(before.height-before.viewport)<1,role+' sidebar stretches on '+section);
+   footerBottom??=before.bottom;assert(Math.abs(before.bottom-footerBottom)<1,role+' footer moved');
+   await page.evaluate(()=>window.scrollTo(0,1800));
+   assert(await page.evaluate(()=>Math.abs(document.querySelector('.sidebar').getBoundingClientRect().top)<1),role+' sidebar scrolls away');
+  }
+ }
+ await page.setViewport({width:1440,height:600});await page.goto(base+'/index.html');
+ assert(await page.$eval('.sidebar nav',nav=>nav.scrollHeight>nav.clientHeight));
+ await page.$eval('.sidebar nav',nav=>{nav.scrollTop=nav.scrollHeight;});
+ assert(await page.$eval('.sidebar-bottom',bottom=>bottom.getBoundingClientRect().bottom<=innerHeight));
  await page.setViewport({width:320,height:800});await page.goto(base+'/account.html');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  if(process.env.E2E_SCREENSHOT_PATH){await page.setViewport({width:1440,height:1000});await page.goto(base+'/index.html');await page.select('[data-ui-locale]','es');await (await page.$('.sidebar')).screenshot({path:process.env.E2E_SCREENSHOT_PATH});}
  assert.deepEqual(errors,[]);console.log('Shared shell PASS: 36 role/section menus, language position/persistence, active link, password visibility and local-mail instructions; 320px no overflow.');
